@@ -16,6 +16,40 @@ type parsedImageLine struct {
 	err      error
 }
 
+type compose struct {
+	Services map[string]struct {
+		ImageName    string        `yaml:"image"`
+		BuildWrapper *buildWrapper `yaml:"build"`
+	} `yaml:"services"`
+}
+
+type verbose struct {
+	Context    string   `yaml:"context"`
+	Dockerfile string   `yaml:"dockerfile"`
+	Args       []string `yaml:"args"`
+}
+
+type simple string
+
+type buildWrapper struct {
+	Build interface{}
+}
+
+func (b *buildWrapper) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	*b = buildWrapper{}
+	var v verbose
+	if err := unmarshal(&v); err == nil {
+		b.Build = v
+		return nil
+	}
+	var s simple
+	if err := unmarshal(&s); err == nil {
+		b.Build = s
+		return nil
+	}
+	return nil
+}
+
 func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, wg *sync.WaitGroup) {
 	defer wg.Done()
 	yamlByt, err := ioutil.ReadFile(fileName)
@@ -23,61 +57,34 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, 
 		parsedImageLines <- parsedImageLine{err: err}
 		return
 	}
-	var comp map[string]interface{}
+	var comp compose
 	if err := yaml.Unmarshal(yamlByt, &comp); err != nil {
 		parsedImageLines <- parsedImageLine{err: err}
-		return
 	}
-	services := comp["services"].(map[interface{}]interface{})
-	for _, serviceConfig := range services {
-		var result parsedImageLine
-		result.fileName = fileName
-		config := serviceConfig.(map[interface{}]interface{})
-		if _, ok := config["build"]; !ok {
-			imageName, _ := config["image"].(string)
-			result.line = os.ExpandEnv(imageName)
-			parsedImageLines <- result
+	for _, service := range comp.Services {
+		if service.BuildWrapper == nil {
+			line := os.ExpandEnv(service.ImageName)
+			parsedImageLines <- parsedImageLine{line: line, fileName: fileName}
 			continue
 		}
-		switch build := config["build"].(type) {
-		case string:
-			if build != "" {
-				build = os.ExpandEnv(build)
-				fi, err := os.Stat(build)
-				if err != nil {
-					parsedImageLines <- parsedImageLine{err: err}
-					return
-				}
-				mode := fi.Mode()
-				if mode.IsDir() {
-					parseDockerfile(path.Join(build, "Dockerfile"), nil, parsedImageLines, nil)
-				} else {
-					parseDockerfile(build, nil, parsedImageLines, nil)
-				}
-			}
-		case map[interface{}]interface{}:
-			context := build["context"].(string)
-			context = os.ExpandEnv(context)
-			dockerfileName, _ := build["dockerfile"].(string)
-			dockerfileName = os.ExpandEnv(dockerfileName)
-			var dockerfile string
-			if dockerfileName == "" {
+		switch build := service.BuildWrapper.Build.(type) {
+		case simple:
+			line := path.Join(os.ExpandEnv(string(build)), "Dockerfile")
+			parsedImageLines <- parsedImageLine{line: line, fileName: fileName}
+		case verbose:
+			context := os.ExpandEnv(build.Context)
+			dockerfile := os.ExpandEnv(build.Dockerfile)
+			if dockerfile == "" {
 				dockerfile = path.Join(context, "Dockerfile")
 			} else {
-				dockerfile = path.Join(context, dockerfileName)
+				dockerfile = path.Join(context, dockerfile)
 			}
-			args, _ := build["args"].([]interface{})
-			argsMap := make(map[string]string)
-			if len(args) == 0 {
-				parseDockerfile(dockerfile, nil, parsedImageLines, nil)
-			} else {
-				for _, arg := range args {
-					argString := os.ExpandEnv(arg.(string))
-					argsSlice := strings.Split(argString, "=")
-					argsMap[argsSlice[0]] = argsSlice[1]
-				}
-				parseDockerfile(dockerfile, argsMap, parsedImageLines, nil)
+			buildArgs := make(map[string]string)
+			for _, arg := range build.Args {
+				kv := strings.Split(os.ExpandEnv(arg), "=")
+				buildArgs[kv[0]] = kv[1]
 			}
+			parseDockerfile(dockerfile, buildArgs, parsedImageLines, nil)
 		}
 	}
 }
