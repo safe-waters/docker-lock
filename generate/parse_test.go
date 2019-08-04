@@ -47,7 +47,7 @@ func TestParseComposeFile(t *testing.T) {
 			t.Errorf("Failed to parse: '%+v'.", parsedImageLine)
 		}
 		if _, ok := results[parsedImageLine]; !ok {
-			t.Errorf("parsedImageResult: '%+v' not in results: '%+v'", parsedImageLine, results)
+			t.Errorf("parsedImageResult: '%+v' not in results: '%+v'.", parsedImageLine, results)
 		}
 		results[parsedImageLine] = true
 		i++
@@ -62,23 +62,63 @@ func TestParseComposeFile(t *testing.T) {
 	}
 }
 
-func TestParseDockerfile(t *testing.T) {
+func TestParseDockerfileOverride(t *testing.T) {
+	// Args from composefiles should override args in Dockerfiles.
 	baseDir := filepath.Join("testassets", "parse", "dockerfile")
-
-	// tests that compose build args overrides the ones defined in the dockerfile (simulate by passing in build vars)
 	dockerfile := filepath.Join(baseDir, "override", "Dockerfile")
-	//parseDockerfile(fileName string, buildArgs map[string]string, parsedImageLines chan<- parsedImageLine, wg *sync.WaitGroup)
-	//parseDockerfile
 	buildArgs := map[string]string{"IMAGE_NAME": "debian"}
-	_ = buildArgs
-	_ = dockerfile
+	parsedImageLines := make(chan parsedImageLine)
+	var wg sync.WaitGroup
+	go func() {
+		wg.Add(1)
+		parseDockerfile(dockerfile, buildArgs, parsedImageLines, &wg)
+		wg.Wait()
+		close(parsedImageLines)
+	}()
+	for parsedImageLine := range parsedImageLines {
+		if parsedImageLine.line != buildArgs["IMAGE_NAME"] {
+			t.Errorf("Want '%s'. Got '%s'.", parsedImageLine.line, buildArgs["IMAGE_NAME"])
+		}
+	}
+}
 
-	// test that build vars reset on each new from line
+func TestParseDockerfileReset(t *testing.T) {
+	// Args in Dockerfile should reset everytime a new FROM statement is made.
+	// TODO: test that docker-compose args do not reset each time
+	baseDir := filepath.Join("testassets", "parse", "dockerfile")
+	dockerfile := filepath.Join(baseDir, "reset", "Dockerfile")
+	parsedImageLines := make(chan parsedImageLine)
+	var wg sync.WaitGroup
+	go func() {
+		wg.Add(1)
+		parseDockerfile(dockerfile, nil, parsedImageLines, &wg)
+		wg.Wait()
+		close(parsedImageLines)
+	}()
 
+	results := []string{"ubuntu:xenial", "ubuntu:"}
+	var i int
+	for parsedImageLine := range parsedImageLines {
+		if parsedImageLine.line != results[i] {
+			t.Errorf("Want '%s'. Got '%s'.", parsedImageLine.line, results[i])
+		}
+		i++
+	}
+}
+
+func TestParseDockerfileEnvOverride(t *testing.T) {
+	// TODO: test that ENV overrides environment variables in composefile
+}
+
+func TestParseDockerfileEnvAndArg(t *testing.T) {
+	// TODO: test behvaior when both an ARG and an ENV have the same name. Who gets priority?
+}
+
+func TestParseDockerfileEmptyArg(t *testing.T) {
 	// tests that ARG vars without values will be filled in by compose build args (similute by passing in build vars)
+}
 
+func TestParseDockerfileEmptyArg(t *testing.T) {
 	// tests that compose build args, which are not defined in the Dockerfile cannot be used
 	// have vars in docker-compose and try to use them in a Dockerfile where they are not defined.
-
-	// ENV in dockerfile overrides environment variables from compose files
 }

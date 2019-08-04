@@ -113,19 +113,17 @@ func parseDockerfile(fileName string, buildArgs map[string]string, parsedImageLi
 				if strings.Contains(fields[1], "=") {
 					for _, pair := range fields[1:] {
 						splitPair := strings.Split(pair, "=")
-						key, val := splitPair[0], splitPair[1]
-						buildVars[key] = val
+						varName, varVal := splitPair[0], splitPair[1]
+						setBuildVars(buildVars, varName, varVal, buildArgs)
 					}
 				} else if len(fields) == 3 {
 					//INSTUCTION VAR1 VAL1
-					key, val := fields[1], fields[2]
-					buildVars[key] = val
+					varName, varVal := fields[1], fields[2]
+					setBuildVars(buildVars, varName, varVal, buildArgs)
 				} else if instruction == "arg" && len(fields) == 2 {
 					// ARG VAR1
-					argName := fields[1]
-					if argVal, ok := buildArgs[argName]; ok {
-						buildVars[argName] = argVal
-					}
+					varName := fields[1]
+					setBuildVars(buildVars, varName, "", buildArgs)
 				}
 			case "from":
 				line := expandBuildVars(fields[1], buildVars)
@@ -165,4 +163,12 @@ func expandBuildVars(line string, buildVars map[string]string) string {
 		return val
 	}
 	return os.Expand(line, mapper)
+}
+
+func setBuildVars(buildVars map[string]string, varName string, varVal string, buildArgs map[string]string) {
+	if argVal, ok := buildArgs[varName]; ok {
+		buildVars[varName] = argVal
+	} else {
+		buildVars[varName] = varVal
+	}
 }
