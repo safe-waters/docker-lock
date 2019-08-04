@@ -24,16 +24,14 @@ services:
   verbose3:
     image: verbose3image
     build:
-      context: verbose3build
+      context: ./verbose3build
       dockerfile: Dockerfile
       args:
-        - buildno=1
-        - gitcommithash=cdc3b19
+        - buildno=3
   verbose4:
     image: ${VERBOSE4IMAGE}
     build:
       context: ${VERBOSE4CONTEXT}
       dockerfile: ${VERBOSE4DOCKERFILE}
       args:
-        - buildno=1
-        - gitcommithash=cdc3b19
+        - buildno=4
