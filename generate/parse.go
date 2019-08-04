@@ -2,6 +2,7 @@ package generate
 
 import (
 	"bufio"
+	"errors"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -47,7 +48,7 @@ func (b *buildWrapper) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		b.Build = s
 		return nil
 	}
-	return nil
+	return errors.New("Unable to parse service.")
 }
 
 func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, wg *sync.WaitGroup) {
@@ -69,10 +70,10 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, 
 		}
 		switch build := service.BuildWrapper.Build.(type) {
 		case simple:
-			line := path.Join(os.ExpandEnv(string(build)), "Dockerfile")
-			parsedImageLines <- parsedImageLine{line: line, fileName: fileName}
+			dockerfile := path.Join(path.Dir(fileName), os.ExpandEnv(string(build)), "Dockerfile")
+			parseDockerfile(dockerfile, nil, parsedImageLines, nil)
 		case verbose:
-			context := os.ExpandEnv(build.Context)
+			context := path.Join(path.Dir(fileName), os.ExpandEnv(build.Context))
 			dockerfile := os.ExpandEnv(build.Dockerfile)
 			if dockerfile == "" {
 				dockerfile = path.Join(context, "Dockerfile")

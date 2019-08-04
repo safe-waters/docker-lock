@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  simple1:
+    image: busybox
+  simple2:
+    image: simple2image
+    build: simple2build
+  simple3:
+    image: ${SIMPLE3IMAGE}
+    build: ${SIMPLE3BUILD}
+  simple4:
+    image: simple4image
+    build: ./simple4build
+  verbose1:
+    image: verbose1image
+    build:
+      context: verbose1build
+  verbose2:
+    image: verbose2image
+    build:
+      context: verbose2build
+      dockerfile: Dockerfile
+  verbose3:
+    image: verbose3image
+    build:
+      context: verbose3build
+      dockerfile: Dockerfile
+      args:
+        - buildno=1
+        - gitcommithash=cdc3b19
+  verbose4:
+    image: ${VERBOSE4IMAGE}
+    build:
+      context: ${VERBOSE4CONTEXT}
+      dockerfile: ${VERBOSE4DOCKERFILE}
+      args:
+        - buildno=1
+        - gitcommithash=cdc3b19
