@@ -19,21 +19,24 @@ func TestParseComposeFile(t *testing.T) {
 	os.Setenv("VERBOSE4IMAGE", VERBOSE4IMAGE)
 	os.Setenv("VERBOSE4CONTEXT", VERBOSE4CONTEXT)
 	os.Setenv("VERBOSE4DOCKERFILE", VERBOSE4DOCKERFILE)
+
+	baseDir := "testassets/parse/composefile/"
+
 	results := map[parsedImageLine]bool{
-		{line: "busybox", fileName: "testassets/parse/docker-compose.yml", err: nil}:           false,
-		{line: "busybox", fileName: "testassets/parse/simple2build/Dockerfile", err: nil}:      false,
-		{line: "busybox", fileName: "testassets/parse/simple3build/Dockerfile", err: nil}:      false,
-		{line: "busybox", fileName: "testassets/parse/simple4build/Dockerfile", err: nil}:      false,
-		{line: "busybox", fileName: "testassets/parse/verbose1build/Dockerfile", err: nil}:     false,
-		{line: "busybox", fileName: "testassets/parse/verbose2build/Dockerfile", err: nil}:     false,
-		{line: "busybox", fileName: "testassets/parse/verbose3build/Dockerfile", err: nil}:     false,
-		{line: "busybox", fileName: "testassets/parse/verbose4build/Dockerfile-dev", err: nil}: false,
+		{line: "busybox", fileName: baseDir + "docker-compose.yml", err: nil}:           false,
+		{line: "busybox", fileName: baseDir + "simple2build/Dockerfile", err: nil}:      false,
+		{line: "busybox", fileName: baseDir + "simple3build/Dockerfile", err: nil}:      false,
+		{line: "busybox", fileName: baseDir + "simple4build/Dockerfile", err: nil}:      false,
+		{line: "busybox", fileName: baseDir + "verbose1build/Dockerfile", err: nil}:     false,
+		{line: "busybox", fileName: baseDir + "verbose2build/Dockerfile", err: nil}:     false,
+		{line: "busybox", fileName: baseDir + "verbose3build/Dockerfile", err: nil}:     false,
+		{line: "busybox", fileName: baseDir + "verbose4build/Dockerfile-dev", err: nil}: false,
 	}
 	parsedImageLines := make(chan parsedImageLine)
 	var wg sync.WaitGroup
 	go func() {
 		wg.Add(1)
-		parseComposefile("testassets/parse/docker-compose.yml", parsedImageLines, &wg)
+		parseComposefile(baseDir+"docker-compose.yml", parsedImageLines, &wg)
 		wg.Wait()
 		close(parsedImageLines)
 	}()
@@ -56,4 +59,7 @@ func TestParseComposeFile(t *testing.T) {
 			t.Errorf("Could not find expected '%+v'.", parsedImageLine)
 		}
 	}
+}
+
+func TestParseDockerfile(t *testing.T) {
 }
