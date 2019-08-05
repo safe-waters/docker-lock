@@ -52,7 +52,9 @@ func (b *buildWrapper) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, wg *sync.WaitGroup) {
-	defer wg.Done()
+	if wg != nil {
+		defer wg.Done()
+	}
 	yamlByt, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		parsedImageLines <- parsedImageLine{err: err}
@@ -90,7 +92,7 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, 
 	}
 }
 
-func parseDockerfile(fileName string, buildArgs map[string]string, parsedImageLines chan<- parsedImageLine, wg *sync.WaitGroup) {
+func parseDockerfile(fileName string, composeArgs map[string]string, parsedImageLines chan<- parsedImageLine, wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()
 	}
@@ -101,45 +103,37 @@ func parseDockerfile(fileName string, buildArgs map[string]string, parsedImageLi
 	}
 	defer dockerfile.Close()
 	stageNames := make(map[string]bool)
-	buildVars := make(map[string]string)
+	globalArgs := make(map[string]string)
 	scanner := bufio.NewScanner(dockerfile)
 	scanner.Split(bufio.ScanLines)
+	globalContext := true
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
 		if len(fields) > 0 {
 			switch instruction := strings.ToLower(fields[0]); instruction {
-			case "arg", "env":
-				//INSTRUCTION VAR1=VAL1 VAR2=VAL2 ...
-				if strings.Contains(fields[1], "=") {
-					for _, pair := range fields[1:] {
-						splitPair := strings.Split(pair, "=")
-						varName, varVal := splitPair[0], splitPair[1]
-						setBuildVars(buildVars, varName, varVal, buildArgs)
+			case "arg":
+				if globalContext {
+					if strings.Contains(fields[1], "=") {
+						//ARG VAR1=VAL1 VAR2=VAL2
+						for _, pair := range fields[1:] {
+							splitPair := strings.Split(pair, "=")
+							globalArgs[splitPair[0]] = splitPair[1]
+						}
+					} else {
+						// ARG VAR1
+						globalArgs[fields[1]] = ""
 					}
-				} else if len(fields) == 3 {
-					//INSTUCTION VAR1 VAL1
-					varName, varVal := fields[1], fields[2]
-					setBuildVars(buildVars, varName, varVal, buildArgs)
-				} else if instruction == "arg" && len(fields) == 2 {
-					// ARG VAR1
-					varName := fields[1]
-					setBuildVars(buildVars, varName, "", buildArgs)
 				}
 			case "from":
-				line := expandBuildVars(fields[1], buildVars)
-				// each from resets buildvars
-				buildVars = make(map[string]string)
-				// guarding against the case where the line is the name of a previous build stage
-				// rather than a base image.
-				// For instance, FROM <previous-stage> AS <name>
+				globalContext = false
+				line := expandField(fields[1], globalArgs, composeArgs)
 				if !stageNames[line] {
 					parsedImageLines <- parsedImageLine{line: line, fileName: fileName}
 				}
-				// multistage build
-				// FROM <image> AS <name>
-				// FROM <previous-stage> as <name>
+				// FROM <image> AS <stage>
+				// FROM <stage> AS <another stage>
 				if len(fields) == 4 {
-					stageName := expandBuildVars(fields[3], buildVars)
+					stageName := expandField(fields[3], globalArgs, composeArgs)
 					stageNames[stageName] = true
 				}
 			}
@@ -147,11 +141,18 @@ func parseDockerfile(fileName string, buildArgs map[string]string, parsedImageLi
 	}
 }
 
-func expandBuildVars(line string, buildVars map[string]string) string {
-	mapper := func(buildVar string) string {
-		val, ok := buildVars[buildVar]
+func expandField(field string, globalArgs map[string]string, composeArgs map[string]string) string {
+	mapper := func(arg string) string {
+		var val string
+		globalVal, ok := globalArgs[arg]
 		if !ok {
-			return val
+			return ""
+		}
+		composeVal, ok := composeArgs[arg]
+		if ok {
+			val = composeVal
+		} else {
+			val = globalVal
 		}
 		// Remove excess quotes, for instance ARG="val" should be equivalent to ARG=val
 		if len(val) > 0 && val[0] == '"' {
@@ -162,13 +163,5 @@ func expandBuildVars(line string, buildVars map[string]string) string {
 		}
 		return val
 	}
-	return os.Expand(line, mapper)
-}
-
-func setBuildVars(buildVars map[string]string, varName string, varVal string, buildArgs map[string]string) {
-	if argVal, ok := buildArgs[varName]; ok {
-		buildVars[varName] = argVal
-	} else {
-		buildVars[varName] = varVal
-	}
+	return os.Expand(field, mapper)
 }
