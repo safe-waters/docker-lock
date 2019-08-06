@@ -39,20 +39,23 @@ func (v *Verifier) VerifyLockfile(wrapperManager *registry.WrapperManager) error
 	if bytes.Equal(lockfileBytes, verificationBytes) {
 		return nil
 	}
-	var existingLockfile, verificationlockfile generate.Lockfile
+	var existingLockfile, verificationLockfile generate.Lockfile
 	if err := json.Unmarshal(lockfileBytes, &existingLockfile); err != nil {
 		return err
 	}
-	if err := json.Unmarshal(verificationBytes, &verificationlockfile); err != nil {
+	if err := json.Unmarshal(verificationBytes, &verificationLockfile); err != nil {
 		return err
 	}
-	if len(existingLockfile.Images) != len(verificationlockfile.Images) {
-		return fmt.Errorf("Existing lockfile has %d images. Verification found %d images.", len(existingLockfile.Images), len(verificationlockfile.Images))
+	errMsg := errors.New("Failed to verify.")
+	if len(existingLockfile.Images) != len(verificationLockfile.Images) {
+		errMsg = fmt.Errorf("%s Found %d images. Expected %d images.", errMsg, len(verificationLockfile.Images), len(existingLockfile.Images))
+		return errMsg
 	}
 	for i, _ := range existingLockfile.Images {
-		if existingLockfile.Images[i] != verificationlockfile.Images[i] {
-			return fmt.Errorf("Existing lockfile has image %+v. Verification has image %+v.", existingLockfile.Images[i], verificationlockfile.Images[i])
+		if existingLockfile.Images[i] != verificationLockfile.Images[i] {
+			errMsg = fmt.Errorf("%s Found image:\n%+v\nExpected image:\n%+v\n", errMsg, verificationLockfile.Images[i], existingLockfile.Images[i])
+			return errMsg
 		}
 	}
-	return errors.New("Existing lockfile does not match newly generated lockfile.")
+	return errMsg
 }

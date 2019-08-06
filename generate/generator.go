@@ -32,6 +32,11 @@ type imageResult struct {
 	err   error
 }
 
+func (i Image) String() string {
+	pretty, _ := json.MarshalIndent(i, "", "\t")
+	return string(pretty)
+}
+
 func NewGenerator(flags *Flags) (*Generator, error) {
 	dockerfiles, err := findDockerfiles(flags)
 	if err != nil {
