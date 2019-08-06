@@ -57,12 +57,12 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, 
 	}
 	yamlByt, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		parsedImageLines <- parsedImageLine{err: err}
+		parsedImageLines <- parsedImageLine{fileName: fileName, err: err}
 		return
 	}
 	var comp compose
 	if err := yaml.Unmarshal(yamlByt, &comp); err != nil {
-		parsedImageLines <- parsedImageLine{err: err}
+		parsedImageLines <- parsedImageLine{fileName: fileName, err: err}
 	}
 	for _, service := range comp.Services {
 		if service.BuildWrapper == nil {
@@ -98,7 +98,7 @@ func parseDockerfile(fileName string, composeArgs map[string]string, parsedImage
 	}
 	dockerfile, err := os.Open(fileName)
 	if err != nil {
-		parsedImageLines <- parsedImageLine{err: err}
+		parsedImageLines <- parsedImageLine{fileName: fileName, err: err}
 		return
 	}
 	defer dockerfile.Close()

@@ -1,28 +1,17 @@
 package generate
 
 import (
-	"os"
+	"github.com/joho/godotenv"
 	"path/filepath"
 	"sync"
 	"testing"
 )
 
 func TestParseComposeFile(t *testing.T) {
-	const (
-		SIMPLE3IMAGE       = "simple3image"
-		SIMPLE3BUILD       = "simple3build"
-		VERBOSE4IMAGE      = "verbose4image"
-		VERBOSE4CONTEXT    = "verbose4build"
-		VERBOSE4DOCKERFILE = "Dockerfile-dev"
-	)
-	os.Setenv("SIMPLE3IMAGE", SIMPLE3IMAGE)
-	os.Setenv("SIMPLE3BUILD", SIMPLE3BUILD)
-	os.Setenv("VERBOSE4IMAGE", VERBOSE4IMAGE)
-	os.Setenv("VERBOSE4CONTEXT", VERBOSE4CONTEXT)
-	os.Setenv("VERBOSE4DOCKERFILE", VERBOSE4DOCKERFILE)
-
 	baseDir := filepath.Join("testassets", "parse", "composefile")
-
+	if err := godotenv.Load(filepath.Join(baseDir, ".env")); err != nil {
+		t.Errorf("Unable to load dotenv before running test.")
+	}
 	results := map[parsedImageLine]bool{
 		{line: "busybox", fileName: filepath.Join(baseDir, "docker-compose.yml"), err: nil}:              false,
 		{line: "busybox", fileName: filepath.Join(baseDir, "simple2build", "Dockerfile"), err: nil}:      false,
@@ -44,7 +33,7 @@ func TestParseComposeFile(t *testing.T) {
 	var i int
 	for imLine := range parsedImageLines {
 		if imLine.err != nil {
-			t.Errorf("Failed to parse: '%+v'.", imLine)
+			t.Errorf("Failed to parse filename: '%s' err: '%s'.", imLine.fileName, imLine.err)
 		}
 		if _, ok := results[imLine]; !ok {
 			t.Errorf("parsedImageResult: '%+v' not in results: '%+v'.", imLine, results)
