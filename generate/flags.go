@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/joho/godotenv"
 	"os"
+	"path/filepath"
 )
 
 type stringSliceFlag []string
@@ -52,24 +53,21 @@ func NewFlags(cmdLineArgs []string) (*Flags, error) {
 	if outfile == "" {
 		return nil, errors.New("Outfile cannot be empty.")
 	}
-	fi, err := os.Stat(envFile)
+	_, err := os.Stat(envFile)
 	if err != nil && envFile != ".env" {
 		return nil, err
 	}
 	if err == nil {
-		if mode := fi.Mode(); mode.IsRegular() {
-			if err := godotenv.Load(envFile); err != nil {
-				return nil, err
-			}
-		}
-	}
-	if configFile != "" {
-		if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		if err := godotenv.Load(envFile); err != nil {
 			return nil, err
 		}
 	}
-	if configFile == "" {
-		defaultConfig := os.ExpandEnv("$HOME") + "/.docker/config.json"
+	if configFile != "" {
+		if _, err := os.Stat(configFile); err != nil {
+			return nil, err
+		}
+	} else if homeDir, err := os.UserHomeDir(); err == nil {
+		defaultConfig := filepath.Join(homeDir, ".docker", "config.json")
 		if _, err := os.Stat(defaultConfig); err == nil {
 			configFile = defaultConfig
 		}

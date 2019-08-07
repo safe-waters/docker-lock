@@ -25,6 +25,7 @@ type config struct {
 			Auth string `json:"auth"`
 		} `json:"https://index.docker.io/v1/"`
 	} `json:"auths"`
+	CredStore string `json:"credsStore"`
 }
 
 func (w *DockerWrapper) GetDigest(name string, tag string) (string, error) {
@@ -108,7 +109,10 @@ func (w *DockerWrapper) getAuthCredentials() (string, string, error) {
 	}
 	auth := strings.Split(string(authByt), ":")
 	if len(auth) != 2 {
-		return "", "", fmt.Errorf("Unable to get username and password from config file '%s'.", w.ConfigFile)
+		if conf.CredStore == "" {
+			return "", "", fmt.Errorf("Unable to get username and password from config file '%s'.", w.ConfigFile)
+		}
+		return "", "", nil
 	}
 	username = auth[0]
 	password = auth[1]
