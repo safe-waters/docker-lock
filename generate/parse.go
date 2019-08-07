@@ -3,12 +3,13 @@ package generate
 import (
 	"bufio"
 	"errors"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"sync"
+
+	"gopkg.in/yaml.v2"
 )
 
 type parsedImageLine struct {
@@ -72,15 +73,15 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, 
 		}
 		switch build := service.BuildWrapper.Build.(type) {
 		case simple:
-			dockerfile := path.Join(path.Dir(fileName), os.ExpandEnv(string(build)), "Dockerfile")
+			dockerfile := filepath.Join(filepath.Dir(fileName), os.ExpandEnv(string(build)), "Dockerfile")
 			parseDockerfile(dockerfile, nil, parsedImageLines, nil)
 		case verbose:
-			context := path.Join(path.Dir(fileName), os.ExpandEnv(build.Context))
+			context := filepath.Join(filepath.Dir(fileName), os.ExpandEnv(build.Context))
 			dockerfile := os.ExpandEnv(build.Dockerfile)
 			if dockerfile == "" {
-				dockerfile = path.Join(context, "Dockerfile")
+				dockerfile = filepath.Join(context, "Dockerfile")
 			} else {
-				dockerfile = path.Join(context, dockerfile)
+				dockerfile = filepath.Join(context, dockerfile)
 			}
 			buildArgs := make(map[string]string)
 			for _, arg := range build.Args {
