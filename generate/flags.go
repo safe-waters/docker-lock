@@ -54,14 +54,12 @@ func NewFlags(cmdLineArgs []string) (*Flags, error) {
 	command.StringVar(&configFile, "c", "", "Path to config file for auth credentials.")
 	command.StringVar(&envFile, "e", ".env", "Path to .env file.")
 	command.Parse(cmdLineArgs)
-	_, err := os.Stat(envFile)
-	if err != nil && envFile != ".env" {
-		return nil, err
-	}
-	if err == nil {
-		if err := godotenv.Load(envFile); err != nil {
+	if _, err := os.Stat(envFile); err != nil {
+		if envFile != ".env" {
 			return nil, err
 		}
+	} else if err := godotenv.Load(envFile); err != nil {
+		return nil, err
 	}
 	if configFile != "" {
 		if _, err := os.Stat(configFile); err != nil {
