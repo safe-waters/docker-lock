@@ -38,11 +38,11 @@ func (i Image) String() string {
 }
 
 func NewGenerator(flags *Flags) (*Generator, error) {
-	dockerfiles, err := findDockerfiles(flags)
+	dockerfiles, err := collectDockerfiles(flags)
 	if err != nil {
 		return nil, err
 	}
-	composefiles, err := findComposefiles(flags)
+	composefiles, err := collectComposefiles(flags)
 	if err != nil {
 		return nil, err
 	}

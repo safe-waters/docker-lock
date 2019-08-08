@@ -27,8 +27,14 @@ func TestDefaults(t *testing.T) {
 	if f.Recursive {
 		t.Fatal("Got true for recursive. Expected false.")
 	}
+	if f.RecursiveDir != "." {
+		t.Fatalf("Got '%s'. Expected '.'.", f.RecursiveDir)
+	}
 	if f.ComposeRecursive {
 		t.Fatal("Got true for compose recursive. Expected false.")
+	}
+	if f.ComposeRecursiveDir != "." {
+		t.Fatalf("Got '%s'. Expected '.'.", f.ComposeRecursiveDir)
 	}
 	if f.Outfile != "docker-lock.json" {
 		t.Fatalf("Got '%s' outfile. Expected 'docker-lock.json'.", f.Outfile)
@@ -58,16 +64,8 @@ func TestOutFile(t *testing.T) {
 	}
 }
 
-func TestOutFileEmpty(t *testing.T) {
-	outFile := ""
-	args := []string{"-o", outFile}
-	if _, err := NewFlags(args); err == nil {
-		t.Fatal("Should fail when OutFile is empty.")
-	}
-}
-
 func TestConfigFile(t *testing.T) {
-	configFile := "testdata/flags/config.json"
+	configFile := filepath.Join("testdata", "flags", "config.json")
 	args := []string{"-c", configFile}
 	f, err := NewFlags(args)
 	if err != nil {
@@ -79,7 +77,7 @@ func TestConfigFile(t *testing.T) {
 }
 
 func TestEnvFile(t *testing.T) {
-	envFile := "testdata/flags/.env"
+	envFile := filepath.Join("testdata", "flags", ".env")
 	args := []string{"-e", envFile}
 	f, err := NewFlags(args)
 	if err != nil {
@@ -90,11 +88,11 @@ func TestEnvFile(t *testing.T) {
 	}
 }
 
-func TestEnvFileEmpty(t *testing.T) {
-	envFile := ""
+func TestFaultyEnvFile(t *testing.T) {
+	envFile := filepath.Join("testdata", "flags", ".env2")
 	args := []string{"-e", envFile}
 	_, err := NewFlags(args)
 	if err == nil {
-		t.Fatal("Should fail when .env is empty.")
+		t.Fatal("Faulty env file should fail.")
 	}
 }

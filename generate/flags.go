@@ -1,7 +1,6 @@
 package generate
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/joho/godotenv"
@@ -21,21 +20,24 @@ func (s *stringSliceFlag) Set(filePath string) error {
 }
 
 type Flags struct {
-	Dockerfiles      []string
-	Composefiles     []string
-	Globs            []string
-	ComposeGlobs     []string
-	Recursive        bool
-	ComposeRecursive bool
-	Outfile          string
-	ConfigFile       string
-	EnvFile          string
+	Dockerfiles         []string
+	Composefiles        []string
+	Globs               []string
+	ComposeGlobs        []string
+	Recursive           bool
+	RecursiveDir        string
+	ComposeRecursive    bool
+	ComposeRecursiveDir string
+	Outfile             string
+	ConfigFile          string
+	EnvFile             string
 }
 
 func NewFlags(cmdLineArgs []string) (*Flags, error) {
 	var dockerfiles, composefiles stringSliceFlag
 	var globs, composeGlobs stringSliceFlag
 	var recursive, composeRecursive bool
+	var recursiveDir, composeRecursiveDir string
 	var outfile string
 	var configFile string
 	var envFile string
@@ -45,14 +47,13 @@ func NewFlags(cmdLineArgs []string) (*Flags, error) {
 	command.Var(&globs, "g", "Glob pattern to select Dockerfiles from current directory.")
 	command.Var(&composeGlobs, "cg", "Glob pattern to select docker-compose files from current directory.")
 	command.BoolVar(&recursive, "r", false, "recursively collect Dockerfiles from current directory.")
+	command.StringVar(&recursiveDir, "rd", ".", "dir to start recursive walk to collect Dockerfiles.")
 	command.BoolVar(&composeRecursive, "cr", false, "recursively collect docker-compose files from current directory.")
+	command.StringVar(&composeRecursiveDir, "crd", ".", "dir to start recursive walk to collect docker-compose files.")
 	command.StringVar(&outfile, "o", "docker-lock.json", "Path to save Lockfile from current directory.")
 	command.StringVar(&configFile, "c", "", "Path to config file for auth credentials.")
 	command.StringVar(&envFile, "e", ".env", "Path to .env file.")
 	command.Parse(cmdLineArgs)
-	if outfile == "" {
-		return nil, errors.New("Outfile cannot be empty.")
-	}
 	_, err := os.Stat(envFile)
 	if err != nil && envFile != ".env" {
 		return nil, err
@@ -73,13 +74,15 @@ func NewFlags(cmdLineArgs []string) (*Flags, error) {
 		}
 	}
 	return &Flags{Dockerfiles: []string(dockerfiles),
-		Composefiles:     []string(composefiles),
-		Globs:            []string(globs),
-		ComposeGlobs:     []string(composeGlobs),
-		Recursive:        recursive,
-		ComposeRecursive: composeRecursive,
-		Outfile:          outfile,
-		ConfigFile:       configFile,
-		EnvFile:          envFile,
+		Composefiles:        []string(composefiles),
+		Globs:               []string(globs),
+		ComposeGlobs:        []string(composeGlobs),
+		Recursive:           recursive,
+		RecursiveDir:        recursiveDir,
+		ComposeRecursive:    composeRecursive,
+		ComposeRecursiveDir: composeRecursiveDir,
+		Outfile:             outfile,
+		ConfigFile:          configFile,
+		EnvFile:             envFile,
 	}, nil
 }
