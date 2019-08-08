@@ -76,12 +76,12 @@ If you are using docker >= 19.03, `docker-lock` should be installed as a cli-plu
 * `cd docker-lock`
 * `mkdir -p ~/.docker/cli-plugins`
 * `go get`
-* `go build -o ~/.docker/cli-plugins/docker-lock`
+* `go build -o ~/.docker/cli-plugins/docker-lock ./cmd/docker-lock`
 
 Typing the command, `docker`, should reveal the `lock` subcommand in the list of possible subcommands.
 
 ### standalone tool
-* `go get github.com/michaelperel/docker-lock`
+* `go get github.com/michaelperel/docker-lock/cmd/docker-lock`
 
 `docker-lock` should appear in the `bin/` in your `GOPATH`.
 

@@ -1,14 +1,15 @@
 package generate
 
 import (
-	"github.com/joho/godotenv"
 	"path/filepath"
 	"sync"
 	"testing"
+
+	"github.com/joho/godotenv"
 )
 
 func TestParseComposeFile(t *testing.T) {
-	baseDir := filepath.Join("testassets", "parse", "composefile")
+	baseDir := filepath.Join("testdata", "parse", "composefile")
 	if err := godotenv.Load(filepath.Join(baseDir, ".env")); err != nil {
 		t.Errorf("Unable to load dotenv before running test.")
 	}
@@ -54,7 +55,7 @@ func TestParseComposeFile(t *testing.T) {
 func TestParseDockerfileOverride(t *testing.T) {
 	// ARG in Dockerfile, also in composefile.
 	// composefile should override.
-	baseDir := filepath.Join("testassets", "parse", "dockerfile")
+	baseDir := filepath.Join("testdata", "parse", "dockerfile")
 	dockerfile := filepath.Join(baseDir, "override", "Dockerfile")
 	composeArgs := map[string]string{"IMAGE_NAME": "debian"}
 	parsedImageLines := make(chan parsedImageLine)
@@ -68,7 +69,7 @@ func TestParseDockerfileOverride(t *testing.T) {
 func TestParseDockerfileEmpty(t *testing.T) {
 	// Empty ARG in Dockerfile, definition in composefile.
 	// composefile should override.
-	baseDir := filepath.Join("testassets", "parse", "dockerfile")
+	baseDir := filepath.Join("testdata", "parse", "dockerfile")
 	dockerfile := filepath.Join(baseDir, "empty", "Dockerfile")
 	composeArgs := map[string]string{"IMAGE_NAME": "debian"}
 	parsedImageLines := make(chan parsedImageLine)
@@ -82,7 +83,7 @@ func TestParseDockerfileEmpty(t *testing.T) {
 func TestParseDockerfileNoArg(t *testing.T) {
 	// ARG defined in Dockerfile, not in composefile.
 	// Should behave as though no composefile existed.
-	baseDir := filepath.Join("testassets", "parse", "dockerfile")
+	baseDir := filepath.Join("testdata", "parse", "dockerfile")
 	dockerfile := filepath.Join(baseDir, "noarg", "Dockerfile")
 	parsedImageLines := make(chan parsedImageLine)
 	go parseDockerfile(dockerfile, nil, parsedImageLines, nil)
@@ -96,7 +97,7 @@ func TestParseDockerfileNoArg(t *testing.T) {
 func TestParseDockerfileLocalArg(t *testing.T) {
 	// ARG defined before FROM (aka global arg) should not
 	// be overridden by ARG defined after FROM (aka local arg)
-	baseDir := filepath.Join("testassets", "parse", "dockerfile")
+	baseDir := filepath.Join("testdata", "parse", "dockerfile")
 	dockerfile := filepath.Join(baseDir, "localarg", "Dockerfile")
 	parsedImageLines := make(chan parsedImageLine)
 	go parseDockerfile(dockerfile, nil, parsedImageLines, nil)
@@ -116,7 +117,7 @@ func TestParseDockerfileBuildStage(t *testing.T) {
 	// FROM busybox AS busy
 	// FROM busy AS anotherbusy
 	// should only parse 'busybox', the second field in the first line.
-	baseDir := filepath.Join("testassets", "parse", "dockerfile")
+	baseDir := filepath.Join("testdata", "parse", "dockerfile")
 	dockerfile := filepath.Join(baseDir, "buildstage", "Dockerfile")
 	parsedImageLines := make(chan parsedImageLine)
 	go parseDockerfile(dockerfile, nil, parsedImageLines, nil)

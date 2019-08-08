@@ -1,15 +1,27 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/michaelperel/docker-lock/generate"
 	"github.com/michaelperel/docker-lock/registry"
 	"github.com/michaelperel/docker-lock/verify"
-	"os"
 )
 
+type metadata struct {
+	SchemaVersion    string
+	Vendor           string
+	Version          string
+	ShortDescription string
+}
+
 func main() {
+	if len(os.Args) <= 1 {
+		handleError(errors.New("Expected 'lock' subcommand."))
+	}
 	// Boilerplate required by every cli-plugin to show up in the 'docker' command.
 	if os.Args[1] == "docker-cli-plugin-metadata" {
 		metadata, err := getMetadata()
@@ -45,6 +57,21 @@ func main() {
 	default:
 		handleError(errors.New("Expected 'generate' or 'verify' subcommands."))
 	}
+}
+
+func getMetadata() (string, error) {
+	m := metadata{
+		SchemaVersion:    "0.1.0",
+		Vendor:           "https://github.com/michaelperel/docker-lock",
+		Version:          "v0.1.0",
+		ShortDescription: "Generate and validate lock files for Docker",
+	}
+	var jsonData []byte
+	jsonData, err := json.Marshal(m)
+	if err != nil {
+		return "", err
+	}
+	return string(jsonData), nil
 }
 
 func handleError(err error) {
