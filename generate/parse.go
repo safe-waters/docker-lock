@@ -64,6 +64,7 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, 
 	var comp compose
 	if err := yaml.Unmarshal(yamlByt, &comp); err != nil {
 		parsedImageLines <- parsedImageLine{fileName: fileName, err: err}
+		return
 	}
 	for _, service := range comp.Services {
 		if service.BuildWrapper == nil {
