@@ -13,67 +13,94 @@ import (
 
 type Verifier struct {
 	*generate.Generator
+	*generate.Lockfile
 	outfile string
 }
 
 func NewVerifier(flags *Flags) (*Verifier, error) {
-	lockfileByt, err := ioutil.ReadFile(flags.Outfile)
+	lByt, err := ioutil.ReadFile(flags.Outfile)
 	if err != nil {
 		return nil, err
 	}
-	var lockfile generate.Lockfile
-	if err := json.Unmarshal(lockfileByt, &lockfile); err != nil {
+	var lFile generate.Lockfile
+	if err := json.Unmarshal(lByt, &lFile); err != nil {
 		return nil, err
 	}
-	for i := range lockfile.Generator.Dockerfiles {
-		lockfile.Generator.Dockerfiles[i] = filepath.FromSlash(lockfile.Generator.Dockerfiles[i])
+	var i int
+	cFpaths := make([]string, len(lFile.ComposefileImages))
+	for fpath := range lFile.ComposefileImages {
+		cFpaths[i] = filepath.FromSlash(fpath)
+		i++
 	}
-	for i := range lockfile.Generator.Composefiles {
-		lockfile.Generator.Composefiles[i] = filepath.FromSlash(lockfile.Generator.Composefiles[i])
+	i = 0
+	dFpaths := make([]string, len(lFile.DockerfileImages))
+	for fpath := range lFile.DockerfileImages {
+		dFpaths[i] = filepath.FromSlash(fpath)
+		i++
 	}
-	return &Verifier{Generator: lockfile.Generator, outfile: flags.Outfile}, nil
+	g := &generate.Generator{Dockerfiles: dFpaths, Composefiles: cFpaths}
+	return &Verifier{Generator: g, Lockfile: &lFile, outfile: flags.Outfile}, nil
 }
 
 func (v *Verifier) VerifyLockfile(wrapperManager *registry.WrapperManager) error {
-	lockfileBytes, err := ioutil.ReadFile(v.outfile)
+	lByt, err := v.GenerateLockfileBytes(wrapperManager)
 	if err != nil {
 		return err
 	}
-	verificationBytes, err := v.GenerateLockfileBytes(wrapperManager)
-	if err != nil {
+	var lFile generate.Lockfile
+	if err := json.Unmarshal(lByt, &lFile); err != nil {
 		return err
 	}
-	var existingLockfile, verificationLockfile generate.Lockfile
-	if err := json.Unmarshal(lockfileBytes, &existingLockfile); err != nil {
+	err = errors.New("Failed to verify.")
+	if len(v.DockerfileImages) != len(lFile.DockerfileImages) {
+		err = fmt.Errorf("%s Found %d Dockerfiles. Expected %d.",
+			err,
+			len(lFile.DockerfileImages),
+			len(v.DockerfileImages))
 		return err
 	}
-	if err := json.Unmarshal(verificationBytes, &verificationLockfile); err != nil {
+	if len(v.ComposefileImages) != len(lFile.ComposefileImages) {
+		err = fmt.Errorf("%s Found %d Composefiles. Expected %d.",
+			err,
+			len(lFile.ComposefileImages),
+			len(v.ComposefileImages))
 		return err
 	}
-	errMsg := errors.New("Failed to verify.")
-	if len(existingLockfile.Images) != len(verificationLockfile.Images) {
-		errMsg = fmt.Errorf("%s Found %d files. Expected %d files.",
-			errMsg,
-			len(verificationLockfile.Images),
-			len(existingLockfile.Images))
-		return errMsg
-	}
-	for fileName := range existingLockfile.Images {
-		if len(existingLockfile.Images[fileName]) != len(verificationLockfile.Images[fileName]) {
-			errMsg = fmt.Errorf("%s Found %d images in file %s. Expected %d files.",
-				errMsg,
-				len(verificationLockfile.Images[fileName]),
-				fileName,
-				len(existingLockfile.Images[fileName]))
-			return errMsg
+	for dFpath := range v.DockerfileImages {
+		if len(v.DockerfileImages[dFpath]) != len(lFile.DockerfileImages[dFpath]) {
+			err = fmt.Errorf("%s Found %d images in file %s. Expected %d.",
+				err,
+				len(lFile.DockerfileImages[dFpath]),
+				dFpath,
+				len(v.DockerfileImages[dFpath]))
+			return err
 		}
-		for i := range existingLockfile.Images[fileName] {
-			if existingLockfile.Images[fileName][i] != verificationLockfile.Images[fileName][i] {
-				errMsg = fmt.Errorf("%s Found image:\n%+v\nExpected image:\n%+v",
-					errMsg,
-					verificationLockfile.Images[fileName][i],
-					existingLockfile.Images[fileName][i])
-				return errMsg
+		for i := range v.DockerfileImages[dFpath] {
+			if v.DockerfileImages[dFpath][i] != lFile.DockerfileImages[dFpath][i] {
+				err = fmt.Errorf("%s Found image:\n%+v\nExpected image:\n%+v",
+					err,
+					lFile.DockerfileImages[dFpath][i],
+					v.DockerfileImages[dFpath][i])
+				return err
+			}
+		}
+	}
+	for cFpath := range v.ComposefileImages {
+		if len(v.ComposefileImages[cFpath]) != len(lFile.ComposefileImages[cFpath]) {
+			err = fmt.Errorf("%s Found %d images in file %s. Expected %d.",
+				err,
+				len(lFile.ComposefileImages[cFpath]),
+				cFpath,
+				len(v.ComposefileImages[cFpath]))
+			return err
+		}
+		for i := range v.ComposefileImages[cFpath] {
+			if v.ComposefileImages[cFpath][i] != lFile.ComposefileImages[cFpath][i] {
+				err = fmt.Errorf("%s Found image:\n%+v\nExpected image:\n%+v",
+					err,
+					lFile.ComposefileImages[cFpath][i],
+					v.ComposefileImages[cFpath][i])
+				return err
 			}
 		}
 	}

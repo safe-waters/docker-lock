@@ -13,10 +13,12 @@ import (
 )
 
 type parsedImageLine struct {
-	line     string
-	fileName string
-	position int
-	err      error
+	line            string
+	dockerfileName  string
+	composefileName string
+	position        int
+	serviceName     string
+	err             error
 }
 
 type compose struct {
@@ -59,24 +61,24 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, 
 	}
 	yamlByt, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		parsedImageLines <- parsedImageLine{fileName: fileName, err: err}
+		parsedImageLines <- parsedImageLine{composefileName: fileName, err: err}
 		return
 	}
 	var comp compose
 	if err := yaml.Unmarshal(yamlByt, &comp); err != nil {
-		parsedImageLines <- parsedImageLine{fileName: fileName, err: err}
+		parsedImageLines <- parsedImageLine{composefileName: fileName, err: err}
 		return
 	}
-	for _, service := range comp.Services {
+	for serviceName, service := range comp.Services {
 		if service.BuildWrapper == nil {
 			line := os.ExpandEnv(service.ImageName)
-			parsedImageLines <- parsedImageLine{line: line, fileName: fileName}
+			parsedImageLines <- parsedImageLine{line: line, composefileName: fileName, serviceName: serviceName}
 			continue
 		}
 		switch build := service.BuildWrapper.Build.(type) {
 		case simple:
 			dockerfile := filepath.Join(filepath.Dir(fileName), os.ExpandEnv(string(build)), "Dockerfile")
-			parseDockerfile(dockerfile, nil, parsedImageLines, nil)
+			parseDockerfile(dockerfile, nil, fileName, serviceName, parsedImageLines, nil)
 		case verbose:
 			context := filepath.Join(filepath.Dir(fileName), os.ExpandEnv(build.Context))
 			dockerfile := os.ExpandEnv(build.Dockerfile)
@@ -90,18 +92,25 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, 
 				kv := strings.Split(os.ExpandEnv(arg), "=")
 				buildArgs[kv[0]] = kv[1]
 			}
-			parseDockerfile(dockerfile, buildArgs, parsedImageLines, nil)
+			parseDockerfile(dockerfile, buildArgs, fileName, serviceName, parsedImageLines, nil)
 		}
 	}
 }
 
-func parseDockerfile(fileName string, composeArgs map[string]string, parsedImageLines chan<- parsedImageLine, wg *sync.WaitGroup) {
+func parseDockerfile(dockerfileName string,
+	composeArgs map[string]string,
+	composefileName string,
+	serviceName string,
+	parsedImageLines chan<- parsedImageLine, wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()
 	}
-	dockerfile, err := os.Open(fileName)
+	dockerfile, err := os.Open(dockerfileName)
 	if err != nil {
-		parsedImageLines <- parsedImageLine{fileName: fileName, err: err}
+		parsedImageLines <- parsedImageLine{dockerfileName: dockerfileName,
+			composefileName: composefileName,
+			serviceName:     serviceName,
+			err:             err}
 		return
 	}
 	defer dockerfile.Close()
@@ -132,7 +141,11 @@ func parseDockerfile(fileName string, composeArgs map[string]string, parsedImage
 				globalContext = false
 				line := expandField(fields[1], globalArgs, composeArgs)
 				if !stageNames[line] {
-					parsedImageLines <- parsedImageLine{line: line, fileName: fileName, position: position}
+					parsedImageLines <- parsedImageLine{line: line,
+						dockerfileName:  dockerfileName,
+						composefileName: composefileName,
+						serviceName:     serviceName,
+						position:        position}
 					position++
 				}
 				// FROM <image> AS <stage>

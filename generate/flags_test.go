@@ -60,7 +60,7 @@ func TestOutFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	if f.Outfile != outFile {
-		t.Errorf("Got '%s'. Expected '%s'", f.Outfile, outFile)
+		t.Fatalf("Got '%s'. Expected '%s'", f.Outfile, outFile)
 	}
 }
 
@@ -72,7 +72,7 @@ func TestConfigFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	if f.ConfigFile != configFile {
-		t.Errorf("Got '%s'. Expected '%s'.", f.ConfigFile, configFile)
+		t.Fatalf("Got '%s'. Expected '%s'.", f.ConfigFile, configFile)
 	}
 }
 
@@ -84,7 +84,7 @@ func TestEnvFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	if f.EnvFile != envFile {
-		t.Errorf("Got '%s'. Expected '%s'.", f.EnvFile, envFile)
+		t.Fatalf("Got '%s'. Expected '%s'.", f.EnvFile, envFile)
 	}
 }
 

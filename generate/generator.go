@@ -19,21 +19,35 @@ type Generator struct {
 }
 
 type Image struct {
-	Name     string `json:"name"`
-	Tag      string `json:"tag"`
-	Digest   string `json:"digest"`
+	Name   string `json:"name"`
+	Tag    string `json:"tag"`
+	Digest string `json:"digest"`
+}
+
+type DockerfileImage struct {
+	Image
 	position int
 }
 
+type ComposefileImage struct {
+	Image
+	ServiceName string `json:"serviceName"`
+	Dockerfile  string `json:"dockerfile"`
+	position    int
+}
+
 type Lockfile struct {
-	Generator *Generator
-	Images    map[string][]Image
+	DockerfileImages  map[string][]DockerfileImage  `json:"dockerfiles"`
+	ComposefileImages map[string][]ComposefileImage `json:"composefiles"`
 }
 
 type imageResult struct {
-	image    Image
-	fileName string
-	err      error
+	image           Image
+	dockerfileName  string
+	composefileName string
+	position        int
+	serviceName     string
+	err             error
 }
 
 func (i Image) String() string {
@@ -78,24 +92,26 @@ func (g *Generator) GenerateLockfile(wrapperManager *registry.WrapperManager) er
 }
 
 func (g *Generator) GenerateLockfileBytes(wrapperManager *registry.WrapperManager) ([]byte, error) {
-	images, err := g.getImages(wrapperManager)
-	slashImages := make(map[string][]Image)
-	for fileName := range images {
-		slashImages[filepath.ToSlash(fileName)] = images[fileName]
-	}
+	dImages, err := g.getDockerfileImages(wrapperManager)
 	if err != nil {
 		return nil, err
 	}
-	slashGen := *g
-	slashGen.Dockerfiles = make([]string, len(g.Dockerfiles))
-	slashGen.Composefiles = make([]string, len(g.Composefiles))
-	for i := range g.Dockerfiles {
-		slashGen.Dockerfiles[i] = filepath.ToSlash(g.Dockerfiles[i])
+	dSlashImages := make(map[string][]DockerfileImage)
+	for fileName := range dImages {
+		dSlashImages[filepath.ToSlash(fileName)] = dImages[fileName]
 	}
-	for i := range g.Composefiles {
-		slashGen.Composefiles[i] = filepath.ToSlash(g.Composefiles[i])
+	cImages, err := g.getComposefileImages(wrapperManager)
+	if err != nil {
+		return nil, err
 	}
-	lockfile := Lockfile{Generator: &slashGen, Images: slashImages}
+	cSlashImages := make(map[string][]ComposefileImage)
+	for fileName := range cImages {
+		for i := range cImages[fileName] {
+			cImages[fileName][i].Dockerfile = filepath.ToSlash(cImages[fileName][i].Dockerfile)
+		}
+		cSlashImages[filepath.ToSlash(fileName)] = cImages[fileName]
+	}
+	lockfile := Lockfile{DockerfileImages: dSlashImages, ComposefileImages: cSlashImages}
 	lockfileBytes, err := json.MarshalIndent(lockfile, "", "\t")
 	if err != nil {
 		return nil, err
@@ -103,21 +119,15 @@ func (g *Generator) GenerateLockfileBytes(wrapperManager *registry.WrapperManage
 	return lockfileBytes, nil
 }
 
-func (g *Generator) getImages(wrapperManager *registry.WrapperManager) (map[string][]Image, error) {
+func (g *Generator) getDockerfileImages(wrapperManager *registry.WrapperManager) (map[string][]DockerfileImage, error) {
 	parsedImageLines := make(chan parsedImageLine)
-	var dwg sync.WaitGroup
+	var wg sync.WaitGroup
 	for _, fileName := range g.Dockerfiles {
-		dwg.Add(1)
-		go parseDockerfile(fileName, nil, parsedImageLines, &dwg)
-	}
-	var cwg sync.WaitGroup
-	for _, fileName := range g.Composefiles {
-		cwg.Add(1)
-		go parseComposefile(fileName, parsedImageLines, &cwg)
+		wg.Add(1)
+		go parseDockerfile(fileName, nil, "", "", parsedImageLines, &wg)
 	}
 	go func() {
-		dwg.Wait()
-		cwg.Wait()
+		wg.Wait()
 		close(parsedImageLines)
 	}()
 	imageResults := make(chan imageResult)
@@ -129,22 +139,74 @@ func (g *Generator) getImages(wrapperManager *registry.WrapperManager) (map[stri
 		numImages++
 		go g.getImage(parsedImageLine, wrapperManager, imageResults)
 	}
-	images := make(map[string][]Image)
+	images := make(map[string][]DockerfileImage)
 	for i := 0; i < numImages; i++ {
 		result := <-imageResults
 		if result.err != nil {
 			return nil, result.err
 		}
-		_, ok := images[result.fileName]
+		dImage := DockerfileImage{Image: result.image, position: result.position}
+		_, ok := images[result.dockerfileName]
 		if ok {
-			images[result.fileName] = append(images[result.fileName], result.image)
+			images[result.dockerfileName] = append(images[result.dockerfileName], dImage)
 		} else {
-			images[result.fileName] = []Image{result.image}
+			images[result.dockerfileName] = []DockerfileImage{dImage}
 		}
 	}
 	for _, imageSlice := range images {
 		sort.Slice(imageSlice, func(i, j int) bool {
 			return imageSlice[i].position < imageSlice[j].position
+		})
+	}
+	return images, nil
+}
+
+func (g *Generator) getComposefileImages(wrapperManager *registry.WrapperManager) (map[string][]ComposefileImage, error) {
+	parsedImageLines := make(chan parsedImageLine)
+	var wg sync.WaitGroup
+	for _, fileName := range g.Composefiles {
+		wg.Add(1)
+		go parseComposefile(fileName, parsedImageLines, &wg)
+	}
+	go func() {
+		wg.Wait()
+		close(parsedImageLines)
+	}()
+	imageResults := make(chan imageResult)
+	var numImages int
+	for parsedImageLine := range parsedImageLines {
+		if parsedImageLine.err != nil {
+			return nil, parsedImageLine.err
+		}
+		numImages++
+		go g.getImage(parsedImageLine, wrapperManager, imageResults)
+	}
+	images := make(map[string][]ComposefileImage)
+	for i := 0; i < numImages; i++ {
+		result := <-imageResults
+		if result.err != nil {
+			return nil, result.err
+		}
+		cImage := ComposefileImage{Image: result.image,
+			ServiceName: result.serviceName,
+			Dockerfile:  result.dockerfileName,
+			position:    result.position}
+		_, ok := images[result.composefileName]
+		if ok {
+			images[result.composefileName] = append(images[result.composefileName], cImage)
+		} else {
+			images[result.composefileName] = []ComposefileImage{cImage}
+		}
+	}
+	for _, imageSlice := range images {
+		sort.Slice(imageSlice, func(i, j int) bool {
+			if imageSlice[i].ServiceName != imageSlice[j].ServiceName {
+				return imageSlice[i].ServiceName < imageSlice[j].ServiceName
+			} else if imageSlice[i].Dockerfile != imageSlice[i].Dockerfile {
+				return imageSlice[i].Dockerfile < imageSlice[j].Dockerfile
+			} else {
+				return imageSlice[i].position < imageSlice[j].position
+			}
 		})
 	}
 	return images, nil
@@ -169,8 +231,11 @@ func (g *Generator) getImage(imLine parsedImageLine, wrapperManager *registry.Wr
 		name := line[:tagSeparator]
 		tag := line[tagSeparator+1 : digestSeparator]
 		digest := line[digestSeparator+1+len("sha256:"):]
-		imageResults <- imageResult{image: Image{Name: name, Tag: tag, Digest: digest, position: imLine.position},
-			fileName: imLine.fileName}
+		imageResults <- imageResult{image: Image{Name: name, Tag: tag, Digest: digest},
+			position:        imLine.position,
+			serviceName:     imLine.serviceName,
+			dockerfileName:  imLine.dockerfileName,
+			composefileName: imLine.composefileName}
 		return
 	}
 	// ubuntu:18.04
@@ -180,20 +245,26 @@ func (g *Generator) getImage(imLine parsedImageLine, wrapperManager *registry.Wr
 		wrapper := wrapperManager.GetWrapper(name)
 		digest, err := wrapper.GetDigest(name, tag)
 		if err != nil {
-			err := fmt.Errorf("%s. From line: '%s'. From file: '%s'.", err, line, imLine.fileName)
+			err := fmt.Errorf("%s. From line: '%s'. From file: '%s'.", err, line, imLine.dockerfileName)
 			imageResults <- imageResult{err: err}
 			return
 		}
-		imageResults <- imageResult{image: Image{Name: name, Tag: tag, Digest: digest, position: imLine.position},
-			fileName: imLine.fileName}
+		imageResults <- imageResult{image: Image{Name: name, Tag: tag, Digest: digest},
+			position:        imLine.position,
+			serviceName:     imLine.serviceName,
+			composefileName: imLine.composefileName,
+			dockerfileName:  imLine.dockerfileName}
 		return
 	}
 	// ubuntu@sha256:9b1702dcfe32c873a770a32cfd306dd7fc1c4fd134adfb783db68defc8894b3c
 	if tagSeparator == -1 && digestSeparator != -1 {
 		name := line[:digestSeparator]
 		digest := line[digestSeparator+1+len("sha256:"):]
-		imageResults <- imageResult{image: Image{Name: name, Digest: digest, position: imLine.position},
-			fileName: imLine.fileName}
+		imageResults <- imageResult{image: Image{Name: name, Digest: digest},
+			position:        imLine.position,
+			serviceName:     imLine.serviceName,
+			composefileName: imLine.composefileName,
+			dockerfileName:  imLine.dockerfileName}
 		return
 	}
 	// ubuntu
@@ -203,12 +274,15 @@ func (g *Generator) getImage(imLine parsedImageLine, wrapperManager *registry.Wr
 		wrapper := wrapperManager.GetWrapper(name)
 		digest, err := wrapper.GetDigest(name, tag)
 		if err != nil {
-			err := fmt.Errorf("%s. From line: '%s'. From file: '%s'.", err, line, imLine.fileName)
+			err := fmt.Errorf("%s. From line: '%s'. From file: '%s'.", err, line, imLine.dockerfileName)
 			imageResults <- imageResult{err: err}
 			return
 		}
-		imageResults <- imageResult{image: Image{Name: name, Tag: tag, Digest: digest, position: imLine.position},
-			fileName: imLine.fileName}
+		imageResults <- imageResult{image: Image{Name: name, Tag: tag, Digest: digest},
+			position:        imLine.position,
+			serviceName:     imLine.serviceName,
+			dockerfileName:  imLine.dockerfileName,
+			composefileName: imLine.composefileName}
 		return
 	}
 }

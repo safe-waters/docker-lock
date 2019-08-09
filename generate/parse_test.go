@@ -11,43 +11,47 @@ import (
 func TestParseComposeFile(t *testing.T) {
 	baseDir := filepath.Join("testdata", "parse", "composefile")
 	if err := godotenv.Load(filepath.Join(baseDir, ".env")); err != nil {
-		t.Errorf("Unable to load dotenv before running test.")
+		t.Fatalf("Unable to load dotenv before running test.")
 	}
+	composefileName := filepath.Join(baseDir, "docker-compose.yml")
 	results := map[parsedImageLine]bool{
-		{line: "busybox", fileName: filepath.Join(baseDir, "docker-compose.yml"), err: nil}:              false,
-		{line: "busybox", fileName: filepath.Join(baseDir, "simple2build", "Dockerfile"), err: nil}:      false,
-		{line: "busybox", fileName: filepath.Join(baseDir, "simple3build", "Dockerfile"), err: nil}:      false,
-		{line: "busybox", fileName: filepath.Join(baseDir, "simple4build", "Dockerfile"), err: nil}:      false,
-		{line: "busybox", fileName: filepath.Join(baseDir, "verbose1build", "Dockerfile"), err: nil}:     false,
-		{line: "busybox", fileName: filepath.Join(baseDir, "verbose2build", "Dockerfile"), err: nil}:     false,
-		{line: "busybox", fileName: filepath.Join(baseDir, "verbose3build", "Dockerfile"), err: nil}:     false,
-		{line: "busybox", fileName: filepath.Join(baseDir, "verbose4build", "Dockerfile-dev"), err: nil}: false,
+		{line: "busybox", composefileName: composefileName, dockerfileName: "", serviceName: "simple1"}:                                                         false,
+		{line: "busybox", composefileName: composefileName, dockerfileName: filepath.Join(baseDir, "simple2build", "Dockerfile"), serviceName: "simple2"}:       false,
+		{line: "busybox", composefileName: composefileName, dockerfileName: filepath.Join(baseDir, "simple3build", "Dockerfile"), serviceName: "simple3"}:       false,
+		{line: "busybox", composefileName: composefileName, dockerfileName: filepath.Join(baseDir, "simple4build", "Dockerfile"), serviceName: "simple4"}:       false,
+		{line: "busybox", composefileName: composefileName, dockerfileName: filepath.Join(baseDir, "verbose1build", "Dockerfile"), serviceName: "verbose1"}:     false,
+		{line: "busybox", composefileName: composefileName, dockerfileName: filepath.Join(baseDir, "verbose2build", "Dockerfile"), serviceName: "verbose2"}:     false,
+		{line: "busybox", composefileName: composefileName, dockerfileName: filepath.Join(baseDir, "verbose3build", "Dockerfile"), serviceName: "verbose3"}:     false,
+		{line: "busybox", composefileName: composefileName, dockerfileName: filepath.Join(baseDir, "verbose4build", "Dockerfile-dev"), serviceName: "verbose4"}: false,
 	}
 	parsedImageLines := make(chan parsedImageLine)
 	var wg sync.WaitGroup
 	go func() {
 		wg.Add(1)
-		parseComposefile(filepath.Join(baseDir, "docker-compose.yml"), parsedImageLines, &wg)
+		parseComposefile(composefileName, parsedImageLines, &wg)
 		wg.Wait()
 		close(parsedImageLines)
 	}()
 	var i int
 	for imLine := range parsedImageLines {
 		if imLine.err != nil {
-			t.Errorf("Failed to parse filename: '%s' err: '%s'.", imLine.fileName, imLine.err)
+			t.Fatalf("Failed to parse. Composefile: '%s'. Dockerfile: '%s'. Err: '%s'.",
+				imLine.composefileName,
+				imLine.dockerfileName,
+				imLine.err)
 		}
 		if _, ok := results[imLine]; !ok {
-			t.Errorf("parsedImageResult: '%+v' not in results: '%+v'.", imLine, results)
+			t.Fatalf("parsedImageResult: '%+v' not in results: '%+v'.", imLine, results)
 		}
 		results[imLine] = true
 		i++
 	}
 	if i != len(results) {
-		t.Errorf("Got '%d' unique results. Want '%d' results.", i, len(results))
+		t.Fatalf("Got '%d' unique results. Want '%d' results.", i, len(results))
 	}
 	for imLine, seen := range results {
 		if !seen {
-			t.Errorf("Could not find expected '%+v'.", imLine)
+			t.Fatalf("Could not find expected '%+v'.", imLine)
 		}
 	}
 }
@@ -59,10 +63,10 @@ func TestParseDockerfileOverride(t *testing.T) {
 	dockerfile := filepath.Join(baseDir, "override", "Dockerfile")
 	composeArgs := map[string]string{"IMAGE_NAME": "debian"}
 	parsedImageLines := make(chan parsedImageLine)
-	go parseDockerfile(dockerfile, composeArgs, parsedImageLines, nil)
+	go parseDockerfile(dockerfile, composeArgs, "", "", parsedImageLines, nil)
 	result := <-parsedImageLines
 	if result.line != composeArgs["IMAGE_NAME"] {
-		t.Errorf("Got '%s'. Want '%s'.", result.line, composeArgs["IMAGE_NAME"])
+		t.Fatalf("Got '%s'. Want '%s'.", result.line, composeArgs["IMAGE_NAME"])
 	}
 }
 
@@ -73,10 +77,10 @@ func TestParseDockerfileEmpty(t *testing.T) {
 	dockerfile := filepath.Join(baseDir, "empty", "Dockerfile")
 	composeArgs := map[string]string{"IMAGE_NAME": "debian"}
 	parsedImageLines := make(chan parsedImageLine)
-	go parseDockerfile(dockerfile, composeArgs, parsedImageLines, nil)
+	go parseDockerfile(dockerfile, composeArgs, "", "", parsedImageLines, nil)
 	result := <-parsedImageLines
 	if result.line != composeArgs["IMAGE_NAME"] {
-		t.Errorf("Got '%s'. Want '%s'.", result.line, composeArgs["IMAGE_NAME"])
+		t.Fatalf("Got '%s'. Want '%s'.", result.line, composeArgs["IMAGE_NAME"])
 	}
 }
 
@@ -86,11 +90,11 @@ func TestParseDockerfileNoArg(t *testing.T) {
 	baseDir := filepath.Join("testdata", "parse", "dockerfile")
 	dockerfile := filepath.Join(baseDir, "noarg", "Dockerfile")
 	parsedImageLines := make(chan parsedImageLine)
-	go parseDockerfile(dockerfile, nil, parsedImageLines, nil)
+	go parseDockerfile(dockerfile, nil, "", "", parsedImageLines, nil)
 	result := <-parsedImageLines
 	imageName := "busybox"
 	if result.line != imageName {
-		t.Errorf("Got '%s'. Want '%s'.", result.line, imageName)
+		t.Fatalf("Got '%s'. Want '%s'.", result.line, imageName)
 	}
 }
 
@@ -100,12 +104,12 @@ func TestParseDockerfileLocalArg(t *testing.T) {
 	baseDir := filepath.Join("testdata", "parse", "dockerfile")
 	dockerfile := filepath.Join(baseDir, "localarg", "Dockerfile")
 	parsedImageLines := make(chan parsedImageLine)
-	go parseDockerfile(dockerfile, nil, parsedImageLines, nil)
+	go parseDockerfile(dockerfile, nil, "", "", parsedImageLines, nil)
 	results := []parsedImageLine{<-parsedImageLines, <-parsedImageLines}
 	imageName := "busybox"
 	for _, result := range results {
 		if result.line != imageName {
-			t.Errorf("Got '%s'. Want '%s'.", result.line, imageName)
+			t.Fatalf("Got '%s'. Want '%s'.", result.line, imageName)
 		}
 	}
 }
@@ -120,12 +124,12 @@ func TestParseDockerfileBuildStage(t *testing.T) {
 	baseDir := filepath.Join("testdata", "parse", "dockerfile")
 	dockerfile := filepath.Join(baseDir, "buildstage", "Dockerfile")
 	parsedImageLines := make(chan parsedImageLine)
-	go parseDockerfile(dockerfile, nil, parsedImageLines, nil)
+	go parseDockerfile(dockerfile, nil, "", "", parsedImageLines, nil)
 	results := []parsedImageLine{<-parsedImageLines, <-parsedImageLines}
 	imageNames := []string{"busybox", "ubuntu"}
 	for i, result := range results {
 		if result.line != imageNames[i] {
-			t.Errorf("Got '%s'. Want '%s'.", result.line, imageNames[i])
+			t.Fatalf("Got '%s'. Want '%s'.", result.line, imageNames[i])
 		}
 	}
 
