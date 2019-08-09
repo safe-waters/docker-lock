@@ -15,6 +15,7 @@ import (
 type parsedImageLine struct {
 	line     string
 	fileName string
+	position int
 	err      error
 }
 
@@ -109,6 +110,7 @@ func parseDockerfile(fileName string, composeArgs map[string]string, parsedImage
 	scanner := bufio.NewScanner(dockerfile)
 	scanner.Split(bufio.ScanLines)
 	globalContext := true
+	position := 0
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
 		if len(fields) > 0 {
@@ -130,7 +132,8 @@ func parseDockerfile(fileName string, composeArgs map[string]string, parsedImage
 				globalContext = false
 				line := expandField(fields[1], globalArgs, composeArgs)
 				if !stageNames[line] {
-					parsedImageLines <- parsedImageLine{line: line, fileName: fileName}
+					parsedImageLines <- parsedImageLine{line: line, fileName: fileName, position: position}
+					position++
 				}
 				// FROM <image> AS <stage>
 				// FROM <stage> AS <another stage>

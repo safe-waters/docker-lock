@@ -1,13 +1,14 @@
 package verify
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
+
 	"github.com/michaelperel/docker-lock/generate"
 	"github.com/michaelperel/docker-lock/registry"
-	"io/ioutil"
 )
 
 type Verifier struct {
@@ -24,6 +25,12 @@ func NewVerifier(flags *Flags) (*Verifier, error) {
 	if err := json.Unmarshal(lockfileByt, &lockfile); err != nil {
 		return nil, err
 	}
+	for i := range lockfile.Generator.Dockerfiles {
+		lockfile.Generator.Dockerfiles[i] = filepath.FromSlash(lockfile.Generator.Dockerfiles[i])
+	}
+	for i := range lockfile.Generator.Composefiles {
+		lockfile.Generator.Composefiles[i] = filepath.FromSlash(lockfile.Generator.Composefiles[i])
+	}
 	return &Verifier{Generator: lockfile.Generator, outfile: flags.Outfile}, nil
 }
 
@@ -36,9 +43,6 @@ func (v *Verifier) VerifyLockfile(wrapperManager *registry.WrapperManager) error
 	if err != nil {
 		return err
 	}
-	if bytes.Equal(lockfileBytes, verificationBytes) {
-		return nil
-	}
 	var existingLockfile, verificationLockfile generate.Lockfile
 	if err := json.Unmarshal(lockfileBytes, &existingLockfile); err != nil {
 		return err
@@ -48,14 +52,30 @@ func (v *Verifier) VerifyLockfile(wrapperManager *registry.WrapperManager) error
 	}
 	errMsg := errors.New("Failed to verify.")
 	if len(existingLockfile.Images) != len(verificationLockfile.Images) {
-		errMsg = fmt.Errorf("%s Found %d images. Expected %d images.", errMsg, len(verificationLockfile.Images), len(existingLockfile.Images))
+		errMsg = fmt.Errorf("%s Found %d files. Expected %d files.",
+			errMsg,
+			len(verificationLockfile.Images),
+			len(existingLockfile.Images))
 		return errMsg
 	}
-	for i, _ := range existingLockfile.Images {
-		if existingLockfile.Images[i] != verificationLockfile.Images[i] {
-			errMsg = fmt.Errorf("%s Found image:\n%+v\nExpected image:\n%+v\n", errMsg, verificationLockfile.Images[i], existingLockfile.Images[i])
+	for fileName := range existingLockfile.Images {
+		if len(existingLockfile.Images[fileName]) != len(verificationLockfile.Images[fileName]) {
+			errMsg = fmt.Errorf("%s Found %d images in file %s. Expected %d files.",
+				errMsg,
+				len(verificationLockfile.Images[fileName]),
+				fileName,
+				len(existingLockfile.Images[fileName]))
 			return errMsg
 		}
+		for i := range existingLockfile.Images[fileName] {
+			if existingLockfile.Images[fileName][i] != verificationLockfile.Images[fileName][i] {
+				errMsg = fmt.Errorf("%s Found image:\n%+v\nExpected image:\n%+v",
+					errMsg,
+					verificationLockfile.Images[fileName][i],
+					existingLockfile.Images[fileName][i])
+				return errMsg
+			}
+		}
 	}
-	return errMsg
+	return nil
 }
