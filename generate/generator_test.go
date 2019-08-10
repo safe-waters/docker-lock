@@ -31,9 +31,9 @@ func TestCompose(t *testing.T) {
 		t.Fatal(err)
 	}
 	results := map[string][]ComposefileImage{composefile: []ComposefileImage{
-		{Image: Image{Name: "nginx", Tag: "1.7"}, ServiceName: "simple", Dockerfile: "", position: 0},
-		{Image: Image{Name: "python", Tag: "2.7"}, ServiceName: "verbose", Dockerfile: filepath.Join(baseDir, "verbose", "Dockerfile-verbose"), position: 0},
-		{Image: Image{Name: "python", Tag: "3.7"}, ServiceName: "verbose", Dockerfile: filepath.Join(baseDir, "verbose", "Dockerfile-verbose"), position: 1},
+		{Image: Image{Name: "nginx", Tag: "1.7"}, ServiceName: "simple", Dockerfile: ""},
+		{Image: Image{Name: "python", Tag: "2.7"}, ServiceName: "verbose", Dockerfile: filepath.Join(baseDir, "verbose", "Dockerfile-verbose")},
+		{Image: Image{Name: "python", Tag: "3.7"}, ServiceName: "verbose", Dockerfile: filepath.Join(baseDir, "verbose", "Dockerfile-verbose")},
 	}}
 	for foundComposefile, foundImages := range lFile.ComposefileImages {
 		if filepath.FromSlash(foundComposefile) != composefile {
@@ -50,6 +50,16 @@ func TestCompose(t *testing.T) {
 			}
 			if foundImage.Image.Digest == "" {
 				t.Fatalf("%+v has an empty digest.", foundImage)
+			}
+			if foundImage.ServiceName != results[composefile][i].ServiceName {
+				t.Fatalf("Found '%s' service. Expected '%s'.",
+					foundImage.ServiceName,
+					results[composefile][i].ServiceName)
+			}
+			if filepath.FromSlash(foundImage.Dockerfile) != results[composefile][i].Dockerfile {
+				t.Fatalf("Found '%s' dockerfile. Expected '%s'.",
+					filepath.FromSlash(foundImage.Dockerfile),
+					results[composefile][i].Dockerfile)
 			}
 		}
 	}
