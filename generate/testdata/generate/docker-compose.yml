@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  simple:
+    image: nginx:1.7
+  verbose:
+    image: ${VERBOSEIMAGE}
+    build:
+      context: ${VERBOSECONTEXT}
+      dockerfile: ${VERBOSEDOCKERFILE}
+      args:
+        - VERBOSEBASEIMAGE=${VERBOSEBASEIMAGE}
