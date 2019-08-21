@@ -6,12 +6,18 @@
 * `docker lock generate` generates a lockfile.
 * `docker lock verify` verifies that the lockfile digests are the same as the ones in the registry.
 
-# Install (Linux)
-* Ensure docker version >= 19.03
+# Install
+## Linux
+* Docker version >= 19.03
 * `mkdir -p ~/.docker/cli-plugins`
 * `wget https://github.com/michaelperel/docker-lock/releases/download/v0.0.1/docker-lock`
 * `chmod +x docker-lock`
 * `mv docker-lock ~/.docker/cli-plugins`
+## Windows
+* Docker version >= 19.03
+* Create the folder `%USERPROFILE%\.docker\cli-plugins`
+* Download `docker-lock.exe` from the releases page.
+* Move `docker-lock.exe` into `%USERPROFILE%\.docker\cli-plugins`
 
 ## Demo
 Consider a project with a multi-stage build Dockerfile at its root:
@@ -46,6 +52,9 @@ docker lock verify
 ```
 `docker lock generate` will generate a lockfile. Running `docker lock verify` after deployment (in this case, pushing the built/tagged images to a registry) ensures that the base images upon which the built/tagged images rely have not changed in between testing and deployment. If `docker lock verify` fails, a change to a base image could have occurred before deployment.
 
+## Development
+While developing, it can be useful to generate a lockfile, commit it to source control, and verify it periodically (for instance on PR merges). In this way, developers can be notified when base images change, and if a bug related to a change in a base image crops up, it will be easy to identify.
+
 # Motivation
 Docker image tags are mutable. This means an image maintainer can push changes to an image without changing the tag. For instance, consider the `python:3.6` image hosted on Dockerhub. Recently, its maintainers changed the underlying linux distribution and pushed the updated image to Dockerhub with the same tag.
 
@@ -60,9 +69,6 @@ Although specifying digests ensures that updates to a base image will not break 
 * It is unclear why an image is tied to a specific digest. Is it because future changes are incompatible, is it just to be safe, or does the developer prefer the digest over the tag?
 * Keeping digests up to date can become unwieldly in projects with many services.
 * Specifying the correct digest is complicated. Local digests may differ from remote digests, and there are many different types of digests (manifest digests, layer digests, etc.)
-
-## Development
-While developing, it can be useful to generate a lockfile, commit it to source control, and verify it periodically (for instance on PR merges). In this way, developers can be notified when base images change, and if a bug related to a change in a base image crops up, it will be easy to identify.
 
 # Features
 * Supports docker-compose (including build args, .env, etc.).
