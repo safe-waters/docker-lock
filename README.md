@@ -13,7 +13,7 @@ If you do not understand the differences between tags and digests, please refer 
 ## Linux
 * Docker version >= 19.03
 * `mkdir -p ~/.docker/cli-plugins`
-* `wget https://github.com/michaelperel/docker-lock/releases/download/v0.0.1/docker-lock`
+* `wget https://github.com/michaelperel/docker-lock/releases/download/v0.0.2/docker-lock`
 * `chmod +x docker-lock`
 * `mv docker-lock ~/.docker/cli-plugins`
 ## Windows
