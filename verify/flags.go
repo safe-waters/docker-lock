@@ -18,7 +18,7 @@ func NewFlags(cmdLineArgs []string) (*Flags, error) {
 	var configFile string
 	var envFile string
 	command := flag.NewFlagSet("verify", flag.ExitOnError)
-	command.StringVar(&outfile, "o", "docker-lock.json", "Path to save Lockfile from current directory.")
+	command.StringVar(&outfile, "o", "docker-lock.json", "Path to read Lockfile from current directory.")
 	command.StringVar(&configFile, "c", "", "Path to config file for auth credentials.")
 	command.StringVar(&envFile, "e", ".env", "Path to .env file.")
 	command.Parse(cmdLineArgs)

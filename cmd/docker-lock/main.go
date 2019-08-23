@@ -8,6 +8,7 @@ import (
 
 	"github.com/michaelperel/docker-lock/generate"
 	"github.com/michaelperel/docker-lock/registry"
+	"github.com/michaelperel/docker-lock/rewrite"
 	"github.com/michaelperel/docker-lock/verify"
 )
 
@@ -54,6 +55,12 @@ func main() {
 		wrappers := []registry.Wrapper{&registry.ElasticWrapper{}, &registry.MCRWrapper{}}
 		wrapperManager.Add(wrappers...)
 		handleError(verifier.VerifyLockfile(wrapperManager))
+	case "rewrite":
+		flags, err := rewrite.NewFlags(os.Args[subCommandIndex+1:])
+		handleError(err)
+		rewriter, err := rewrite.NewRewriter(flags)
+		handleError(err)
+		rewriter.Rewrite()
 	default:
 		handleError(errors.New("Expected 'generate' or 'verify' subcommands."))
 	}
