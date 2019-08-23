@@ -1,10 +1,13 @@
 # About
-`docker-lock` is a [cli-plugin](https://github.com/docker/cli/issues/1534) that generates and verifies lockfiles (think `package-lock.json` or `Pipfile.lock`) for docker and docker-compose. `docker-lock` allows developers to refer to images by tags, yet still receive all the benefits of referring to images by digest.
+`docker-lock` is a [cli-plugin](https://github.com/docker/cli/issues/1534) that uses lockfiles (think `package-lock.json` or `Pipfile.lock`) to ensure repeatable builds. `docker-lock` allows developers to refer to images by tags, yet still receive all the benefits of referring to images by digest.
+
+If you do not understand the differences between tags and digests, please refer to the [Motivation](#Motivation) section of this README.
 
 # How to use
 `docker-lock` ships with two commmands `generate` and `verify`:
 * `docker lock generate` generates a lockfile.
-* `docker lock verify` verifies that the lockfile digests are the same as the ones in the registry.
+* `docker lock rewrite` rewrites base images in Dockerfiles and docker-compose files to use their digests.
+* `docker lock verify` verifies that the lockfile digests are the same as the ones on a remote registry.
 
 # Install
 ## Linux
@@ -40,20 +43,30 @@ Now, assume that a change to `mperel/log:v1` has been pushed to the registry. Ru
 ![Verify GIF](gifs/verify.gif)
 
 # Use cases
-## CI/CD pipelines
-`docker lock` is particularly useful in CI/CD pipelines to ensure that base images have not changed after testing but before deployment. Consider the following CI/CD pipeline:
+## CI/CD
+`docker lock` can be used in CI/CD pipelines to ensure that the images used at build/test time are the same as the ones that will be deployed.
+Consider the following CI/CD pipeline:
 ```
 docker lock generate
+docker lock rewrite
 # build images
 # run tests
-# tag images
-# push images to registry
-docker lock verify
+# if tests pass, deploy
 ```
-`docker lock generate` will generate a lockfile. Running `docker lock verify` after deployment (in this case, pushing the built/tagged images to a registry) ensures that the base images upon which the built/tagged images rely have not changed in between testing and deployment. If `docker lock verify` fails, a change to a base image could have occurred before deployment.
+`docker lock generate` generates a lockfile that `docker lock rewrite` uses to rewrite Dockerfiles and docker-compose files
+to use their digests rather than their tags. This mitigates the risk that an update is pushed to an image in between building
+images and deploying them. If deploying to a Kubernetes or OpenShift cluster, [specifying digests will ensure repeatable builds](https://kubernetes.io/docs/concepts/configuration/overview/#container-images), regardless of `imagePullPolicy`.
 
 ## Development
 While developing, it can be useful to generate a lockfile, commit it to source control, and verify it periodically (for instance on PR merges). In this way, developers can be notified when base images change, and if a bug related to a change in a base image crops up, it will be easy to identify.
+
+To generate a lockfile, run:
+
+`docker lock generate`
+
+To verify a lockfile, run:
+
+`docker lock verify`
 
 # Motivation
 Docker image tags are mutable. This means an image maintainer can push changes to an image without changing the tag. For instance, consider the `python:3.6` image hosted on Dockerhub. Recently, its maintainers changed the underlying linux distribution and pushed the updated image to Dockerhub with the same tag.
@@ -76,7 +89,4 @@ Although specifying digests ensures that updates to a base image will not break 
 * Has CLI flags for common tasks such as selecting Dockerfiles/docker-compose files by globs.
 * Smart defaults such as including `Dockerfile`, `docker-compose.yml` and `docker-compose.yaml` without configuration during generation so typically there is no need to learn any CLI flags.
 * Lightning fast - uses goroutine's to process files/make http calls concurrently.
-* Supports registries compliant with the [Docker Registry HTTP API V2](https://docs.docker.com/registry/spec/api/) (coming soon).
-
-# Coming soon
-* `docker lock rewrite` to rewrite Dockerfiles and docker-compose files to include the digest (useful for CI/CD).
+* Supports registries compliant with the [Docker Registry HTTP API V2](https://docs.docker.com/registry/spec/api/).

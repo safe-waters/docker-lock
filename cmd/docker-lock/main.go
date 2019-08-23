@@ -31,7 +31,7 @@ func main() {
 		os.Exit(0)
 	}
 	if len(os.Args) <= 2 {
-		handleError(errors.New("Expected 'generate' or 'verify' subcommands."))
+		handleError(errors.New("Expected 'generate', 'verify', or 'rewrite' subcommands."))
 	}
 	subCommandIndex := 2
 	switch subCommand := os.Args[subCommandIndex]; subCommand {

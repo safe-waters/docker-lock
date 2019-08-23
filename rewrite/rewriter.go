@@ -3,17 +3,18 @@ package rewrite
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/michaelperel/docker-lock/generate"
 	"io/ioutil"
 	"strings"
 	"sync"
+
+	"github.com/michaelperel/docker-lock/generate"
 
 	"gopkg.in/yaml.v2"
 )
 
 type Rewriter struct {
 	generate.Lockfile
-	Postfix string
+	Suffix string
 }
 
 type compose struct {
@@ -32,20 +33,19 @@ func NewRewriter(flags *Flags) (*Rewriter, error) {
 	if err := json.Unmarshal(lByt, &lockfile); err != nil {
 		return nil, err
 	}
-	return &Rewriter{Lockfile: lockfile, Postfix: flags.Postfix}, nil
+	return &Rewriter{Lockfile: lockfile, Suffix: flags.Suffix}, nil
 }
 
 // Rewrite rewrites base images to include their digests.
-// The order of rewrite is: Dockerfiles, Composefiles, Dockerfiles referenced by Composefiles.
+// Rewrites in the following order: Dockerfiles, Dockerfiles referenced by Composefiles, Composefiles.
 func (r *Rewriter) Rewrite() {
-	// var dwg sync.WaitGroup
-	// for dpath, images := range r.DockerfileImages {
-	// 	dwg.Add(1)
-	// 	go r.rewriteDockerfile(dpath, images, &dwg)
-	// }
-	// dwg.Wait()
-
-    var cwg sync.WaitGroup
+	var dwg sync.WaitGroup
+	for dpath, images := range r.DockerfileImages {
+		dwg.Add(1)
+		go r.rewriteDockerfile(dpath, images, &dwg)
+	}
+	dwg.Wait()
+	var cwg sync.WaitGroup
 	for cpath, images := range r.ComposefileImages {
 		cwg.Add(1)
 		r.rewriteComposefiles(cpath, images, &cwg)
@@ -53,6 +53,7 @@ func (r *Rewriter) Rewrite() {
 	cwg.Wait()
 }
 
+// rewriteDockerfile requires images to be passed in in the order that they should be replaced.
 func (r *Rewriter) rewriteDockerfile(dpath string, images []generate.DockerfileImage, wg *sync.WaitGroup) error {
 	if wg != nil {
 		defer wg.Done()
@@ -83,13 +84,19 @@ func (r *Rewriter) rewriteDockerfile(dpath string, images []generate.DockerfileI
 	}
 	// write lines
 	outlines := strings.Join(lines, "\n")
-	outpath := dpath + r.Postfix
+	var outpath string
+	if r.Suffix == "" {
+		outpath = dpath
+	} else {
+		outpath = fmt.Sprintf("%s-%s", dpath, r.Suffix)
+	}
 	if err := ioutil.WriteFile(outpath, []byte(outlines), 0644); err != nil {
 		return err
 	}
 	return nil
 }
 
+// rewriteComposefiles requires images to be passed in in the order that they should be replaced.
 func (r *Rewriter) rewriteComposefiles(cpath string, images []generate.ComposefileImage, wg *sync.WaitGroup) error {
 	if wg != nil {
 		defer wg.Done()
@@ -102,40 +109,78 @@ func (r *Rewriter) rewriteComposefiles(cpath string, images []generate.Composefi
 	if err := yaml.Unmarshal(cByt, &comp); err != nil {
 		return err
 	}
-	// TODO: change docker-lock file so this step is unnecessary
-	lServices := make(map[string][]generate.ComposefileImage)
+	sImages := make(map[string][]generate.ComposefileImage)
 	for _, image := range images {
-		if _, ok := lServices[image.ServiceName]; !ok {
-			lServices[image.ServiceName] = make([]generate.ComposefileImage, 0)
+		if _, ok := sImages[image.ServiceName]; !ok {
+			sImages[image.ServiceName] = make([]generate.ComposefileImage, 0)
 		}
-		lServices[image.ServiceName] = append(lServices[image.ServiceName], image)
+		sImages[image.ServiceName] = append(sImages[image.ServiceName], image)
 	}
+	rewrittenImageLines := map[string]string{}
 	for serviceName, service := range comp.Services {
+		shouldRewriteDockerfile := false
+		shouldRewriteImageline := false
 		switch build := service.Build.(type) {
 		case map[interface{}]interface{}:
 			if build["context"] != nil || build["dockerfile"] != nil {
-				dFile, dImages := getDImageInfo(serviceName, lServices)
-				r.rewriteDockerfile(dFile, dImages, nil)
+				shouldRewriteDockerfile = true
 			} else {
-				// record the service name, and the replacement image
+				shouldRewriteImageline = true
 			}
 		case string:
-			dFile, dImages := getDImageInfo(serviceName, lServices)
-			r.rewriteDockerfile(dFile, dImages, nil)
+			shouldRewriteDockerfile = true
 		default:
-			// record the service name, and the replacement image
-			fmt.Println(service, "does not exist")
+			shouldRewriteImageline = true
+		}
+		if shouldRewriteImageline {
+			image := sImages[serviceName][0]
+			rewrittenImageLines[serviceName] = fmt.Sprintf("%s:%s@sha256:%s", image.Name, image.Tag, image.Digest)
+		} else if shouldRewriteDockerfile {
+			dFile, dImages := getDImageInfo(serviceName, sImages)
+			r.rewriteDockerfile(dFile, dImages, nil)
 		}
 	}
-
-	// replace the service name with replacement image, rewrite the file.
+	if len(rewrittenImageLines) != 0 {
+		var rewrittenCFile map[string]interface{}
+		if err := yaml.Unmarshal(cByt, &rewrittenCFile); err != nil {
+			return err
+		}
+		services := rewrittenCFile["services"].(map[interface{}]interface{})
+		for serviceName, serviceSpec := range services {
+			serviceName := serviceName.(string)
+			if rewrittenImageLines[serviceName] != "" {
+				serviceSpec := serviceSpec.(map[interface{}]interface{})
+				serviceSpec["image"] = rewrittenImageLines[serviceName]
+			}
+		}
+		outByt, err := yaml.Marshal(&rewrittenCFile)
+		if err != nil {
+			return err
+		}
+		var outpath string
+		if r.Suffix == "" {
+			outpath = cpath
+		} else {
+			var ymlSuffix string
+			if strings.HasSuffix(cpath, ".yml") {
+				ymlSuffix = ".yml"
+			}
+			if strings.HasSuffix(cpath, ".yaml") {
+				ymlSuffix = ".yaml"
+			}
+			outpath = fmt.Sprintf("%s-%s%s", cpath[:len(cpath)-len(ymlSuffix)], r.Suffix, ymlSuffix)
+		}
+		if err := ioutil.WriteFile(outpath, outByt, 0644); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func getDImageInfo(serviceName string, lServices map[string][]generate.ComposefileImage) (string, []generate.DockerfileImage) {
-	dImages := make([]generate.DockerfileImage, len(lServices[serviceName]))
-	dFile := lServices[serviceName][0].Dockerfile
-	for i, cImage := range lServices[serviceName] {
+func getDImageInfo(serviceName string, sImages map[string][]generate.ComposefileImage) (string, []generate.DockerfileImage) {
+	dImages := make([]generate.DockerfileImage, len(sImages[serviceName]))
+	dFile := sImages[serviceName][0].Dockerfile
+	for i, cImage := range sImages[serviceName] {
 		dImages[i] = generate.DockerfileImage{Image: cImage.Image}
 	}
 	return dFile, dImages
