@@ -77,10 +77,19 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, 
 		}
 		switch build := service.BuildWrapper.Build.(type) {
 		case simple:
-			dockerfile := filepath.Join(filepath.Dir(fileName), os.ExpandEnv(string(build)), "Dockerfile")
+			var dockerfile string
+			dockerfileDir := os.ExpandEnv(string(build))
+			if filepath.IsAbs(dockerfileDir) {
+				dockerfile = filepath.Join(dockerfileDir, "Dockerfile")
+			} else {
+				dockerfile = filepath.Join(filepath.Dir(fileName), dockerfileDir, "Dockerfile")
+			}
 			parseDockerfile(dockerfile, nil, fileName, serviceName, parsedImageLines, nil)
 		case verbose:
-			context := filepath.Join(filepath.Dir(fileName), os.ExpandEnv(build.Context))
+			context := os.ExpandEnv(build.Context)
+			if !filepath.IsAbs(context) {
+				context = filepath.Join(filepath.Dir(fileName), context)
+			}
 			dockerfile := os.ExpandEnv(build.Dockerfile)
 			if dockerfile == "" {
 				dockerfile = filepath.Join(context, "Dockerfile")
