@@ -16,6 +16,7 @@ type Generator struct {
 	Dockerfiles  []string
 	Composefiles []string
 	outfile      string
+	imCache      *imageCache
 }
 
 type Image struct {
@@ -50,6 +51,27 @@ type imageResult struct {
 	err             error
 }
 
+type imageCache struct {
+	cache     map[string]Image
+	semaphore sync.RWMutex
+}
+
+func newImageCache() *imageCache {
+	return &imageCache{cache: make(map[string]Image)}
+}
+
+func (c *imageCache) Read(line string) Image {
+	c.semaphore.RLock()
+	defer c.semaphore.RUnlock()
+	return c.cache[line]
+}
+
+func (c *imageCache) Write(line string, im Image) {
+	c.semaphore.Lock()
+	c.cache[line] = im
+	c.semaphore.Unlock()
+}
+
 func (i Image) String() string {
 	pretty, _ := json.MarshalIndent(i, "", "\t")
 	return string(pretty)
@@ -80,7 +102,7 @@ func NewGenerator(flags *Flags) (*Generator, error) {
 			}
 		}
 	}
-	return &Generator{Dockerfiles: dockerfiles, Composefiles: composefiles, outfile: flags.Outfile}, nil
+	return &Generator{Dockerfiles: dockerfiles, Composefiles: composefiles, outfile: flags.Outfile, imCache: newImageCache()}, nil
 }
 
 func (g *Generator) GenerateLockfile(wrapperManager *registry.WrapperManager) error {
@@ -214,6 +236,15 @@ func (g *Generator) getComposefileImages(wrapperManager *registry.WrapperManager
 
 func (g *Generator) getImage(imLine parsedImageLine, wrapperManager *registry.WrapperManager, imageResults chan<- imageResult) {
 	line := imLine.line
+	var im Image
+	if im = g.imCache.Read(line); (im != Image{}) {
+		imageResults <- imageResult{image: im,
+			position:        imLine.position,
+			serviceName:     imLine.serviceName,
+			composefileName: imLine.composefileName,
+			dockerfileName:  imLine.dockerfileName}
+		return
+	}
 	tagSeparator := -1
 	digestSeparator := -1
 	for i, c := range line {
@@ -225,74 +256,50 @@ func (g *Generator) getImage(imLine parsedImageLine, wrapperManager *registry.Wr
 			break
 		}
 	}
+	var name, tag, digest string
 	// 4 valid cases
-	// ubuntu:18.04@sha256:9b1702dcfe32c873a770a32cfd306dd7fc1c4fd134adfb783db68defc8894b3c
 	if tagSeparator != -1 && digestSeparator != -1 {
-		name := line[:tagSeparator]
-		tag := line[tagSeparator+1 : digestSeparator]
-		digest := line[digestSeparator+1+len("sha256:"):]
-		imageResults <- imageResult{image: Image{Name: name, Tag: tag, Digest: digest},
-			position:        imLine.position,
-			serviceName:     imLine.serviceName,
-			dockerfileName:  imLine.dockerfileName,
-			composefileName: imLine.composefileName}
-		return
+		// ubuntu:18.04@sha256:9b1702dcfe32c873a770a32cfd306dd7fc1c4fd134adfb783db68defc8894b3c
+		name = line[:tagSeparator]
+		tag = line[tagSeparator+1 : digestSeparator]
+		digest = line[digestSeparator+1+len("sha256:"):]
+	} else if tagSeparator != -1 && digestSeparator == -1 {
+		// ubuntu:18.04
+		name = line[:tagSeparator]
+		tag = line[tagSeparator+1:]
+	} else if tagSeparator == -1 && digestSeparator != -1 {
+		// ubuntu@sha256:9b1702dcfe32c873a770a32cfd306dd7fc1c4fd134adfb783db68defc8894b3c
+		name = line[:digestSeparator]
+		digest = line[digestSeparator+1+len("sha256:"):]
+	} else {
+		// ubuntu
+		name = line
+		tag = "latest"
 	}
-	// ubuntu:18.04
-	if tagSeparator != -1 && digestSeparator == -1 {
-		name := line[:tagSeparator]
-		tag := line[tagSeparator+1:]
-		wrapper := wrapperManager.GetWrapper(name)
-		digest, err := wrapper.GetDigest(name, tag)
-		if err != nil {
-			err := fmt.Errorf("%s. From line: '%s'. From dockerfile: '%s'. From composefile: '%s'. From service: '%s'.",
-				err,
-				line,
-				imLine.dockerfileName,
-				imLine.composefileName,
-				imLine.serviceName)
-			imageResults <- imageResult{err: err}
-			return
+	if digest != "" {
+		im = Image{Name: name, Tag: tag, Digest: digest}
+	} else {
+		im = g.imCache.Read(line)
+		if (im == Image{}) {
+			wrapper := wrapperManager.GetWrapper(name)
+			digest, err := wrapper.GetDigest(name, tag)
+			if err != nil {
+				err := fmt.Errorf("%s. From line: '%s'. From dockerfile: '%s'. From composefile: '%s'. From service: '%s'.",
+					err,
+					line,
+					imLine.dockerfileName,
+					imLine.composefileName,
+					imLine.serviceName)
+				imageResults <- imageResult{err: err}
+				return
+			}
+			im = Image{Name: name, Tag: tag, Digest: digest}
+			g.imCache.Write(line, im)
 		}
-		imageResults <- imageResult{image: Image{Name: name, Tag: tag, Digest: digest},
-			position:        imLine.position,
-			serviceName:     imLine.serviceName,
-			composefileName: imLine.composefileName,
-			dockerfileName:  imLine.dockerfileName}
-		return
 	}
-	// ubuntu@sha256:9b1702dcfe32c873a770a32cfd306dd7fc1c4fd134adfb783db68defc8894b3c
-	if tagSeparator == -1 && digestSeparator != -1 {
-		name := line[:digestSeparator]
-		digest := line[digestSeparator+1+len("sha256:"):]
-		imageResults <- imageResult{image: Image{Name: name, Digest: digest},
-			position:        imLine.position,
-			serviceName:     imLine.serviceName,
-			composefileName: imLine.composefileName,
-			dockerfileName:  imLine.dockerfileName}
-		return
-	}
-	// ubuntu
-	if tagSeparator == -1 && digestSeparator == -1 {
-		name := line
-		tag := "latest"
-		wrapper := wrapperManager.GetWrapper(name)
-		digest, err := wrapper.GetDigest(name, tag)
-		if err != nil {
-			err := fmt.Errorf("%s. From line: '%s'. From dockerfile: '%s'. From composefile: '%s'. From service: '%s'.",
-				err,
-				line,
-				imLine.dockerfileName,
-				imLine.composefileName,
-				imLine.serviceName)
-			imageResults <- imageResult{err: err}
-			return
-		}
-		imageResults <- imageResult{image: Image{Name: name, Tag: tag, Digest: digest},
-			position:        imLine.position,
-			serviceName:     imLine.serviceName,
-			dockerfileName:  imLine.dockerfileName,
-			composefileName: imLine.composefileName}
-		return
-	}
+	imageResults <- imageResult{image: im,
+		position:        imLine.position,
+		serviceName:     imLine.serviceName,
+		dockerfileName:  imLine.dockerfileName,
+		composefileName: imLine.composefileName}
 }
