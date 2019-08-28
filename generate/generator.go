@@ -245,7 +245,12 @@ func (g *Generator) getImage(imLine parsedImageLine, wrapperManager *registry.Wr
 		wrapper := wrapperManager.GetWrapper(name)
 		digest, err := wrapper.GetDigest(name, tag)
 		if err != nil {
-			err := fmt.Errorf("%s. From line: '%s'. From file: '%s'.", err, line, imLine.dockerfileName)
+			err := fmt.Errorf("%s. From line: '%s'. From dockerfile: '%s'. From composefile: '%s'. From service: '%s'.",
+				err,
+				line,
+				imLine.dockerfileName,
+				imLine.composefileName,
+				imLine.serviceName)
 			imageResults <- imageResult{err: err}
 			return
 		}
@@ -274,7 +279,12 @@ func (g *Generator) getImage(imLine parsedImageLine, wrapperManager *registry.Wr
 		wrapper := wrapperManager.GetWrapper(name)
 		digest, err := wrapper.GetDigest(name, tag)
 		if err != nil {
-			err := fmt.Errorf("%s. From line: '%s'. From file: '%s'.", err, line, imLine.dockerfileName)
+			err := fmt.Errorf("%s. From line: '%s'. From dockerfile: '%s'. From composefile: '%s'. From service: '%s'.",
+				err,
+				line,
+				imLine.dockerfileName,
+				imLine.composefileName,
+				imLine.serviceName)
 			imageResults <- imageResult{err: err}
 			return
 		}
