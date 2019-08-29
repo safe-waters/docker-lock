@@ -69,6 +69,7 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, 
 		parsedImageLines <- parsedImageLine{composefileName: fileName, err: err}
 		return
 	}
+	var dfileWg sync.WaitGroup
 	for serviceName, service := range comp.Services {
 		if service.BuildWrapper == nil {
 			line := os.ExpandEnv(service.ImageName)
@@ -84,7 +85,8 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, 
 			} else {
 				dockerfile = filepath.Join(filepath.Dir(fileName), dockerfileDir, "Dockerfile")
 			}
-			parseDockerfile(dockerfile, nil, fileName, serviceName, parsedImageLines, nil)
+			dfileWg.Add(1)
+			go parseDockerfile(dockerfile, nil, fileName, serviceName, parsedImageLines, &dfileWg)
 		case verbose:
 			context := os.ExpandEnv(build.Context)
 			if !filepath.IsAbs(context) {
@@ -101,9 +103,11 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, 
 				kv := strings.Split(os.ExpandEnv(arg), "=")
 				buildArgs[kv[0]] = kv[1]
 			}
-			parseDockerfile(dockerfile, buildArgs, fileName, serviceName, parsedImageLines, nil)
+			dfileWg.Add(1)
+			go parseDockerfile(dockerfile, buildArgs, fileName, serviceName, parsedImageLines, &dfileWg)
 		}
 	}
+	dfileWg.Wait()
 }
 
 func parseDockerfile(dockerfileName string,
