@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -107,15 +106,19 @@ func (w *DockerWrapper) getAuthCredentials() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	auth := strings.Split(string(authByt), ":")
-	if len(auth) != 2 {
-		if conf.CredStore == "" {
-			return "", "", fmt.Errorf("Unable to get username and password from config file '%s'.", w.ConfigFile)
+	authString := string(authByt)
+	if authString != "" {
+		auth := strings.Split(authString, ":")
+		username = auth[0]
+		password = auth[1]
+	} else if conf.CredStore != "" {
+		creds, err := GetCredentials(conf.CredStore)
+		if err != nil {
+			return "", "", err
 		}
-		return "", "", nil
+		username = creds.Username
+		password = creds.Password
 	}
-	username = auth[0]
-	password = auth[1]
 	return username, password, nil
 }
 
