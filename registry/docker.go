@@ -4,10 +4,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
+
+	c "github.com/docker/docker-credential-helpers/client"
 )
 
 type DockerWrapper struct {
@@ -24,7 +27,7 @@ type config struct {
 			Auth string `json:"auth"`
 		} `json:"https://index.docker.io/v1/"`
 	} `json:"auths"`
-	CredStore string `json:"credsStore"`
+	CredsStore string `json:"credsStore"`
 }
 
 func (w *DockerWrapper) GetDigest(name string, tag string) (string, error) {
@@ -111,15 +114,32 @@ func (w *DockerWrapper) getAuthCredentials() (string, string, error) {
 		auth := strings.Split(authString, ":")
 		username = auth[0]
 		password = auth[1]
-	} else if conf.CredStore != "" {
-		creds, err := GetCredentials(conf.CredStore)
+	} else if conf.CredsStore != "" {
+		username, password, err = w.getAuthCredentialsFromCredsStore(conf.CredsStore)
 		if err != nil {
 			return "", "", err
 		}
-		username = creds.Username
-		password = creds.Password
 	}
 	return username, password, nil
+}
+
+// Works for “osxkeychain” on macOS, “wincred” on windows, and “pass” on Linux.
+func (w *DockerWrapper) getAuthCredentialsFromCredsStore(credsStore string) (username string, password string, err error) {
+	credsStore = fmt.Sprintf("%s-%s", "docker-credential", credsStore)
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Printf("%t", err)
+			username, password = "", ""
+			return
+		}
+	}()
+	p := c.NewShellProgramFunc(credsStore)
+	credResponse, err := c.Get(p, "https://index.docker.io/v1/")
+	if err != nil {
+		fmt.Println(err)
+	}
+	username, password = credResponse.Username, credResponse.Secret
+	return username, password, err
 }
 
 func (w *DockerWrapper) Prefix() string {
