@@ -128,7 +128,6 @@ func (w *DockerWrapper) getAuthCredentialsFromCredsStore(credsStore string) (use
 	credsStore = fmt.Sprintf("%s-%s", "docker-credential", credsStore)
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Printf("%t", err)
 			username, password = "", ""
 			return
 		}
