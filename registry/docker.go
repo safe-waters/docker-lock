@@ -135,7 +135,7 @@ func (w *DockerWrapper) getAuthCredentialsFromCredsStore(credsStore string) (use
 	p := c.NewShellProgramFunc(credsStore)
 	credResponse, err := c.Get(p, "https://index.docker.io/v1/")
 	if err != nil {
-		fmt.Println(err)
+		return
 	}
 	username, password = credResponse.Username, credResponse.Secret
 	return username, password, err
