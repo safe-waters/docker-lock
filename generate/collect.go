@@ -3,20 +3,36 @@ package generate
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/spf13/cobra"
 )
 
-func collectDockerfiles(flags *Flags) ([]string, error) {
+func collectDockerfiles(cmd *cobra.Command) ([]string, error) {
 	isDefaultDockerfile := func(fpath string) bool {
 		return filepath.Base(fpath) == "Dockerfile"
 	}
-	return collectFiles(flags.Dockerfiles, flags.Recursive, flags.RecursiveDir, isDefaultDockerfile, flags.Globs)
+	dockerfiles, err := cmd.Flags().GetStringSlice("dockerfiles")
+	dockerfileRecursive, err := cmd.Flags().GetBool("dockerfile-recursive")
+	dockerfileRecursiveDirectory, err := cmd.Flags().GetString("dockerfile-recursive-directory")
+	dockerfileGlobs, err := cmd.Flags().GetStringSlice("dockerfile-globs")
+	if err != nil {
+		return nil, err
+	}
+	return collectFiles(dockerfiles, dockerfileRecursive, dockerfileRecursiveDirectory, isDefaultDockerfile, dockerfileGlobs)
 }
 
-func collectComposefiles(flags *Flags) ([]string, error) {
+func collectComposefiles(cmd *cobra.Command) ([]string, error) {
 	isDefaultComposefile := func(fpath string) bool {
 		return filepath.Base(fpath) == "docker-compose.yml" || filepath.Base(fpath) == "docker-compose.yaml"
 	}
-	return collectFiles(flags.Composefiles, flags.ComposeRecursive, flags.ComposeRecursiveDir, isDefaultComposefile, flags.ComposeGlobs)
+	composefiles, err := cmd.Flags().GetStringSlice("compose-files")
+	composefileRecursive, err := cmd.Flags().GetBool("compose-file-recursive")
+	composefileRecursiveDirectory, err := cmd.Flags().GetString("compose-file-recursive-directory")
+	composefileGlobs, err := cmd.Flags().GetStringSlice("compose-file-globs")
+	if err != nil {
+		return nil, err
+	}
+	return collectFiles(composefiles, composefileRecursive, composefileRecursiveDirectory, isDefaultComposefile, composefileGlobs)
 }
 
 func collectFiles(files []string, recursive bool, recursiveStartDir string, isDefaultName func(string) bool, globs []string) ([]string, error) {

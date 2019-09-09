@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/michaelperel/docker-lock/generate"
-
+	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
 
@@ -24,8 +24,12 @@ type compose struct {
 	} `yaml:"services"`
 }
 
-func NewRewriter(flags *Flags) (*Rewriter, error) {
-	lByt, err := ioutil.ReadFile(flags.Outfile)
+func NewRewriter(cmd *cobra.Command) (*Rewriter, error) {
+	outfile, err := cmd.Flags().GetString("outfile")
+	if err != nil {
+		return nil, err
+	}
+	lByt, err := ioutil.ReadFile(outfile)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +37,11 @@ func NewRewriter(flags *Flags) (*Rewriter, error) {
 	if err := json.Unmarshal(lByt, &lockfile); err != nil {
 		return nil, err
 	}
-	return &Rewriter{Lockfile: lockfile, Suffix: flags.Suffix}, nil
+	suffix, err := cmd.Flags().GetString("suffix")
+	if err != nil {
+		return nil, err
+	}
+	return &Rewriter{Lockfile: lockfile, Suffix: suffix}, nil
 }
 
 // Rewrite rewrites base images to include their digests.

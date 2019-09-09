@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/michaelperel/docker-lock/registry"
+	"github.com/spf13/cobra"
 )
 
 type Generator struct {
@@ -62,12 +63,12 @@ func (i Image) String() string {
 	return string(pretty)
 }
 
-func NewGenerator(flags *Flags) (*Generator, error) {
-	dockerfiles, err := collectDockerfiles(flags)
+func NewGenerator(cmd *cobra.Command) (*Generator, error) {
+	dockerfiles, err := collectDockerfiles(cmd)
 	if err != nil {
 		return nil, err
 	}
-	composefiles, err := collectComposefiles(flags)
+	composefiles, err := collectComposefiles(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +88,11 @@ func NewGenerator(flags *Flags) (*Generator, error) {
 			}
 		}
 	}
-	return &Generator{Dockerfiles: dockerfiles, Composefiles: composefiles, outfile: flags.Outfile}, nil
+	outfile, err := cmd.Flags().GetString("outfile")
+	if err != nil {
+		return nil, err
+	}
+	return &Generator{Dockerfiles: dockerfiles, Composefiles: composefiles, outfile: outfile}, nil
 }
 
 func (g *Generator) GenerateLockfile(wrapperManager *registry.WrapperManager) error {

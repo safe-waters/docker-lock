@@ -9,6 +9,7 @@ import (
 
 	"github.com/michaelperel/docker-lock/generate"
 	"github.com/michaelperel/docker-lock/registry"
+	"github.com/spf13/cobra"
 )
 
 type Verifier struct {
@@ -17,8 +18,12 @@ type Verifier struct {
 	outfile string
 }
 
-func NewVerifier(flags *Flags) (*Verifier, error) {
-	lByt, err := ioutil.ReadFile(flags.Outfile)
+func NewVerifier(cmd *cobra.Command) (*Verifier, error) {
+	outfile, err := cmd.Flags().GetString("outfile")
+	if err != nil {
+		return nil, err
+	}
+	lByt, err := ioutil.ReadFile(outfile)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +44,7 @@ func NewVerifier(flags *Flags) (*Verifier, error) {
 		i++
 	}
 	g := &generate.Generator{Dockerfiles: dFpaths, Composefiles: cFpaths}
-	return &Verifier{Generator: g, Lockfile: &lFile, outfile: flags.Outfile}, nil
+	return &Verifier{Generator: g, Lockfile: &lFile, outfile: outfile}, nil
 }
 
 func (v *Verifier) VerifyLockfile(wrapperManager *registry.WrapperManager) error {
