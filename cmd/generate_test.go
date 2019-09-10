@@ -11,14 +11,19 @@ import (
 )
 
 func TestCompose(t *testing.T) {
+	t.Parallel()
 	baseDir := filepath.Join("testdata", "generate")
+	tmpFile, err := ioutil.TempFile("", "test-compose")
+	if err != nil {
+		t.Error(err)
+	}
 	generateCmd := NewGenerateCmd()
 	generateCmd.SetArgs([]string{
 		"lock",
 		"generate",
 		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "docker-compose.yml")),
 		fmt.Sprintf("--env-file=%s", filepath.Join(baseDir, ".env")),
-		fmt.Sprintf("--outfile=%s", filepath.Join(baseDir, "testoutput", "test-compose.json")),
+		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
 	})
 	generateCmd.Execute()
 	outfile, err := generateCmd.Flags().GetString("outfile")
@@ -43,6 +48,7 @@ func TestCompose(t *testing.T) {
 		{Image: generate.Image{Name: "python", Tag: "2.7"}, ServiceName: "verbose", Dockerfile: filepath.Join(baseDir, "verbose", "Dockerfile-verbose")},
 		{Image: generate.Image{Name: "python", Tag: "3.7"}, ServiceName: "verbose", Dockerfile: filepath.Join(baseDir, "verbose", "Dockerfile-verbose")},
 	}}
+	// TODO: Loop through the results, not the found images because len could be < len(results).
 	for foundComposefile, foundImages := range lFile.ComposefileImages {
 		if filepath.FromSlash(foundComposefile) != composefile {
 			t.Errorf("Found '%s' composefile. Expected '%s'.", filepath.FromSlash(foundComposefile), composefile)
@@ -74,13 +80,18 @@ func TestCompose(t *testing.T) {
 }
 
 func TestPrivate(t *testing.T) {
+	t.Parallel()
 	baseDir := filepath.Join("testdata", "generate")
 	generateCmd := NewGenerateCmd()
+	tmpFile, err := ioutil.TempFile("", "test-private")
+	if err != nil {
+		t.Error(err)
+	}
 	generateCmd.SetArgs([]string{
 		"lock",
 		"generate",
 		fmt.Sprintf("--dockerfiles=%s", filepath.Join(baseDir, "private", "Dockerfile")),
-		fmt.Sprintf("--outfile=%s", filepath.Join(baseDir, "testoutput", "test-private.json")),
+		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
 	})
 	generateCmd.Execute()
 }
