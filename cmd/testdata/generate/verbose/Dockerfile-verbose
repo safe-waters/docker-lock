@@ -1,4 +1,0 @@
-ARG VERBOSEBASEIMAGE
-FROM ${VERBOSEBASEIMAGE} AS base
-FROM base AS anotherstage
-FROM python:3.7

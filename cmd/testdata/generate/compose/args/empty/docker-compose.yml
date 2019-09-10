@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  svc:
+    image: unused
+    build:
+      context: .
+      args:
+        - IMAGE=busybox

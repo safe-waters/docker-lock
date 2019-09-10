@@ -1,2 +1,0 @@
-ARG IMAGE_NAME=ubuntu
-FROM ${IMAGE_NAME}

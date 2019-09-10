@@ -1,2 +1,0 @@
-ARG IMAGE_NAME=busybox
-FROM ${IMAGE_NAME}

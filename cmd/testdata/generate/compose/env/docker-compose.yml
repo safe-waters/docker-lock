@@ -1,0 +1,8 @@
+version: '3'
+
+services:
+  svc:
+    image: ${IMAGE}
+    build:
+      context: ${CONTEXT}
+      dockerfile: ${DOCKERFILE}
