@@ -3,22 +3,24 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/michaelperel/docker-lock/generate"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
+
+	"github.com/michaelperel/docker-lock/generate"
 )
 
 func TestCompose(t *testing.T) {
 	baseDir := filepath.Join("testdata", "generate")
-	rootCmd.SetArgs([]string{
+	generateCmd := NewGenerateCmd()
+	generateCmd.SetArgs([]string{
 		"lock",
 		"generate",
 		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "docker-compose.yml")),
 		fmt.Sprintf("--env-file=%s", filepath.Join(baseDir, ".env")),
 		fmt.Sprintf("--outfile=%s", filepath.Join(baseDir, "testoutput", "test-compose.json")),
 	})
-	rootCmd.Execute()
+	generateCmd.Execute()
 	outfile, err := generateCmd.Flags().GetString("outfile")
 	if err != nil {
 		t.Error(err)
@@ -69,4 +71,16 @@ func TestCompose(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestPrivate(t *testing.T) {
+	baseDir := filepath.Join("testdata", "generate")
+	generateCmd := NewGenerateCmd()
+	generateCmd.SetArgs([]string{
+		"lock",
+		"generate",
+		fmt.Sprintf("--dockerfiles=%s", filepath.Join(baseDir, "private", "Dockerfile")),
+		fmt.Sprintf("--outfile=%s", filepath.Join(baseDir, "testoutput", "test-private.json")),
+	})
+	generateCmd.Execute()
 }

@@ -4,10 +4,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var lockCmd = &cobra.Command{
-	Use:   "lock",
-	Short: "Umbrella command for generating Lockfiles and verifying and rewriting base images.",
-	Long: `docker lock can generate a Lockfile for base images referenced in Dockerfiles and docker-compose files,
+func NewLockCmd() *cobra.Command {
+	lockCmd := &cobra.Command{
+		Use:   "lock",
+		Short: "Umbrella command for generating Lockfiles and verifying and rewriting base images.",
+		Long: `docker lock can generate a Lockfile for base images referenced in Dockerfiles and docker-compose files,
 verify that all base images in files referenced in the Lockfile exist in the Lockfile and have up-to-date digests, and
 rewrite Dockerfiles and docker-compose files to use image digests from the Lockfile rather than tags.
 
@@ -26,8 +27,6 @@ console output will show the changed image.
 to use image digests rather than tags by running "docker lock rewrite". In this way, all future deployments
 will be repeatable even if a base image changes.
 `,
-}
-
-func init() {
-	rootCmd.AddCommand(lockCmd)
+	}
+	return lockCmd
 }
