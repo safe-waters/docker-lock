@@ -10,16 +10,17 @@ If you do not understand the differences between tags and digests, please refer 
 * `docker lock verify` verifies that the lockfile digests are the same as the ones on a remote registry.
 
 # Install
-## Linux
+## Linux / Mac
 * Docker version >= 19.03
 * `mkdir -p ~/.docker/cli-plugins`
-* `wget https://github.com/michaelperel/docker-lock/releases/download/v0.0.2/docker-lock`
+* `wget  -O docker-lock https://github.com/michaelperel/docker-lock/releases/download/{VERSION}/docker-lock-{OS}`
 * `chmod +x docker-lock`
 * `mv docker-lock ~/.docker/cli-plugins`
 ## Windows
 * Docker version >= 19.03
 * Create the folder `%USERPROFILE%\.docker\cli-plugins`
-* Download `docker-lock.exe` from the releases page.
+* Download `docker-lock-windows.exe` from the releases page.
+* Rename the file `docker-lock.exe`
 * Move `docker-lock.exe` into `%USERPROFILE%\.docker\cli-plugins`
 
 ## Demo

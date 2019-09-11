@@ -60,10 +60,6 @@ jobs:
   - download: current
     artifact: docker-lock-windows
     displayName: Download docker-lock-windows
-  - script: ls -al $(Pipeline.Workspace)
-  - script: ls -al $(Pipeline.Workspace)/docker-lock-linux
-  - script: ls -al $(Pipeline.Workspace)/docker-lock-mac
-  - script: ls -al $(Pipeline.Workspace)/docker-lock-windows
   - task: GithubRelease@0 
     displayName: 'Create GitHub Release'      
     inputs:
