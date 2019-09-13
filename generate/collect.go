@@ -41,7 +41,7 @@ func collectFiles(files []string, recursive bool, recursiveStartDir string, isDe
 		fileSet[fileName] = true
 	}
 	if recursive {
-		filepath.Walk(recursiveStartDir, func(path string, info os.FileInfo, err error) error {
+		err := filepath.Walk(recursiveStartDir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
@@ -50,6 +50,9 @@ func collectFiles(files []string, recursive bool, recursiveStartDir string, isDe
 			}
 			return nil
 		})
+		if err != nil {
+			return nil, err
+		}
 	}
 	for _, pattern := range globs {
 		matches, err := filepath.Glob(pattern)
