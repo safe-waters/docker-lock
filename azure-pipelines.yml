@@ -19,6 +19,8 @@ jobs:
   pool:
     vmImage: $(os.image)
   steps:
+  - script: docker login --username "$DOCKER_USERNAME" --password "$DOCKER_PASSWORD"
+    displayName: 'Login to Docker'
   - script: go test -race ./...
     displayName: 'Run all tests with race detector'
     condition: ne(variables['os.image'], 'windows-latest')
@@ -61,7 +63,7 @@ jobs:
     artifact: docker-lock-windows
     displayName: Download docker-lock-windows
   - task: GithubRelease@0 
-    displayName: 'Create GitHub Release'      
+    displayName: 'Create GitHub Release'
     inputs:
       gitHubConnection: docker-lock-release
       repositoryName: michaelperel/docker-lock

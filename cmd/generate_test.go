@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -459,6 +460,47 @@ func TestDockerfileArgsLocalArg(t *testing.T) {
 	checkDockerResults(t, results, lFile)
 }
 
+func TestDockerfilePrivate(t *testing.T) {
+	t.Parallel()
+	if os.Getenv("CI_SERVER") != "TRUE" {
+		t.Skip("Only runs on CI server.")
+	}
+	baseDir := filepath.Join("testdata", "generate", "docker")
+	tmpFile, err := ioutil.TempFile("", "test-dockerfile-private")
+	if err != nil {
+		t.Error(err)
+	}
+	generateCmd := NewGenerateCmd()
+	generateCmd.SetArgs([]string{
+		"lock",
+		"generate",
+		fmt.Sprintf("--dockerfiles=%s", filepath.Join(baseDir, "private", "Dockerfile")),
+		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
+	})
+	generateCmd.Execute()
+	outfile, err := generateCmd.Flags().GetString("outfile")
+	if err != nil {
+		t.Error(err)
+	}
+	dockerfiles, err := generateCmd.Flags().GetStringSlice("dockerfiles")
+	if err != nil {
+		t.Error(err)
+	}
+	lByt, err := ioutil.ReadFile(outfile)
+	if err != nil {
+		t.Error(err)
+	}
+	var lFile generate.Lockfile
+	if err := json.Unmarshal(lByt, &lFile); err != nil {
+		t.Error(err)
+	}
+	dockerfile := filepath.ToSlash(dockerfiles[0])
+	results := map[string][]generate.DockerfileImage{dockerfile: []generate.DockerfileImage{
+		{Image: generate.Image{Name: "dockerlocktestaccount/busybox", Tag: "latest"}},
+	}}
+	checkDockerResults(t, results, lFile)
+}
+
 func checkDockerResults(t *testing.T, results map[string][]generate.DockerfileImage, lFile generate.Lockfile) {
 	if len(lFile.DockerfileImages) != len(results) {
 		t.Errorf("Found '%d' Dockerfiles. Expected '%d'.", len(lFile.DockerfileImages), len(results))
@@ -487,20 +529,3 @@ func checkDockerResults(t *testing.T, results map[string][]generate.DockerfileIm
 		}
 	}
 }
-
-// func TestPrivate(t *testing.T) {
-// 	t.Parallel()
-// 	baseDir := filepath.Join("testdata", "generate")
-// 	generateCmd := NewGenerateCmd()
-// 	tmpFile, err := ioutil.TempFile("", "test-private")
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
-// 	generateCmd.SetArgs([]string{
-// 		"lock",
-// 		"generate",
-// 		fmt.Sprintf("--dockerfiles=%s", filepath.Join(baseDir, "private", "Dockerfile")),
-// 		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
-// 	})
-// 	generateCmd.Execute()
-// }
