@@ -117,7 +117,10 @@ func (w *DockerWrapper) getAuthCredentials() (string, string, error) {
 	} else if conf.CredsStore != "" {
 		username, password, err = w.getAuthCredentialsFromCredsStore(conf.CredsStore)
 		if err != nil {
-			return "", "", err
+			fmt.Fprintln(os.Stderr, `docker's config.json found, but unable to get auth credentials.
+Proceeding as if user not logged in, so private repositories will be unavailable.
+Try logging in with "docker login" to have access to private repositories.`)
+			return "", "", nil
 		}
 	}
 	return username, password, nil
