@@ -1,4 +1,6 @@
 # About
+[![Build Status](https://dev.azure.com/michaelsethperel/docker-lock/_apis/build/status/michaelperel.docker-lock?branchName=master)](https://dev.azure.com/michaelsethperel/docker-lock/_build/latest?definitionId=4&branchName=master)
+
 `docker-lock` is a [cli-plugin](https://github.com/docker/cli/issues/1534) that uses lockfiles (think `package-lock.json` or `Pipfile.lock`) to ensure repeatable builds. `docker-lock` allows developers to refer to images by tags, yet still receive all the benefits of referring to images by digest.
 
 If you do not understand the differences between tags and digests, please refer to the [Motivation](#Motivation) section of this README.
