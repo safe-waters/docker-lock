@@ -5,7 +5,6 @@ trigger:
   tags:
     include:
     - '*'
-
 jobs:
 - job: Test
   strategy:
@@ -19,37 +18,56 @@ jobs:
   pool:
     vmImage: $(os.image)
   steps:
-  - script: docker login --username "$DOCKER_USERNAME" --password "$DOCKER_PASSWORD"
+  - bash: |
+      mkdir homebrew
+      curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C homebrew
+      brew install docker-credential-helper
+      brew install docker
+      mkdir -p ""$HOME"/.docker"
+      echo '{"credsStore":"osxkeychain"}' > ""$HOME"/.docker/config.json"
+    condition: eq(variables['os.image'], 'macos-latest')
+    displayName: Setup docker + credential helper on mac
+  - bash: |
+      curl -sSL https://github.com/docker/docker-credential-helpers/releases/download/v0.6.3/docker-credential-wincred-v0.6.3-amd64.zip -o docker-credential-wincred.zip
+      unzip docker-credential-wincred.zip
+      mkdir -p /usr/bin
+      mv docker-credential-wincred.exe /usr/bin
+      mkdir -p "$USERPROFILE"/.docker"
+      echo '{"credsStore":"wincred"}' > "$USERPROFILE"/.docker/config.json"
+    condition: eq(variables['os.image'], 'windows-latest')
+    displayName: Setup credential helper on windows
+  - bash: docker login --username "$DOCKER_USERNAME" --password "$DOCKER_PASSWORD"
     displayName: 'Login to Docker'
     env:
       DOCKER_USERNAME: $(DOCKER_USERNAME)
       DOCKER_PASSWORD: $(DOCKER_PASSWORD)
-  - script: go test -race ./...
-    displayName: 'Run all tests with race detector'
+  - bash: go test -race ./...
+    displayName: 'Run tests with race detector'
     condition: ne(variables['os.image'], 'windows-latest')
-  - script: go test ./...
-    displayName: 'Run all tests'
+  - bash: go test ./...
+    displayName: 'Run tests without race detector'
     condition: eq(variables['os.image'], 'windows-latest')
-
 - job: Build
   dependsOn: Test
   condition: succeeded()
   pool:
     vmImage: 'ubuntu-latest'
   steps:
-  - script: GOOS=linux GOARCH=amd64 go build -o docker-lock-linux
+  - bash: GOOS=linux GOARCH=amd64 go build -o docker-lock-linux
     displayName: 'Build linux'
-  - script: GOOS=darwin GOARCH=amd64 go build -o docker-lock-mac
+  - bash: GOOS=darwin GOARCH=amd64 go build -o docker-lock-mac
     displayName: 'Build mac'
-  - script: GOOS=windows GOARCH=amd64 go build -o docker-lock-windows.exe
+  - bash: GOOS=windows GOARCH=amd64 go build -o docker-lock-windows.exe
     displayName: 'Build windows'
   - publish: $(System.DefaultWorkingDirectory)/docker-lock-linux
     artifact: docker-lock-linux
+    displayName: 'Publish docker-lock-linux'
   - publish: $(System.DefaultWorkingDirectory)/docker-lock-mac
     artifact: docker-lock-mac
+    displayName: 'Publish docker-lock-mac'
   - publish: $(System.DefaultWorkingDirectory)/docker-lock-windows.exe
     artifact: docker-lock-windows
-
+    displayName: 'Publish docker-lock-windows'
 - job: Release
   dependsOn: Build
   condition: succeeded()
