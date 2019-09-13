@@ -21,6 +21,9 @@ jobs:
   steps:
   - script: docker login --username "$DOCKER_USERNAME" --password "$DOCKER_PASSWORD"
     displayName: 'Login to Docker'
+    env:
+      DOCKER_USERNAME: $(DOCKER_USERNAME)
+      DOCKER_PASSWORD: $(DOCKER_PASSWORD)
   - script: go test -race ./...
     displayName: 'Run all tests with race detector'
     condition: ne(variables['os.image'], 'windows-latest')
