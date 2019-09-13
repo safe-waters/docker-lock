@@ -33,42 +33,46 @@ type config struct {
 func (w *DockerWrapper) GetDigest(name string, tag string) (string, error) {
 	// Docker-Content-Digest is the root of the hash chain
 	// https://github.com/docker/distribution/issues/1662
-	token, err := w.getToken(name)
+	username, password, err := w.getAuthCredentials()
 	if err != nil {
 		return "", err
 	}
-	registryUrl := "https://registry-1.docker.io/v2/" + name + "/manifests/" + tag
-	req, err := http.NewRequest("GET", registryUrl, nil)
-	if err != nil {
-		return "", err
+	var names []string
+	if strings.Contains(name, "/") {
+		names = []string{name, "library/" + name}
+	} else {
+		names = []string{"library/" + name, name}
 	}
-	req.Header.Add("Authorization", "Bearer "+token)
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
+	for _, name := range names {
+		token, err := w.getToken(name, username, password)
+		if err != nil {
+			return "", err
+		}
+		registryURL := "https://registry-1.docker.io/v2/" + name + "/manifests/" + tag
+		req, err := http.NewRequest("GET", registryURL, nil)
+		if err != nil {
+			return "", err
+		}
+		req.Header.Add("Authorization", "Bearer "+token)
+		req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return "", err
+		}
+		defer resp.Body.Close()
+		digest := resp.Header.Get("Docker-Content-Digest")
+		if digest != "" {
+			return strings.TrimPrefix(digest, "sha256:"), nil
+		}
 	}
-	defer resp.Body.Close()
-	digest := resp.Header.Get("Docker-Content-Digest")
-	if digest == "" && !strings.HasPrefix(name, "library/") {
-		name = "library/" + name
-		return w.GetDigest(name, tag)
-	}
-	if digest == "" {
-		return "", errors.New("No digest found")
-	}
-	return strings.TrimPrefix(digest, "sha256:"), nil
+	return "", errors.New("No digest found")
 }
 
-func (w *DockerWrapper) getToken(name string) (string, error) {
+func (w *DockerWrapper) getToken(name string, username string, password string) (string, error) {
 	client := &http.Client{}
 	url := "https://auth.docker.io/token?scope=repository:" + name + ":pull&service=registry.docker.io"
 	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return "", err
-	}
-	username, password, err := w.getAuthCredentials()
 	if err != nil {
 		return "", err
 	}
