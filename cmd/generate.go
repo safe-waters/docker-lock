@@ -23,7 +23,8 @@ func NewGenerateCmd() *cobra.Command {
 			handleError(err)
 			configFile, err := cmd.Flags().GetString("config-file")
 			handleError(err)
-			defaultWrapper := &registry.DockerWrapper{ConfigFile: configFile}
+			defaultWrapper, err := registry.NewDockerWrapper(configFile)
+			handleError(err)
 			wrapperManager := registry.NewWrapperManager(defaultWrapper)
 			wrappers := []registry.Wrapper{&registry.ElasticWrapper{}, &registry.MCRWrapper{}}
 			wrapperManager.Add(wrappers...)

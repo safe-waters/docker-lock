@@ -15,6 +15,12 @@ import (
 
 type DockerWrapper struct {
 	ConfigFile string
+	authCreds  authCredentials
+}
+
+type authCredentials struct {
+	username string
+	password string
 }
 
 type dockerTokenResponse struct {
@@ -30,13 +36,19 @@ type config struct {
 	CredsStore string `json:"credsStore"`
 }
 
+func NewDockerWrapper(configFile string) (*DockerWrapper, error) {
+	w := &DockerWrapper{ConfigFile: configFile}
+	authCreds, err := w.getAuthCredentials()
+	if err != nil {
+		return nil, err
+	}
+	w.authCreds = authCreds
+	return w, nil
+}
+
 func (w *DockerWrapper) GetDigest(name string, tag string) (string, error) {
 	// Docker-Content-Digest is the root of the hash chain
 	// https://github.com/docker/distribution/issues/1662
-	username, password, err := w.getAuthCredentials()
-	if err != nil {
-		return "", err
-	}
 	var names []string
 	if strings.Contains(name, "/") {
 		names = []string{name, "library/" + name}
@@ -44,7 +56,7 @@ func (w *DockerWrapper) GetDigest(name string, tag string) (string, error) {
 		names = []string{"library/" + name, name}
 	}
 	for _, name := range names {
-		token, err := w.getToken(name, username, password)
+		token, err := w.getToken(name)
 		if err != nil {
 			return "", err
 		}
@@ -69,15 +81,15 @@ func (w *DockerWrapper) GetDigest(name string, tag string) (string, error) {
 	return "", errors.New("No digest found")
 }
 
-func (w *DockerWrapper) getToken(name string, username string, password string) (string, error) {
+func (w *DockerWrapper) getToken(name string) (string, error) {
 	client := &http.Client{}
 	url := "https://auth.docker.io/token?scope=repository:" + name + ":pull&service=registry.docker.io"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "", err
 	}
-	if username != "" && password != "" {
-		req.SetBasicAuth(username, password)
+	if w.authCreds.username != "" && w.authCreds.password != "" {
+		req.SetBasicAuth(w.authCreds.username, w.authCreds.password)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -92,60 +104,60 @@ func (w *DockerWrapper) getToken(name string, username string, password string) 
 	return t.Token, nil
 }
 
-func (w *DockerWrapper) getAuthCredentials() (string, string, error) {
+func (w *DockerWrapper) getAuthCredentials() (authCredentials, error) {
 	username := os.Getenv("DOCKER_USERNAME")
 	password := os.Getenv("DOCKER_PASSWORD")
 	if username != "" && password != "" {
-		return username, password, nil
+		return authCredentials{username: username, password: password}, nil
 	}
 	if w.ConfigFile == "" {
-		return "", "", nil
+		return authCredentials{}, nil
 	}
 	confByt, err := ioutil.ReadFile(w.ConfigFile)
 	if err != nil {
-		return "", "", err
+		return authCredentials{}, err
 	}
 	var conf config
 	if err = json.Unmarshal(confByt, &conf); err != nil {
-		return "", "", err
+		return authCredentials{}, err
 	}
 	authByt, err := base64.StdEncoding.DecodeString(conf.Auths.Index.Auth)
 	if err != nil {
-		return "", "", err
+		return authCredentials{}, err
 	}
 	authString := string(authByt)
 	if authString != "" {
 		auth := strings.Split(authString, ":")
-		username = auth[0]
-		password = auth[1]
+		return authCredentials{username: auth[0], password: auth[1]}, nil
 	} else if conf.CredsStore != "" {
-		username, password, err = w.getAuthCredentialsFromCredsStore(conf.CredsStore)
+		authCreds, err := w.getAuthCredentialsFromCredsStore(conf.CredsStore)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, `docker's config.json found, but unable to get auth credentials.
-Proceeding as if user not logged in, so private repositories will be unavailable.
-Try logging in with "docker login" to have access to private repositories.`)
-			return "", "", nil
+			fmt.Fprintf(os.Stderr, "Warning: '%s' found, but unable to get auth credentials. "+
+				"Proceeding as if user not logged in, so private repositories will be unavailable. "+
+				"Try logging in with 'docker login' to have access to private repositories.\n",
+				w.ConfigFile)
+			return authCredentials{}, nil
 		}
+		return authCreds, nil
 	}
-	return username, password, nil
+	return authCredentials{}, nil
 }
 
 // Works for “osxkeychain” on macOS, “wincred” on windows, and “pass” on Linux.
-func (w *DockerWrapper) getAuthCredentialsFromCredsStore(credsStore string) (username string, password string, err error) {
+func (w *DockerWrapper) getAuthCredentialsFromCredsStore(credsStore string) (authCreds authCredentials, err error) {
 	credsStore = fmt.Sprintf("%s-%s", "docker-credential", credsStore)
 	defer func() {
 		if err := recover(); err != nil {
-			username, password = "", ""
+			authCreds = authCredentials{}
 			return
 		}
 	}()
 	p := c.NewShellProgramFunc(credsStore)
 	credResponse, err := c.Get(p, "https://index.docker.io/v1/")
 	if err != nil {
-		return
+		return authCreds, err
 	}
-	username, password = credResponse.Username, credResponse.Secret
-	return username, password, err
+	return authCredentials{username: credResponse.Username, password: credResponse.Secret}, nil
 }
 
 func (w *DockerWrapper) Prefix() string {
