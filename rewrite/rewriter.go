@@ -44,31 +44,53 @@ func NewRewriter(cmd *cobra.Command) (*Rewriter, error) {
 	return &Rewriter{Lockfile: lockfile, Suffix: suffix}, nil
 }
 
-// Rewrite rewrites base images to include their digests.
-// Rewrites in the following order: Dockerfiles, Dockerfiles referenced by Composefiles, Composefiles.
-func (r *Rewriter) Rewrite() {
+// Rewrite rewrites base images, in the following order: Dockerfiles, Dockerfiles referenced by Composefiles, Composefiles, to include digests.
+func (r *Rewriter) Rewrite() error {
 	var dwg sync.WaitGroup
+	dErr := make(chan error)
 	for dpath, images := range r.DockerfileImages {
 		dwg.Add(1)
-		go r.rewriteDockerfile(dpath, images, &dwg)
+		go r.rewriteDockerfile(dpath, images, dErr, &dwg)
 	}
-	dwg.Wait()
+	go func() {
+		dwg.Wait()
+		close(dErr)
+	}()
+	for err := range dErr {
+		if err != nil {
+			return err
+		}
+	}
 	var cwg sync.WaitGroup
+	cErr := make(chan error)
 	for cpath, images := range r.ComposefileImages {
 		cwg.Add(1)
-		r.rewriteComposefiles(cpath, images, &cwg)
+		go r.rewriteComposefiles(cpath, images, cErr, &cwg)
 	}
-	cwg.Wait()
+	go func() {
+		cwg.Wait()
+		close(cErr)
+	}()
+	for err := range cErr {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // rewriteDockerfile requires images to be passed in in the order that they should be replaced.
-func (r *Rewriter) rewriteDockerfile(dpath string, images []generate.DockerfileImage, wg *sync.WaitGroup) error {
+func (r *Rewriter) rewriteDockerfile(dpath string,
+	images []generate.DockerfileImage,
+	res chan<- error,
+	wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()
 	}
 	dfile, err := ioutil.ReadFile(dpath)
 	if err != nil {
-		return err
+		res <- err
+		return
 	}
 	stageNames := make(map[string]bool)
 	lines := strings.Split(string(dfile), "\n")
@@ -80,6 +102,10 @@ func (r *Rewriter) rewriteDockerfile(dpath string, images []generate.DockerfileI
 			// FROM <image> AS <stage>
 			// FROM <stage> AS <another stage>
 			if !stageNames[fields[1]] {
+				if imageIndex > len(images) {
+					res <- fmt.Errorf("more images exist in %s than in the Lockfile", dpath)
+					return
+				}
 				fields[1] = fmt.Sprintf("%s:%s@sha256:%s", images[imageIndex].Name, images[imageIndex].Tag, images[imageIndex].Digest)
 				imageIndex++
 			}
@@ -90,6 +116,10 @@ func (r *Rewriter) rewriteDockerfile(dpath string, images []generate.DockerfileI
 			lines[i] = strings.Join(fields, " ")
 		}
 	}
+	if imageIndex != len(images) {
+		res <- fmt.Errorf("more images exist in the Lockfile than in %s", dpath)
+		return
+	}
 	// write lines
 	outlines := strings.Join(lines, "\n")
 	var outpath string
@@ -99,23 +129,29 @@ func (r *Rewriter) rewriteDockerfile(dpath string, images []generate.DockerfileI
 		outpath = fmt.Sprintf("%s-%s", dpath, r.Suffix)
 	}
 	if err := ioutil.WriteFile(outpath, []byte(outlines), 0644); err != nil {
-		return err
+		res <- err
+		return
 	}
-	return nil
+	res <- nil
 }
 
 // rewriteComposefiles requires images to be passed in in the order that they should be replaced.
-func (r *Rewriter) rewriteComposefiles(cpath string, images []generate.ComposefileImage, wg *sync.WaitGroup) error {
+func (r *Rewriter) rewriteComposefiles(cpath string,
+	images []generate.ComposefileImage,
+	res chan<- error,
+	wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()
 	}
 	cByt, err := ioutil.ReadFile(cpath)
 	if err != nil {
-		return err
+		res <- err
+		return
 	}
 	var comp compose
 	if err := yaml.Unmarshal(cByt, &comp); err != nil {
-		return err
+		res <- err
+		return
 	}
 	sImages := make(map[string][]generate.ComposefileImage)
 	for _, image := range images {
@@ -126,8 +162,7 @@ func (r *Rewriter) rewriteComposefiles(cpath string, images []generate.Composefi
 	}
 	rewrittenImageLines := map[string]string{}
 	for serviceName, service := range comp.Services {
-		shouldRewriteDockerfile := false
-		shouldRewriteImageline := false
+		var shouldRewriteDockerfile, shouldRewriteImageline bool
 		switch build := service.Build.(type) {
 		case map[interface{}]interface{}:
 			if build["context"] != nil || build["dockerfile"] != nil {
@@ -145,13 +180,19 @@ func (r *Rewriter) rewriteComposefiles(cpath string, images []generate.Composefi
 			rewrittenImageLines[serviceName] = fmt.Sprintf("%s:%s@sha256:%s", image.Name, image.Tag, image.Digest)
 		} else if shouldRewriteDockerfile {
 			dFile, dImages := getDImageInfo(serviceName, sImages)
-			r.rewriteDockerfile(dFile, dImages, nil)
+			dErr := make(chan error)
+			go r.rewriteDockerfile(dFile, dImages, dErr, nil)
+			if err := <-dErr; err != nil {
+				res <- fmt.Errorf("%s from %s", err, cpath)
+				return
+			}
 		}
 	}
 	if len(rewrittenImageLines) != 0 {
 		var rewrittenCFile map[string]interface{}
 		if err := yaml.Unmarshal(cByt, &rewrittenCFile); err != nil {
-			return err
+			res <- err
+			return
 		}
 		services := rewrittenCFile["services"].(map[interface{}]interface{})
 		for serviceName, serviceSpec := range services {
@@ -163,7 +204,8 @@ func (r *Rewriter) rewriteComposefiles(cpath string, images []generate.Composefi
 		}
 		outByt, err := yaml.Marshal(&rewrittenCFile)
 		if err != nil {
-			return err
+			res <- err
+			return
 		}
 		var outpath string
 		if r.Suffix == "" {
@@ -179,10 +221,11 @@ func (r *Rewriter) rewriteComposefiles(cpath string, images []generate.Composefi
 			outpath = fmt.Sprintf("%s-%s%s", cpath[:len(cpath)-len(ymlSuffix)], r.Suffix, ymlSuffix)
 		}
 		if err := ioutil.WriteFile(outpath, outByt, 0644); err != nil {
-			return err
+			res <- err
+			return
 		}
 	}
-	return nil
+	res <- nil
 }
 
 func getDImageInfo(serviceName string, sImages map[string][]generate.ComposefileImage) (string, []generate.DockerfileImage) {
