@@ -299,7 +299,7 @@ func (g *Generator) getImage(imLine parsedImageLine, wrapperManager *registry.Wr
 		var err error
 		digest, err = wrapper.GetDigest(name, tag)
 		if err != nil {
-			extraErrInfo := fmt.Sprintf("%s. From line: %s.", err, line)
+			extraErrInfo := fmt.Sprintf("%s. From line: '%s'.", err, line)
 			if imLine.dockerfileName != "" {
 				extraErrInfo += fmt.Sprintf(" From dockerfile: '%s'.", imLine.dockerfileName)
 			}

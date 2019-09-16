@@ -12,8 +12,17 @@ func collectDockerfiles(cmd *cobra.Command) ([]string, error) {
 		return filepath.Base(fpath) == "Dockerfile"
 	}
 	dockerfiles, err := cmd.Flags().GetStringSlice("dockerfiles")
+	if err != nil {
+		return nil, err
+	}
 	dockerfileRecursive, err := cmd.Flags().GetBool("dockerfile-recursive")
+	if err != nil {
+		return nil, err
+	}
 	dockerfileRecursiveDirectory, err := cmd.Flags().GetString("dockerfile-recursive-directory")
+	if err != nil {
+		return nil, err
+	}
 	dockerfileGlobs, err := cmd.Flags().GetStringSlice("dockerfile-globs")
 	if err != nil {
 		return nil, err
@@ -26,8 +35,17 @@ func collectComposefiles(cmd *cobra.Command) ([]string, error) {
 		return filepath.Base(fpath) == "docker-compose.yml" || filepath.Base(fpath) == "docker-compose.yaml"
 	}
 	composefiles, err := cmd.Flags().GetStringSlice("compose-files")
+	if err != nil {
+		return nil, err
+	}
 	composefileRecursive, err := cmd.Flags().GetBool("compose-file-recursive")
+	if err != nil {
+		return nil, err
+	}
 	composefileRecursiveDirectory, err := cmd.Flags().GetString("compose-file-recursive-directory")
+	if err != nil {
+		return nil, err
+	}
 	composefileGlobs, err := cmd.Flags().GetStringSlice("compose-file-globs")
 	if err != nil {
 		return nil, err

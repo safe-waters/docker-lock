@@ -3,6 +3,7 @@ package generate
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -61,12 +62,14 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine, 
 	}
 	yamlByt, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		parsedImageLines <- parsedImageLine{composefileName: fileName, err: err}
+		extraErrorInfo := fmt.Errorf("%s From compose-file: '%s'.", err, fileName)
+		parsedImageLines <- parsedImageLine{err: extraErrorInfo}
 		return
 	}
 	var comp compose
 	if err := yaml.Unmarshal(yamlByt, &comp); err != nil {
-		parsedImageLines <- parsedImageLine{composefileName: fileName, err: err}
+		extraErrInfo := fmt.Errorf("%s From compose-file: '%s'.", err, fileName)
+		parsedImageLines <- parsedImageLine{err: extraErrInfo}
 		return
 	}
 	var dfileWg sync.WaitGroup
@@ -120,10 +123,11 @@ func parseDockerfile(dockerfileName string,
 	}
 	dockerfile, err := os.Open(dockerfileName)
 	if err != nil {
-		parsedImageLines <- parsedImageLine{dockerfileName: dockerfileName,
-			composefileName: composefileName,
-			serviceName:     serviceName,
-			err:             err}
+		extraErrInfo := fmt.Sprintf("%s From dockerfile: '%s'.", err, dockerfileName)
+		if composefileName != "" {
+			extraErrInfo += fmt.Sprintf(" From service: '%s' in compose-file: '%s'.", serviceName, composefileName)
+		}
+		parsedImageLines <- parsedImageLine{err: errors.New(extraErrInfo)}
 		return
 	}
 	defer dockerfile.Close()
