@@ -2,6 +2,7 @@ package generate
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -298,13 +299,14 @@ func (g *Generator) getImage(imLine parsedImageLine, wrapperManager *registry.Wr
 		var err error
 		digest, err = wrapper.GetDigest(name, tag)
 		if err != nil {
-			err := fmt.Errorf("%s. From line: '%s'. From dockerfile: '%s'. From composefile: '%s'. From service: '%s'.",
-				err,
-				line,
-				imLine.dockerfileName,
-				imLine.composefileName,
-				imLine.serviceName)
-			response <- imageResponse{err: err}
+			extraErrInfo := fmt.Sprintf("%s. From line: %s.", err, line)
+			if imLine.dockerfileName != "" {
+				extraErrInfo += fmt.Sprintf(" From dockerfile: '%s'.", imLine.dockerfileName)
+			}
+			if imLine.composefileName != "" {
+				extraErrInfo += fmt.Sprintf(" From service: '%s' in compose-file: '%s'.", imLine.serviceName, imLine.composefileName)
+			}
+			response <- imageResponse{err: errors.New(extraErrInfo)}
 			return
 		}
 	}
