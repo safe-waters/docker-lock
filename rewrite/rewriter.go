@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 	"sync"
 
@@ -17,6 +18,18 @@ type Rewriter struct {
 	Suffix string
 }
 
+type rewriteInfo struct {
+	outPath          string
+	originalContent  []byte
+	rewrittenContent []byte
+	err              error
+}
+
+type renameInfo struct {
+	tmpPath         string
+	originalContent []byte
+}
+
 type compose struct {
 	Services map[string]struct {
 		Image string      `yaml:"image"`
@@ -25,11 +38,11 @@ type compose struct {
 }
 
 func NewRewriter(cmd *cobra.Command) (*Rewriter, error) {
-	outfile, err := cmd.Flags().GetString("outfile")
+	outPath, err := cmd.Flags().GetString("outPath")
 	if err != nil {
 		return nil, err
 	}
-	lByt, err := ioutil.ReadFile(outfile)
+	lByt, err := ioutil.ReadFile(outPath)
 	if err != nil {
 		return nil, err
 	}
@@ -47,53 +60,82 @@ func NewRewriter(cmd *cobra.Command) (*Rewriter, error) {
 // Rewrite rewrites base images, in the following order: Dockerfiles, Dockerfiles referenced by Composefiles, Composefiles, to include digests.
 func (r *Rewriter) Rewrite() error {
 	var dwg sync.WaitGroup
-	dErr := make(chan error)
-	for dpath, images := range r.DockerfileImages {
+	dRwInfo := make(chan rewriteInfo)
+	for dPath, images := range r.DockerfileImages {
 		dwg.Add(1)
-		go r.rewriteDockerfile(dpath, images, dErr, &dwg)
+		go r.getDockerfileRewriteInfo(dPath, images, dRwInfo, &dwg)
 	}
 	go func() {
 		dwg.Wait()
-		close(dErr)
+		close(dRwInfo)
 	}()
-	for err := range dErr {
+	outPathRnInfo := make(map[string]renameInfo)
+	for rwInfo := range dRwInfo {
+		if rwInfo.err != nil {
+			return rwInfo.err
+		}
+		tmpPath, err := writeToTemp(rwInfo.rewrittenContent)
 		if err != nil {
 			return err
 		}
+		outPathRnInfo[rwInfo.outPath] = renameInfo{tmpPath: tmpPath, originalContent: rwInfo.originalContent}
 	}
 	var cwg sync.WaitGroup
-	cErr := make(chan error)
-	for cpath, images := range r.ComposefileImages {
+	cRwInfo := make(chan rewriteInfo)
+	for cPath, images := range r.ComposefileImages {
 		cwg.Add(1)
-		go r.rewriteComposefiles(cpath, images, cErr, &cwg)
+		go r.getComposefileRewriteInfo(cPath, images, cRwInfo, &cwg)
 	}
 	go func() {
 		cwg.Wait()
-		close(cErr)
+		close(cRwInfo)
 	}()
-	for err := range cErr {
+	for rwInfo := range cRwInfo {
+		if rwInfo.err != nil {
+			return rwInfo.err
+		}
+		tmpPath, err := writeToTemp(rwInfo.rewrittenContent)
 		if err != nil {
 			return err
 		}
+		outPathRnInfo[rwInfo.outPath] = renameInfo{tmpPath: tmpPath, originalContent: rwInfo.originalContent}
+	}
+	rnOutPaths := make(map[string]struct{})
+	for outPath, rnInfo := range outPathRnInfo {
+		if err := os.Rename(rnInfo.tmpPath, outPath); err != nil {
+			err = fmt.Errorf("Error renaming temp file: %s.", err)
+			if r.Suffix == "" {
+				for outPath := range rnOutPaths {
+					if rwErr := ioutil.WriteFile(outPath, outPathRnInfo[outPath].originalContent, 0644); rwErr != nil {
+						return fmt.Errorf("%s Error rolling back file to original state: %s.", err, rwErr)
+					}
+				}
+			} else {
+				for outPath := range rnOutPaths {
+					if rmErr := os.Remove(outPath); rmErr != nil {
+						return fmt.Errorf("%s Error removing file to roll back to original state: %s.", err, rmErr)
+					}
+				}
+			}
+			return err
+		}
+		rnOutPaths[outPath] = struct{}{}
 	}
 	return nil
 }
 
-// rewriteDockerfile requires images to be passed in in the order that they should be replaced.
-func (r *Rewriter) rewriteDockerfile(dpath string,
-	images []generate.DockerfileImage,
-	res chan<- error,
-	wg *sync.WaitGroup) {
+// getDockerfileRewriteInfo requires images to be passed in in the order that they should be replaced.
+func (r *Rewriter) getDockerfileRewriteInfo(dPath string, images []generate.DockerfileImage, rwInfo chan<- rewriteInfo, wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()
 	}
-	dfile, err := ioutil.ReadFile(dpath)
+	dByt, err := ioutil.ReadFile(dPath)
 	if err != nil {
-		res <- err
+		rwInfo <- rewriteInfo{err: err}
 		return
 	}
 	stageNames := make(map[string]bool)
-	lines := strings.Split(string(dfile), "\n")
+	lines := strings.Split(string(dByt), "\n")
 	imageIndex := 0
 	for i, line := range lines {
 		fields := strings.Fields(line)
@@ -103,7 +145,7 @@ func (r *Rewriter) rewriteDockerfile(dpath string,
 			// FROM <stage> AS <another stage>
 			if !stageNames[fields[1]] {
 				if imageIndex > len(images) {
-					res <- fmt.Errorf("more images exist in %s than in the Lockfile", dpath)
+					rwInfo <- rewriteInfo{err: fmt.Errorf("More images exist in %s than in the Lockfile.", dPath)}
 					return
 				}
 				fields[1] = fmt.Sprintf("%s:%s@sha256:%s", images[imageIndex].Name, images[imageIndex].Tag, images[imageIndex].Digest)
@@ -117,50 +159,39 @@ func (r *Rewriter) rewriteDockerfile(dpath string,
 		}
 	}
 	if imageIndex != len(images) {
-		res <- fmt.Errorf("more images exist in the Lockfile than in %s", dpath)
+		rwInfo <- rewriteInfo{err: fmt.Errorf("More images exist in the Lockfile than in %s.", dPath)}
 		return
 	}
-	// write lines
-	outlines := strings.Join(lines, "\n")
-	var outpath string
+	rwContent := strings.Join(lines, "\n")
+	var outPath string
 	if r.Suffix == "" {
-		outpath = dpath
+		outPath = dPath
 	} else {
-		outpath = fmt.Sprintf("%s-%s", dpath, r.Suffix)
+		outPath = fmt.Sprintf("%s-%s", dPath, r.Suffix)
 	}
-	if err := ioutil.WriteFile(outpath, []byte(outlines), 0644); err != nil {
-		res <- err
-		return
-	}
-	res <- nil
+	rwInfo <- rewriteInfo{outPath: outPath, originalContent: dByt, rewrittenContent: []byte(rwContent)}
 }
 
-// rewriteComposefiles requires images to be passed in in the order that they should be replaced.
-func (r *Rewriter) rewriteComposefiles(cpath string,
-	images []generate.ComposefileImage,
-	res chan<- error,
-	wg *sync.WaitGroup) {
+// getComposefileRewriteInfo requires images to be passed in in the order that they should be replaced.
+func (r *Rewriter) getComposefileRewriteInfo(cPath string, images []generate.ComposefileImage, rwInfo chan<- rewriteInfo, wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()
 	}
-	cByt, err := ioutil.ReadFile(cpath)
+	cByt, err := ioutil.ReadFile(cPath)
 	if err != nil {
-		res <- err
+		rwInfo <- rewriteInfo{err: err}
 		return
 	}
 	var comp compose
 	if err := yaml.Unmarshal(cByt, &comp); err != nil {
-		res <- err
+		rwInfo <- rewriteInfo{err: err}
 		return
 	}
 	sImages := make(map[string][]generate.ComposefileImage)
 	for _, image := range images {
-		if _, ok := sImages[image.ServiceName]; !ok {
-			sImages[image.ServiceName] = make([]generate.ComposefileImage, 0)
-		}
 		sImages[image.ServiceName] = append(sImages[image.ServiceName], image)
 	}
-	rewrittenImageLines := map[string]string{}
+	rwImageLines := map[string]string{}
 	for serviceName, service := range comp.Services {
 		var shouldRewriteDockerfile, shouldRewriteImageline bool
 		switch build := service.Build.(type) {
@@ -177,62 +208,72 @@ func (r *Rewriter) rewriteComposefiles(cpath string,
 		}
 		if shouldRewriteImageline {
 			image := sImages[serviceName][0]
-			rewrittenImageLines[serviceName] = fmt.Sprintf("%s:%s@sha256:%s", image.Name, image.Tag, image.Digest)
+			rwImageLines[serviceName] = fmt.Sprintf("%s:%s@sha256:%s", image.Name, image.Tag, image.Digest)
 		} else if shouldRewriteDockerfile {
-			dFile, dImages := getDImageInfo(serviceName, sImages)
-			dErr := make(chan error)
-			go r.rewriteDockerfile(dFile, dImages, dErr, nil)
-			if err := <-dErr; err != nil {
-				res <- fmt.Errorf("%s from %s", err, cpath)
+			dPath, dImages := getDImageInfo(serviceName, sImages)
+			dRwInfo := make(chan rewriteInfo)
+			go r.getDockerfileRewriteInfo(dPath, dImages, dRwInfo, nil)
+			dRes := <-dRwInfo
+			if dRes.err != nil {
+				rwInfo <- rewriteInfo{err: fmt.Errorf("%s from %s", dRes.err, cPath)}
 				return
 			}
+			rwInfo <- dRes
 		}
 	}
-	if len(rewrittenImageLines) != 0 {
-		var rewrittenCFile map[string]interface{}
-		if err := yaml.Unmarshal(cByt, &rewrittenCFile); err != nil {
-			res <- err
+	if len(rwImageLines) != 0 {
+		var rwCFile map[string]interface{}
+		if err := yaml.Unmarshal(cByt, &rwCFile); err != nil {
+			rwInfo <- rewriteInfo{err: err}
 			return
 		}
-		services := rewrittenCFile["services"].(map[interface{}]interface{})
+		services := rwCFile["services"].(map[interface{}]interface{})
 		for serviceName, serviceSpec := range services {
 			serviceName := serviceName.(string)
-			if rewrittenImageLines[serviceName] != "" {
+			if rwImageLines[serviceName] != "" {
 				serviceSpec := serviceSpec.(map[interface{}]interface{})
-				serviceSpec["image"] = rewrittenImageLines[serviceName]
+				serviceSpec["image"] = rwImageLines[serviceName]
 			}
 		}
-		outByt, err := yaml.Marshal(&rewrittenCFile)
+		outByt, err := yaml.Marshal(&rwCFile)
 		if err != nil {
-			res <- err
+			rwInfo <- rewriteInfo{err: err}
 			return
 		}
-		var outpath string
+		var outPath string
 		if r.Suffix == "" {
-			outpath = cpath
+			outPath = cPath
 		} else {
 			var ymlSuffix string
-			if strings.HasSuffix(cpath, ".yml") {
+			if strings.HasSuffix(cPath, ".yml") {
 				ymlSuffix = ".yml"
-			}
-			if strings.HasSuffix(cpath, ".yaml") {
+			} else if strings.HasSuffix(cPath, ".yaml") {
 				ymlSuffix = ".yaml"
 			}
-			outpath = fmt.Sprintf("%s-%s%s", cpath[:len(cpath)-len(ymlSuffix)], r.Suffix, ymlSuffix)
+			outPath = fmt.Sprintf("%s-%s%s", cPath[:len(cPath)-len(ymlSuffix)], r.Suffix, ymlSuffix)
 		}
-		if err := ioutil.WriteFile(outpath, outByt, 0644); err != nil {
-			res <- err
-			return
-		}
+		rwInfo <- rewriteInfo{outPath: outPath, originalContent: cByt, rewrittenContent: outByt}
 	}
-	res <- nil
+}
+
+func writeToTemp(content []byte) (string, error) {
+	// writes bytes to temporary file, returning the name of the temp file
+	file, err := ioutil.TempFile("", "docker-lock-")
+	defer file.Close()
+	if err != nil {
+		return "", err
+	}
+	if _, err := file.Write(content); err != nil {
+		return "", err
+	}
+	return file.Name(), nil
 }
 
 func getDImageInfo(serviceName string, sImages map[string][]generate.ComposefileImage) (string, []generate.DockerfileImage) {
 	dImages := make([]generate.DockerfileImage, len(sImages[serviceName]))
-	dFile := sImages[serviceName][0].Dockerfile
+	dPath := sImages[serviceName][0].Dockerfile
 	for i, cImage := range sImages[serviceName] {
 		dImages[i] = generate.DockerfileImage{Image: cImage.Image}
 	}
-	return dFile, dImages
+	return dPath, dImages
 }
