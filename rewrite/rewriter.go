@@ -20,13 +20,15 @@ type Rewriter struct {
 
 type rewriteInfo struct {
 	outPath          string
+	outPathExists    bool
 	originalContent  []byte
 	rewrittenContent []byte
 	err              error
 }
 
 type renameInfo struct {
-	tmpPath         string
+	tmpFilePath     string
+	outPathExists   bool
 	originalContent []byte
 }
 
@@ -38,7 +40,7 @@ type compose struct {
 }
 
 func NewRewriter(cmd *cobra.Command) (*Rewriter, error) {
-	outPath, err := cmd.Flags().GetString("outPath")
+	outPath, err := cmd.Flags().GetString("outpath")
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +59,16 @@ func NewRewriter(cmd *cobra.Command) (*Rewriter, error) {
 	return &Rewriter{Lockfile: lockfile, Suffix: suffix}, nil
 }
 
-// Rewrite rewrites base images, in the following order: Dockerfiles, Dockerfiles referenced by Composefiles, Composefiles, to include digests.
-func (r *Rewriter) Rewrite() error {
+// Rewrite rewrites base images referenced in the Lockfile to include digests.
+// The order of rewriting is: Dockerfiles, Dockerfiles referenced by
+// docker-compose files, and lastly, docker-compose files.
+// Rewrite has "transaction"-like properties. All files are first
+// written to temporary files. If all writes succeed, each temporary
+// file is renamed to the original file's name (+ suffix, if one is provided).
+// If a problem occurs while renaming any file, previously existing files will be reverted
+// to their original content and new files will be deleted. All temporary files are written
+// to a temporary directory that is removed when the function completes.
+func (r *Rewriter) Rewrite() (err error) {
 	var dwg sync.WaitGroup
 	dRwInfo := make(chan rewriteInfo)
 	for dPath, images := range r.DockerfileImages {
@@ -70,15 +80,25 @@ func (r *Rewriter) Rewrite() error {
 		close(dRwInfo)
 	}()
 	outPathRnInfo := make(map[string]renameInfo)
+	tmpDirPath, err := ioutil.TempDir("", "docker-lock-tmp")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if rmErr := os.RemoveAll(tmpDirPath); rmErr != nil {
+			err = fmt.Errorf("%s Failed to remove temp dir %s with err: %s.", err, tmpDirPath, rmErr)
+		}
+	}()
 	for rwInfo := range dRwInfo {
 		if rwInfo.err != nil {
-			return rwInfo.err
+			err = rwInfo.err
+			return err
 		}
-		tmpPath, err := writeToTemp(rwInfo.rewrittenContent)
+		tmpFilePath, err := writeToTemp(rwInfo.rewrittenContent, tmpDirPath)
 		if err != nil {
 			return err
 		}
-		outPathRnInfo[rwInfo.outPath] = renameInfo{tmpPath: tmpPath, originalContent: rwInfo.originalContent}
+		outPathRnInfo[rwInfo.outPath] = renameInfo{tmpFilePath: tmpFilePath, outPathExists: rwInfo.outPathExists, originalContent: rwInfo.originalContent}
 	}
 	var cwg sync.WaitGroup
 	cRwInfo := make(chan rewriteInfo)
@@ -92,30 +112,33 @@ func (r *Rewriter) Rewrite() error {
 	}()
 	for rwInfo := range cRwInfo {
 		if rwInfo.err != nil {
-			return rwInfo.err
+			err = rwInfo.err
+			return err
 		}
-		tmpPath, err := writeToTemp(rwInfo.rewrittenContent)
+		tmpFilePath, err := writeToTemp(rwInfo.rewrittenContent, tmpDirPath)
 		if err != nil {
 			return err
 		}
-		outPathRnInfo[rwInfo.outPath] = renameInfo{tmpPath: tmpPath, originalContent: rwInfo.originalContent}
+		outPathRnInfo[rwInfo.outPath] = renameInfo{tmpFilePath: tmpFilePath, outPathExists: rwInfo.outPathExists, originalContent: rwInfo.originalContent}
 	}
 	rnOutPaths := make(map[string]struct{})
 	for outPath, rnInfo := range outPathRnInfo {
-		if err := os.Rename(rnInfo.tmpPath, outPath); err != nil {
-			err = fmt.Errorf("Error renaming temp file: %s.", err)
-			if r.Suffix == "" {
-				for outPath := range rnOutPaths {
+		if err = os.Rename(rnInfo.tmpFilePath, outPath); err != nil {
+			err = fmt.Errorf("Error renaming tmp file: %s.", err)
+			var failedRevertOutPaths []string
+			for outPath := range rnOutPaths {
+				if outPathRnInfo[outPath].outPathExists {
 					if rwErr := ioutil.WriteFile(outPath, outPathRnInfo[outPath].originalContent, 0644); rwErr != nil {
-						return fmt.Errorf("%s Error rolling back file to original state: %s.", err, rwErr)
+						failedRevertOutPaths = append(failedRevertOutPaths, outPath)
 					}
-				}
-			} else {
-				for outPath := range rnOutPaths {
+				} else {
 					if rmErr := os.Remove(outPath); rmErr != nil {
-						return fmt.Errorf("%s Error removing file to roll back to original state: %s.", err, rmErr)
+						failedRevertOutPaths = append(failedRevertOutPaths, outPath)
 					}
 				}
+			}
+			if len(failedRevertOutPaths) != 0 {
+				err = fmt.Errorf("%s Failed to revert %s", err, failedRevertOutPaths)
 			}
 			return err
 		}
@@ -243,6 +266,7 @@ func (r *Rewriter) getComposefileRewriteInfo(cPath string, images []generate.Com
 		var outPath string
 		if r.Suffix == "" {
 			outPath = cPath
+			rwInfo <- rewriteInfo{outPath: outPath, outPathExists: true, originalContent: cByt, rewrittenContent: outByt}
 		} else {
 			var ymlSuffix string
 			if strings.HasSuffix(cPath, ".yml") {
@@ -251,14 +275,24 @@ func (r *Rewriter) getComposefileRewriteInfo(cPath string, images []generate.Com
 				ymlSuffix = ".yaml"
 			}
 			outPath = fmt.Sprintf("%s-%s%s", cPath[:len(cPath)-len(ymlSuffix)], r.Suffix, ymlSuffix)
+			var origByt []byte
+			var outPathExists bool
+			if _, err := os.Stat(outPath); err == nil {
+				outPathExists = true
+				origByt, err = ioutil.ReadFile(outPath)
+				if err != nil {
+					rwInfo <- rewriteInfo{err: err}
+					return
+				}
+			}
+			rwInfo <- rewriteInfo{outPath: outPath, outPathExists: outPathExists, originalContent: origByt, rewrittenContent: outByt}
 		}
-		rwInfo <- rewriteInfo{outPath: outPath, originalContent: cByt, rewrittenContent: outByt}
 	}
 }
 
-func writeToTemp(content []byte) (string, error) {
+func writeToTemp(content []byte, tempDir string) (string, error) {
 	// writes bytes to temporary file, returning the name of the temp file
-	file, err := ioutil.TempFile("", "docker-lock-")
+	file, err := ioutil.TempFile(tempDir, "docker-lock-")
 	defer file.Close()
 	if err != nil {
 		return "", err
