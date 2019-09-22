@@ -189,13 +189,23 @@ func (r *Rewriter) getDockerfileRewriteInfo(dPath string, images []generate.Dock
 	var outPath string
 	if r.Suffix == "" {
 		outPath = dPath
+		rwInfo <- rewriteInfo{outPath: outPath, outPathExists: true, originalContent: dByt, rewrittenContent: []byte(rwContent)}
 	} else {
 		outPath = fmt.Sprintf("%s-%s", dPath, r.Suffix)
+		var origByt []byte
+		var outPathExists bool
+		if _, err := os.Stat(outPath); err == nil {
+			outPathExists = true
+			origByt, err = ioutil.ReadFile(outPath)
+			if err != nil {
+				rwInfo <- rewriteInfo{err: err}
+				return
+			}
+		}
+		rwInfo <- rewriteInfo{outPath: outPath, outPathExists: outPathExists, originalContent: origByt, rewrittenContent: []byte(rwContent)}
 	}
-	rwInfo <- rewriteInfo{outPath: outPath, originalContent: dByt, rewrittenContent: []byte(rwContent)}
 }
 
-// getComposefileRewriteInfo requires images to be passed in in the order that they should be replaced.
 func (r *Rewriter) getComposefileRewriteInfo(cPath string, images []generate.ComposefileImage, rwInfo chan<- rewriteInfo, wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()
