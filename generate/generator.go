@@ -17,7 +17,7 @@ import (
 type Generator struct {
 	Dockerfiles  []string
 	Composefiles []string
-	outfile      string
+	outPath      string
 }
 
 type Image struct {
@@ -47,16 +47,6 @@ type imageResponse struct {
 	image Image
 	line  string
 	err   error
-}
-
-type dockerfileImageResponse struct {
-	images map[string][]DockerfileImage
-	err    error
-}
-
-type composefileImageResponse struct {
-	images map[string][]ComposefileImage
-	err    error
 }
 
 func (i Image) String() string {
@@ -89,11 +79,11 @@ func NewGenerator(cmd *cobra.Command) (*Generator, error) {
 			}
 		}
 	}
-	outfile, err := cmd.Flags().GetString("outfile")
+	outPath, err := cmd.Flags().GetString("outpath")
 	if err != nil {
 		return nil, err
 	}
-	return &Generator{Dockerfiles: dockerfiles, Composefiles: composefiles, outfile: outfile}, nil
+	return &Generator{Dockerfiles: dockerfiles, Composefiles: composefiles, outPath: outPath}, nil
 }
 
 func (g *Generator) GenerateLockfile(wrapperManager *registry.WrapperManager) error {
@@ -101,108 +91,16 @@ func (g *Generator) GenerateLockfile(wrapperManager *registry.WrapperManager) er
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(g.outfile, lockfileBytes, 0644)
+	return ioutil.WriteFile(g.outPath, lockfileBytes, 0644)
 }
 
 func (g *Generator) GenerateLockfileBytes(wrapperManager *registry.WrapperManager) ([]byte, error) {
-	dResponseCh := make(chan dockerfileImageResponse)
-	go g.getDockerfileImages(wrapperManager, dResponseCh)
-	cResponseCh := make(chan composefileImageResponse)
-	go g.getComposefileImages(wrapperManager, cResponseCh)
-	var dImages map[string][]DockerfileImage
-	var cImages map[string][]ComposefileImage
-	var numResponses int
-	for {
-		select {
-		case resp := <-dResponseCh:
-			numResponses++
-			if resp.err != nil {
-				return nil, resp.err
-			}
-			dImages = make(map[string][]DockerfileImage)
-			for fileName := range resp.images {
-				dImages[filepath.ToSlash(fileName)] = resp.images[fileName]
-			}
-		case resp := <-cResponseCh:
-			numResponses++
-			if resp.err != nil {
-				return nil, resp.err
-			}
-			cImages = make(map[string][]ComposefileImage)
-			for fileName := range resp.images {
-				for i := range resp.images[fileName] {
-					resp.images[fileName][i].Dockerfile = filepath.ToSlash(resp.images[fileName][i].Dockerfile)
-				}
-				cImages[filepath.ToSlash(fileName)] = resp.images[fileName]
-			}
-		}
-		if numResponses == 2 {
-			break
-		}
-	}
-	lockfile := Lockfile{DockerfileImages: dImages, ComposefileImages: cImages}
-	lockfileBytes, err := json.MarshalIndent(lockfile, "", "\t")
-	if err != nil {
-		return nil, err
-	}
-	return lockfileBytes, nil
-}
-
-func (g *Generator) getDockerfileImages(wrapperManager *registry.WrapperManager, response chan<- dockerfileImageResponse) {
 	parsedImageLines := make(chan parsedImageLine)
 	var parseWg sync.WaitGroup
 	for _, fileName := range g.Dockerfiles {
 		parseWg.Add(1)
 		go parseDockerfile(fileName, nil, "", "", parsedImageLines, &parseWg)
 	}
-	go func() {
-		parseWg.Wait()
-		close(parsedImageLines)
-	}()
-	pilReqs := map[string]bool{}
-	allPils := map[string][]parsedImageLine{}
-	imageResponses := make(chan imageResponse)
-	var numRequests int
-	for pil := range parsedImageLines {
-		if pil.err != nil {
-			response <- dockerfileImageResponse{err: pil.err}
-			return
-		}
-		allPils[pil.line] = append(allPils[pil.line], pil)
-		if !pilReqs[pil.line] {
-			pilReqs[pil.line] = true
-			numRequests++
-			go g.getImage(pil, wrapperManager, imageResponses)
-		}
-	}
-	batchedResponses := []imageResponse{}
-	for i := 0; i < numRequests; i++ {
-		resp := <-imageResponses
-		if resp.err != nil {
-			response <- dockerfileImageResponse{err: resp.err}
-			return
-		}
-		batchedResponses = append(batchedResponses, resp)
-	}
-	close(imageResponses)
-	images := make(map[string][]DockerfileImage)
-	for _, resp := range batchedResponses {
-		for _, pil := range allPils[resp.line] {
-			dImage := DockerfileImage{Image: resp.image, position: pil.position}
-			images[pil.dockerfileName] = append(images[pil.dockerfileName], dImage)
-		}
-	}
-	for _, imageSlice := range images {
-		sort.Slice(imageSlice, func(i, j int) bool {
-			return imageSlice[i].position < imageSlice[j].position
-		})
-	}
-	response <- dockerfileImageResponse{images: images}
-}
-
-func (g *Generator) getComposefileImages(wrapperManager *registry.WrapperManager, response chan<- composefileImageResponse) {
-	parsedImageLines := make(chan parsedImageLine)
-	var parseWg sync.WaitGroup
 	for _, fileName := range g.Composefiles {
 		parseWg.Add(1)
 		go parseComposefile(fileName, parsedImageLines, &parseWg)
@@ -217,8 +115,7 @@ func (g *Generator) getComposefileImages(wrapperManager *registry.WrapperManager
 	var numRequests int
 	for pil := range parsedImageLines {
 		if pil.err != nil {
-			response <- composefileImageResponse{err: pil.err}
-			return
+			return nil, pil.err
 		}
 		allPils[pil.line] = append(allPils[pil.line], pil)
 		if !pilReqs[pil.line] {
@@ -227,38 +124,61 @@ func (g *Generator) getComposefileImages(wrapperManager *registry.WrapperManager
 			go g.getImage(pil, wrapperManager, imageResponses)
 		}
 	}
-	batchedResponses := []imageResponse{}
+	dImages := make(map[string][]DockerfileImage)
+	cImages := make(map[string][]ComposefileImage)
 	for i := 0; i < numRequests; i++ {
 		resp := <-imageResponses
 		if resp.err != nil {
-			response <- composefileImageResponse{err: resp.err}
-			return
+			return nil, resp.err
 		}
-		batchedResponses = append(batchedResponses, resp)
+		for _, pil := range allPils[resp.line] {
+			if pil.composefileName == "" {
+				dImage := DockerfileImage{Image: resp.image, position: pil.position}
+				dKey := filepath.ToSlash(pil.dockerfileName)
+				dImages[dKey] = append(dImages[dKey], dImage)
+			} else {
+				cImage := ComposefileImage{Image: resp.image,
+					ServiceName: pil.serviceName,
+					Dockerfile:  pil.dockerfileName,
+					position:    pil.position}
+				cKey := filepath.ToSlash(pil.composefileName)
+				cImages[cKey] = append(cImages[cKey], cImage)
+			}
+		}
 	}
 	close(imageResponses)
-	images := make(map[string][]ComposefileImage)
-	for _, resp := range batchedResponses {
-		for _, pil := range allPils[resp.line] {
-			cImage := ComposefileImage{Image: resp.image,
-				ServiceName: pil.serviceName,
-				Dockerfile:  pil.dockerfileName,
-				position:    pil.position}
-			images[pil.composefileName] = append(images[pil.composefileName], cImage)
-		}
-	}
-	for _, imageSlice := range images {
-		sort.Slice(imageSlice, func(i, j int) bool {
-			if imageSlice[i].ServiceName != imageSlice[j].ServiceName {
-				return imageSlice[i].ServiceName < imageSlice[j].ServiceName
-			} else if imageSlice[i].Dockerfile != imageSlice[i].Dockerfile {
-				return imageSlice[i].Dockerfile < imageSlice[j].Dockerfile
-			} else {
+	var sortWg sync.WaitGroup
+	sortWg.Add(1)
+	go func() {
+		for _, imageSlice := range dImages {
+			sort.Slice(imageSlice, func(i, j int) bool {
 				return imageSlice[i].position < imageSlice[j].position
-			}
-		})
+			})
+		}
+		sortWg.Done()
+	}()
+	sortWg.Add(1)
+	go func() {
+		for _, imageSlice := range cImages {
+			sort.Slice(imageSlice, func(i, j int) bool {
+				if imageSlice[i].ServiceName != imageSlice[j].ServiceName {
+					return imageSlice[i].ServiceName < imageSlice[j].ServiceName
+				} else if imageSlice[i].Dockerfile != imageSlice[i].Dockerfile {
+					return imageSlice[i].Dockerfile < imageSlice[j].Dockerfile
+				} else {
+					return imageSlice[i].position < imageSlice[j].position
+				}
+			})
+		}
+		sortWg.Done()
+	}()
+	sortWg.Wait()
+	lockfile := Lockfile{DockerfileImages: dImages, ComposefileImages: cImages}
+	lockfileBytes, err := json.MarshalIndent(lockfile, "", "\t")
+	if err != nil {
+		return nil, err
 	}
-	response <- composefileImageResponse{images: images}
+	return lockfileBytes, nil
 }
 
 func (g *Generator) getImage(imLine parsedImageLine, wrapperManager *registry.WrapperManager, response chan<- imageResponse) {

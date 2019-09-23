@@ -39,7 +39,7 @@ func NewGenerateCmd() *cobra.Command {
 	generateCmd.Flags().String("dockerfile-recursive-directory", ".", "Directory to start recursive walk to collect Dockerfiles.")
 	generateCmd.Flags().Bool("compose-file-recursive", false, "Recursively collect docker-compose files.")
 	generateCmd.Flags().String("compose-file-recursive-directory", ".", "Directory to start recursive walk to collect docker-compose files.")
-	generateCmd.Flags().String("outfile", "docker-lock.json", "Path to save Lockfile.")
+	generateCmd.Flags().String("outpath", "docker-lock.json", "Path to save Lockfile.")
 	generateCmd.Flags().String("config-file", getDefaultConfigFile(), "Path to config file for auth credentials.")
 	generateCmd.Flags().String("env-file", ".env", "Path to .env file.")
 	return generateCmd

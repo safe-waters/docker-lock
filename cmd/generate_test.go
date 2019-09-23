@@ -24,10 +24,10 @@ func TestComposeImage(t *testing.T) {
 		"lock",
 		"generate",
 		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "image", "docker-compose.yml")),
-		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
+		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
 	})
 	generateCmd.Execute()
-	outfile, err := generateCmd.Flags().GetString("outfile")
+	outPath, err := generateCmd.Flags().GetString("outpath")
 	if err != nil {
 		t.Error(err)
 	}
@@ -35,7 +35,7 @@ func TestComposeImage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	lByt, err := ioutil.ReadFile(outfile)
+	lByt, err := ioutil.ReadFile(outPath)
 	if err != nil {
 		t.Error(err)
 	}
@@ -62,10 +62,10 @@ func TestComposeBuild(t *testing.T) {
 		"lock",
 		"generate",
 		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "build", "docker-compose.yml")),
-		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
+		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
 	})
 	generateCmd.Execute()
-	outfile, err := generateCmd.Flags().GetString("outfile")
+	outPath, err := generateCmd.Flags().GetString("outpath")
 	if err != nil {
 		t.Error(err)
 	}
@@ -73,7 +73,7 @@ func TestComposeBuild(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	lByt, err := ioutil.ReadFile(outfile)
+	lByt, err := ioutil.ReadFile(outPath)
 	if err != nil {
 		t.Error(err)
 	}
@@ -101,10 +101,10 @@ func TestComposeDockerfile(t *testing.T) {
 		"lock",
 		"generate",
 		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "dockerfile", "docker-compose.yml")),
-		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
+		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
 	})
 	generateCmd.Execute()
-	outfile, err := generateCmd.Flags().GetString("outfile")
+	outPath, err := generateCmd.Flags().GetString("outpath")
 	if err != nil {
 		t.Error(err)
 	}
@@ -112,7 +112,7 @@ func TestComposeDockerfile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	lByt, err := ioutil.ReadFile(outfile)
+	lByt, err := ioutil.ReadFile(outPath)
 	if err != nil {
 		t.Error(err)
 	}
@@ -140,10 +140,10 @@ func TestComposeContext(t *testing.T) {
 		"lock",
 		"generate",
 		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "context", "docker-compose.yml")),
-		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
+		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
 	})
 	generateCmd.Execute()
-	outfile, err := generateCmd.Flags().GetString("outfile")
+	outPath, err := generateCmd.Flags().GetString("outpath")
 	if err != nil {
 		t.Error(err)
 	}
@@ -151,7 +151,7 @@ func TestComposeContext(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	lByt, err := ioutil.ReadFile(outfile)
+	lByt, err := ioutil.ReadFile(outPath)
 	if err != nil {
 		t.Error(err)
 	}
@@ -179,11 +179,11 @@ func TestComposeEnv(t *testing.T) {
 		"lock",
 		"generate",
 		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "env", "docker-compose.yml")),
-		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
+		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
 		fmt.Sprintf("--env-file=%s", filepath.Join(baseDir, "env", ".env")),
 	})
 	generateCmd.Execute()
-	outfile, err := generateCmd.Flags().GetString("outfile")
+	outPath, err := generateCmd.Flags().GetString("outpath")
 	if err != nil {
 		t.Error(err)
 	}
@@ -191,7 +191,7 @@ func TestComposeEnv(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	lByt, err := ioutil.ReadFile(outfile)
+	lByt, err := ioutil.ReadFile(outPath)
 	if err != nil {
 		t.Error(err)
 	}
@@ -221,10 +221,10 @@ func TestComposeArgsDockerfileOverride(t *testing.T) {
 		"lock",
 		"generate",
 		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "override", "docker-compose.yml")),
-		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
+		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
 	})
 	generateCmd.Execute()
-	outfile, err := generateCmd.Flags().GetString("outfile")
+	outPath, err := generateCmd.Flags().GetString("outpath")
 	if err != nil {
 		t.Error(err)
 	}
@@ -232,7 +232,7 @@ func TestComposeArgsDockerfileOverride(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	lByt, err := ioutil.ReadFile(outfile)
+	lByt, err := ioutil.ReadFile(outPath)
 	if err != nil {
 		t.Error(err)
 	}
@@ -262,10 +262,10 @@ func TestComposeArgsDockerfileEmpty(t *testing.T) {
 		"lock",
 		"generate",
 		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "empty", "docker-compose.yml")),
-		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
+		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
 	})
 	generateCmd.Execute()
-	outfile, err := generateCmd.Flags().GetString("outfile")
+	outPath, err := generateCmd.Flags().GetString("outpath")
 	if err != nil {
 		t.Error(err)
 	}
@@ -273,7 +273,7 @@ func TestComposeArgsDockerfileEmpty(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	lByt, err := ioutil.ReadFile(outfile)
+	lByt, err := ioutil.ReadFile(outPath)
 	if err != nil {
 		t.Error(err)
 	}
@@ -303,10 +303,10 @@ func TestComposeArgsDockerfileNoArg(t *testing.T) {
 		"lock",
 		"generate",
 		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "noarg", "docker-compose.yml")),
-		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
+		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
 	})
 	generateCmd.Execute()
-	outfile, err := generateCmd.Flags().GetString("outfile")
+	outPath, err := generateCmd.Flags().GetString("outpath")
 	if err != nil {
 		t.Error(err)
 	}
@@ -314,7 +314,7 @@ func TestComposeArgsDockerfileNoArg(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	lByt, err := ioutil.ReadFile(outfile)
+	lByt, err := ioutil.ReadFile(outPath)
 	if err != nil {
 		t.Error(err)
 	}
@@ -388,10 +388,10 @@ func TestDockerfileArgsBuildStage(t *testing.T) {
 		"lock",
 		"generate",
 		fmt.Sprintf("--dockerfiles=%s", filepath.Join(baseDir, "buildstage", "Dockerfile")),
-		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
+		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
 	})
 	generateCmd.Execute()
-	outfile, err := generateCmd.Flags().GetString("outfile")
+	outPath, err := generateCmd.Flags().GetString("outpath")
 	if err != nil {
 		t.Error(err)
 	}
@@ -399,7 +399,7 @@ func TestDockerfileArgsBuildStage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	lByt, err := ioutil.ReadFile(outfile)
+	lByt, err := ioutil.ReadFile(outPath)
 	if err != nil {
 		t.Error(err)
 	}
@@ -431,10 +431,10 @@ func TestDockerfileArgsLocalArg(t *testing.T) {
 		"lock",
 		"generate",
 		fmt.Sprintf("--dockerfiles=%s", filepath.Join(baseDir, "localarg", "Dockerfile")),
-		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
+		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
 	})
 	generateCmd.Execute()
-	outfile, err := generateCmd.Flags().GetString("outfile")
+	outPath, err := generateCmd.Flags().GetString("outpath")
 	if err != nil {
 		t.Error(err)
 	}
@@ -442,7 +442,7 @@ func TestDockerfileArgsLocalArg(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	lByt, err := ioutil.ReadFile(outfile)
+	lByt, err := ioutil.ReadFile(outPath)
 	if err != nil {
 		t.Error(err)
 	}
@@ -475,10 +475,10 @@ func TestDockerfilePrivate(t *testing.T) {
 		"lock",
 		"generate",
 		fmt.Sprintf("--dockerfiles=%s", filepath.Join(baseDir, "private", "Dockerfile")),
-		fmt.Sprintf("--outfile=%s", tmpFile.Name()),
+		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
 	})
 	generateCmd.Execute()
-	outfile, err := generateCmd.Flags().GetString("outfile")
+	outPath, err := generateCmd.Flags().GetString("outpath")
 	if err != nil {
 		t.Error(err)
 	}
@@ -486,7 +486,7 @@ func TestDockerfilePrivate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	lByt, err := ioutil.ReadFile(outfile)
+	lByt, err := ioutil.ReadFile(outPath)
 	if err != nil {
 		t.Error(err)
 	}

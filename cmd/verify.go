@@ -28,7 +28,7 @@ will verify that all base images in files referenced in the Lockfile exist in th
 			handleError(verifier.VerifyLockfile(wrapperManager))
 		},
 	}
-	verifyCmd.Flags().String("outfile", "docker-lock.json", "Path to load Lockfile.")
+	verifyCmd.Flags().String("outpath", "docker-lock.json", "Path to load Lockfile.")
 	verifyCmd.Flags().String("config-file", getDefaultConfigFile(), "Path to config file for auth credentials.")
 	verifyCmd.Flags().String("env-file", ".env", "Path to .env file.")
 	return verifyCmd

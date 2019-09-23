@@ -15,15 +15,15 @@ import (
 type Verifier struct {
 	*generate.Generator
 	*generate.Lockfile
-	outfile string
+	outPath string
 }
 
 func NewVerifier(cmd *cobra.Command) (*Verifier, error) {
-	outfile, err := cmd.Flags().GetString("outfile")
+	outPath, err := cmd.Flags().GetString("outpath")
 	if err != nil {
 		return nil, err
 	}
-	lByt, err := ioutil.ReadFile(outfile)
+	lByt, err := ioutil.ReadFile(outPath)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func NewVerifier(cmd *cobra.Command) (*Verifier, error) {
 		i++
 	}
 	g := &generate.Generator{Dockerfiles: dFpaths, Composefiles: cFpaths}
-	return &Verifier{Generator: g, Lockfile: &lFile, outfile: outfile}, nil
+	return &Verifier{Generator: g, Lockfile: &lFile, outPath: outPath}, nil
 }
 
 func (v *Verifier) VerifyLockfile(wrapperManager *registry.WrapperManager) error {
