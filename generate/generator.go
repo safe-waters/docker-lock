@@ -139,7 +139,7 @@ func (g *Generator) GenerateLockfileBytes(wrapperManager *registry.WrapperManage
 			} else {
 				cImage := ComposefileImage{Image: resp.image,
 					ServiceName: pil.serviceName,
-					Dockerfile:  pil.dockerfileName,
+					Dockerfile:  filepath.ToSlash(pil.dockerfileName),
 					position:    pil.position}
 				cKey := filepath.ToSlash(pil.composefileName)
 				cImages[cKey] = append(cImages[cKey], cImage)
