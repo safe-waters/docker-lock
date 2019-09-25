@@ -63,14 +63,23 @@ func NewGenerator(cmd *cobra.Command) (*Generator, error) {
 	if err != nil {
 		return nil, err
 	}
+	baseDir, err := cmd.Flags().GetString("base-dir")
+	if err != nil {
+		return nil, err
+	}
 	if len(dockerfiles) == 0 && len(composefiles) == 0 {
-		fi, err := os.Stat("Dockerfile")
+		defaultDockerfile := filepath.Join(baseDir, "Dockerfile")
+		fi, err := os.Stat(defaultDockerfile)
 		if err == nil {
 			if mode := fi.Mode(); mode.IsRegular() {
-				dockerfiles = []string{"Dockerfile"}
+				dockerfiles = []string{defaultDockerfile}
 			}
 		}
-		for _, defaultComposefile := range []string{"docker-compose.yml", "docker-compose.yaml"} {
+		defaultComposefiles := []string{
+			filepath.Join(baseDir, "docker-compose.yml"),
+			filepath.Join(baseDir, "docker-compose.yaml"),
+		}
+		for _, defaultComposefile := range defaultComposefiles {
 			fi, err := os.Stat(defaultComposefile)
 			if err == nil {
 				if mode := fi.Mode(); mode.IsRegular() {

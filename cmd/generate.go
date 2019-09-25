@@ -31,14 +31,13 @@ func NewGenerateCmd() *cobra.Command {
 			handleError(generator.GenerateLockfile(wrapperManager))
 		},
 	}
+	generateCmd.Flags().String("base-dir", ".", "Top level directory to collect files from.")
 	generateCmd.Flags().StringSlice("dockerfiles", []string{}, "Path to Dockerfiles.")
 	generateCmd.Flags().StringSlice("compose-files", []string{}, "Path to docker-compose files.")
 	generateCmd.Flags().StringSlice("dockerfile-globs", []string{}, "Glob pattern to select Dockerfiles.")
 	generateCmd.Flags().StringSlice("compose-file-globs", []string{}, "Glob pattern to select docker-compose files.")
 	generateCmd.Flags().Bool("dockerfile-recursive", false, "Recursively collect Dockerfiles.")
-	generateCmd.Flags().String("dockerfile-recursive-directory", ".", "Directory to start recursive walk to collect Dockerfiles.")
 	generateCmd.Flags().Bool("compose-file-recursive", false, "Recursively collect docker-compose files.")
-	generateCmd.Flags().String("compose-file-recursive-directory", ".", "Directory to start recursive walk to collect docker-compose files.")
 	generateCmd.Flags().String("outpath", "docker-lock.json", "Path to save Lockfile.")
 	generateCmd.Flags().String("config-file", getDefaultConfigFile(), "Path to config file for auth credentials.")
 	generateCmd.Flags().String("env-file", ".env", "Path to .env file.")

@@ -11,6 +11,10 @@ func collectDockerfiles(cmd *cobra.Command) ([]string, error) {
 	isDefaultDockerfile := func(fpath string) bool {
 		return filepath.Base(fpath) == "Dockerfile"
 	}
+	baseDir, err := cmd.Flags().GetString("base-dir")
+	if err != nil {
+		return nil, err
+	}
 	dockerfiles, err := cmd.Flags().GetStringSlice("dockerfiles")
 	if err != nil {
 		return nil, err
@@ -19,20 +23,20 @@ func collectDockerfiles(cmd *cobra.Command) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	dockerfileRecursiveDirectory, err := cmd.Flags().GetString("dockerfile-recursive-directory")
-	if err != nil {
-		return nil, err
-	}
 	dockerfileGlobs, err := cmd.Flags().GetStringSlice("dockerfile-globs")
 	if err != nil {
 		return nil, err
 	}
-	return collectFiles(dockerfiles, dockerfileRecursive, dockerfileRecursiveDirectory, isDefaultDockerfile, dockerfileGlobs)
+	return collectFiles(baseDir, dockerfiles, dockerfileRecursive, isDefaultDockerfile, dockerfileGlobs)
 }
 
 func collectComposefiles(cmd *cobra.Command) ([]string, error) {
 	isDefaultComposefile := func(fpath string) bool {
 		return filepath.Base(fpath) == "docker-compose.yml" || filepath.Base(fpath) == "docker-compose.yaml"
+	}
+	baseDir, err := cmd.Flags().GetString("base-dir")
+	if err != nil {
+		return nil, err
 	}
 	composefiles, err := cmd.Flags().GetStringSlice("compose-files")
 	if err != nil {
@@ -42,24 +46,20 @@ func collectComposefiles(cmd *cobra.Command) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	composefileRecursiveDirectory, err := cmd.Flags().GetString("compose-file-recursive-directory")
-	if err != nil {
-		return nil, err
-	}
 	composefileGlobs, err := cmd.Flags().GetStringSlice("compose-file-globs")
 	if err != nil {
 		return nil, err
 	}
-	return collectFiles(composefiles, composefileRecursive, composefileRecursiveDirectory, isDefaultComposefile, composefileGlobs)
+	return collectFiles(baseDir, composefiles, composefileRecursive, isDefaultComposefile, composefileGlobs)
 }
 
-func collectFiles(files []string, recursive bool, recursiveStartDir string, isDefaultName func(string) bool, globs []string) ([]string, error) {
+func collectFiles(baseDir string, files []string, recursive bool, isDefaultName func(string) bool, globs []string) ([]string, error) {
 	fileSet := make(map[string]bool)
 	for _, fileName := range files {
 		fileSet[fileName] = true
 	}
 	if recursive {
-		err := filepath.Walk(recursiveStartDir, func(path string, info os.FileInfo, err error) error {
+		err := filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
@@ -73,6 +73,7 @@ func collectFiles(files []string, recursive bool, recursiveStartDir string, isDe
 		}
 	}
 	for _, pattern := range globs {
+		pattern = filepath.Join(baseDir, pattern)
 		matches, err := filepath.Glob(pattern)
 		if err != nil {
 			return nil, err
