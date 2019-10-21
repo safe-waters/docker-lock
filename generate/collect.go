@@ -64,10 +64,10 @@ func collectFiles(baseDir string, files []string, recursive bool, isDefaultName 
 	fileCh := make(chan collectedFileResult)
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for _, path := range files {
 			fileCh <- collectedFileResult{path: path}
 		}
-		wg.Done()
 	}()
 	wg.Add(1)
 	go func() {

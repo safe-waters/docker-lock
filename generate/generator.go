@@ -62,13 +62,13 @@ func NewGenerator(cmd *cobra.Command) (*Generator, error) {
 	)
 	collectWg.Add(1)
 	go func() {
+		defer collectWg.Done()
 		dockerfiles, dErr = collectDockerfiles(cmd)
-		collectWg.Done()
 	}()
 	collectWg.Add(1)
 	go func() {
+		defer collectWg.Done()
 		composefiles, cErr = collectComposefiles(cmd)
-		collectWg.Done()
 	}()
 	collectWg.Wait()
 	if dErr != nil {
@@ -122,11 +122,17 @@ func (g *Generator) GenerateLockfileBytes(wrapperManager *registry.WrapperManage
 	var parseWg sync.WaitGroup
 	for _, fileName := range g.Dockerfiles {
 		parseWg.Add(1)
-		go parseDockerfile(fileName, nil, "", "", parsedImageLines, &parseWg)
+		go func(fileName string) {
+			parseDockerfile(fileName, nil, "", "", parsedImageLines)
+			parseWg.Done()
+		}(fileName)
 	}
 	for _, fileName := range g.Composefiles {
 		parseWg.Add(1)
-		go parseComposefile(fileName, parsedImageLines, &parseWg)
+		go func(fileName string) {
+			parseComposefile(fileName, parsedImageLines)
+			parseWg.Done()
+		}(fileName)
 	}
 	go func() {
 		parseWg.Wait()

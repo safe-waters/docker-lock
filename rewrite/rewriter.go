@@ -73,7 +73,10 @@ func (r *Rewriter) Rewrite() (err error) {
 	dRwInfo := make(chan rewriteInfo)
 	for dPath, images := range r.DockerfileImages {
 		dwg.Add(1)
-		go r.getDockerfileRewriteInfo(dPath, images, dRwInfo, &dwg)
+		go func() {
+			defer dwg.Done()
+			r.getDockerfileRewriteInfo(dPath, images, dRwInfo)
+		}()
 	}
 	go func() {
 		dwg.Wait()
@@ -104,7 +107,10 @@ func (r *Rewriter) Rewrite() (err error) {
 	cRwInfo := make(chan rewriteInfo)
 	for cPath, images := range r.ComposefileImages {
 		cwg.Add(1)
-		go r.getComposefileRewriteInfo(cPath, images, cRwInfo, &cwg)
+		go func() {
+			defer cwg.Done()
+			r.getComposefileRewriteInfo(cPath, images, cRwInfo)
+		}()
 	}
 	go func() {
 		cwg.Wait()
@@ -148,10 +154,7 @@ func (r *Rewriter) Rewrite() (err error) {
 }
 
 // getDockerfileRewriteInfo requires images to be passed in in the order that they should be replaced.
-func (r *Rewriter) getDockerfileRewriteInfo(dPath string, images []generate.DockerfileImage, rwInfo chan<- rewriteInfo, wg *sync.WaitGroup) {
-	if wg != nil {
-		defer wg.Done()
-	}
+func (r *Rewriter) getDockerfileRewriteInfo(dPath string, images []generate.DockerfileImage, rwInfo chan<- rewriteInfo) {
 	dByt, err := ioutil.ReadFile(dPath)
 	if err != nil {
 		rwInfo <- rewriteInfo{err: err}
@@ -206,10 +209,7 @@ func (r *Rewriter) getDockerfileRewriteInfo(dPath string, images []generate.Dock
 	}
 }
 
-func (r *Rewriter) getComposefileRewriteInfo(cPath string, images []generate.ComposefileImage, rwInfo chan<- rewriteInfo, wg *sync.WaitGroup) {
-	if wg != nil {
-		defer wg.Done()
-	}
+func (r *Rewriter) getComposefileRewriteInfo(cPath string, images []generate.ComposefileImage, rwInfo chan<- rewriteInfo) {
 	cByt, err := ioutil.ReadFile(cPath)
 	if err != nil {
 		rwInfo <- rewriteInfo{err: err}
@@ -245,7 +245,7 @@ func (r *Rewriter) getComposefileRewriteInfo(cPath string, images []generate.Com
 		} else if shouldRewriteDockerfile {
 			dPath, dImages := getDImageInfo(serviceName, sImages)
 			dRwInfo := make(chan rewriteInfo)
-			go r.getDockerfileRewriteInfo(dPath, dImages, dRwInfo, nil)
+			go r.getDockerfileRewriteInfo(dPath, dImages, dRwInfo)
 			dRes := <-dRwInfo
 			if dRes.err != nil {
 				rwInfo <- rewriteInfo{err: fmt.Errorf("%s from %s", dRes.err, cPath)}
