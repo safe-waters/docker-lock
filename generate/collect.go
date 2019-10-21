@@ -106,18 +106,16 @@ func collectFiles(baseDir string, files []string, recursive bool, isDefaultName 
 		wg.Wait()
 		close(fileCh)
 	}()
+	uniqueFiles := make([]string, 0)
 	fileSet := make(map[string]bool)
 	for res := range fileCh {
 		if res.err != nil {
 			return nil, res.err
 		}
+		if !fileSet[res.path] {
+			uniqueFiles = append(uniqueFiles, res.path)
+		}
 		fileSet[res.path] = true
 	}
-	collectedFiles := make([]string, len(fileSet))
-	i := 0
-	for file := range fileSet {
-		collectedFiles[i] = file
-		i++
-	}
-	return collectedFiles, nil
+	return uniqueFiles, nil
 }
