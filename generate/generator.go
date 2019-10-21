@@ -55,13 +55,27 @@ func (i Image) String() string {
 }
 
 func NewGenerator(cmd *cobra.Command) (*Generator, error) {
-	dockerfiles, err := collectDockerfiles(cmd)
-	if err != nil {
-		return nil, err
+	var (
+		collectWg                 sync.WaitGroup
+		dockerfiles, composefiles []string
+		dErr, cErr                error
+	)
+	collectWg.Add(1)
+	go func() {
+		dockerfiles, dErr = collectDockerfiles(cmd)
+		collectWg.Done()
+	}()
+	collectWg.Add(1)
+	go func() {
+		composefiles, cErr = collectComposefiles(cmd)
+		collectWg.Done()
+	}()
+	collectWg.Wait()
+	if dErr != nil {
+		return nil, dErr
 	}
-	composefiles, err := collectComposefiles(cmd)
-	if err != nil {
-		return nil, err
+	if cErr != nil {
+		return nil, cErr
 	}
 	baseDir, err := cmd.Flags().GetString("base-dir")
 	if err != nil {
