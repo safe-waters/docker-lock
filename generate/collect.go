@@ -71,6 +71,7 @@ func collectFiles(baseDir string, files []string, recursive bool, isDefaultName 
 	}()
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		if recursive {
 			err := filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
@@ -85,10 +86,10 @@ func collectFiles(baseDir string, files []string, recursive bool, isDefaultName 
 				fileCh <- collectedFileResult{err: err}
 			}
 		}
-		wg.Done()
 	}()
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for _, pattern := range globs {
 			pattern = filepath.Join(baseDir, pattern)
 			paths, err := filepath.Glob(pattern)
@@ -100,7 +101,6 @@ func collectFiles(baseDir string, files []string, recursive bool, isDefaultName 
 				fileCh <- collectedFileResult{path: path}
 			}
 		}
-		wg.Done()
 	}()
 	go func() {
 		wg.Wait()
