@@ -3,9 +3,15 @@ package generate
 import (
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/spf13/cobra"
 )
+
+type collectedFileResult struct {
+	path string
+	err  error
+}
 
 func collectDockerfiles(cmd *cobra.Command) ([]string, error) {
 	isDefaultDockerfile := func(fpath string) bool {
@@ -54,33 +60,58 @@ func collectComposefiles(cmd *cobra.Command) ([]string, error) {
 }
 
 func collectFiles(baseDir string, files []string, recursive bool, isDefaultName func(string) bool, globs []string) ([]string, error) {
-	fileSet := make(map[string]bool)
-	for _, fileName := range files {
-		fileSet[fileName] = true
-	}
-	if recursive {
-		err := filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
+	var wg sync.WaitGroup
+	fileCh := make(chan collectedFileResult)
+	wg.Add(1)
+	go func() {
+		for _, path := range files {
+			fileCh <- collectedFileResult{path: path}
+		}
+		wg.Done()
+	}()
+	wg.Add(1)
+	go func() {
+		if recursive {
+			err := filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				if isDefaultName(filepath.Base(path)) {
+					fileCh <- collectedFileResult{path: path}
+				}
+				return nil
+			})
 			if err != nil {
-				return err
+				fileCh <- collectedFileResult{err: err}
 			}
-			if isDefaultName(filepath.Base(path)) {
-				fileSet[path] = true
+		}
+		wg.Done()
+	}()
+	wg.Add(1)
+	go func() {
+		for _, pattern := range globs {
+			pattern = filepath.Join(baseDir, pattern)
+			paths, err := filepath.Glob(pattern)
+			if err != nil {
+				fileCh <- collectedFileResult{err: err}
+				break
 			}
-			return nil
-		})
-		if err != nil {
-			return nil, err
+			for _, path := range paths {
+				fileCh <- collectedFileResult{path: path}
+			}
 		}
-	}
-	for _, pattern := range globs {
-		pattern = filepath.Join(baseDir, pattern)
-		matches, err := filepath.Glob(pattern)
-		if err != nil {
-			return nil, err
+		wg.Done()
+	}()
+	go func() {
+		wg.Wait()
+		close(fileCh)
+	}()
+	fileSet := make(map[string]bool)
+	for res := range fileCh {
+		if res.err != nil {
+			return nil, res.err
 		}
-		for _, match := range matches {
-			fileSet[match] = true
-		}
+		fileSet[res.path] = true
 	}
 	collectedFiles := make([]string, len(fileSet))
 	i := 0
