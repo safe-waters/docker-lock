@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/michaelperel/docker-lock/generate/internal/parse"
 	"gopkg.in/yaml.v2"
 )
 
@@ -22,42 +23,6 @@ type parsedImageLine struct {
 	err             error
 }
 
-type compose struct {
-	Services map[string]Service `yaml:"services"`
-}
-
-type Service struct {
-	ImageName    string        `yaml:"image"`
-	BuildWrapper *buildWrapper `yaml:"build"`
-}
-
-type verbose struct {
-	Context    string   `yaml:"context"`
-	Dockerfile string   `yaml:"dockerfile"`
-	Args       []string `yaml:"args"`
-}
-
-type simple string
-
-type buildWrapper struct {
-	Build interface{}
-}
-
-func (b *buildWrapper) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	*b = buildWrapper{}
-	var v verbose
-	if err := unmarshal(&v); err == nil {
-		b.Build = v
-		return nil
-	}
-	var s simple
-	if err := unmarshal(&s); err == nil {
-		b.Build = s
-		return nil
-	}
-	return errors.New("Unable to parse service.")
-}
-
 func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine) {
 	yamlByt, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -65,7 +30,7 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine) 
 		parsedImageLines <- parsedImageLine{err: extraErrorInfo}
 		return
 	}
-	var comp compose
+	var comp parse.Compose
 	if err := yaml.Unmarshal(yamlByt, &comp); err != nil {
 		extraErrInfo := fmt.Errorf("%s From compose-file: '%s'.", err, fileName)
 		parsedImageLines <- parsedImageLine{err: extraErrInfo}
@@ -74,7 +39,7 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine) 
 	var wg sync.WaitGroup
 	for serviceName, service := range comp.Services {
 		wg.Add(1)
-		go func(serviceName string, service Service) {
+		go func(serviceName string, service parse.Service) {
 			defer wg.Done()
 			if service.BuildWrapper == nil {
 				line := os.ExpandEnv(service.ImageName)
@@ -82,7 +47,7 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine) 
 				return
 			}
 			switch build := service.BuildWrapper.Build.(type) {
-			case simple:
+			case parse.Simple:
 				var dockerfile string
 				dockerfileDir := os.ExpandEnv(string(build))
 				if filepath.IsAbs(dockerfileDir) {
@@ -91,7 +56,7 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine) 
 					dockerfile = filepath.Join(filepath.Dir(fileName), dockerfileDir, "Dockerfile")
 				}
 				parseDockerfile(dockerfile, nil, fileName, serviceName, parsedImageLines)
-			case verbose:
+			case parse.Verbose:
 				context := os.ExpandEnv(build.Context)
 				if !filepath.IsAbs(context) {
 					context = filepath.Join(filepath.Dir(fileName), context)
