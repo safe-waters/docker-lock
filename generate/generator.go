@@ -49,7 +49,7 @@ type imageResponse struct {
 	err   error
 }
 
-func (i Image) String() string {
+func (i Image) Prettify() string {
 	pretty, _ := json.MarshalIndent(i, "", "\t")
 	return string(pretty)
 }
@@ -179,15 +179,16 @@ func (g *Generator) GenerateLockfileBytes(wrapperManager *registry.WrapperManage
 	var sortWg sync.WaitGroup
 	sortWg.Add(1)
 	go func() {
+		defer sortWg.Done()
 		for _, imageSlice := range dImages {
 			sort.Slice(imageSlice, func(i, j int) bool {
 				return imageSlice[i].position < imageSlice[j].position
 			})
 		}
-		sortWg.Done()
 	}()
 	sortWg.Add(1)
 	go func() {
+		defer sortWg.Done()
 		for _, imageSlice := range cImages {
 			sort.Slice(imageSlice, func(i, j int) bool {
 				if imageSlice[i].ServiceName != imageSlice[j].ServiceName {
@@ -199,7 +200,6 @@ func (g *Generator) GenerateLockfileBytes(wrapperManager *registry.WrapperManage
 				}
 			})
 		}
-		sortWg.Done()
 	}()
 	sortWg.Wait()
 	lockfile := Lockfile{DockerfileImages: dImages, ComposefileImages: cImages}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"sync"
 
 	"github.com/michaelperel/docker-lock/generate"
 	"github.com/michaelperel/docker-lock/registry"
@@ -71,43 +72,73 @@ func (v *Verifier) VerifyLockfile(wrapperManager *registry.WrapperManager) error
 			len(v.ComposefileImages))
 		return err
 	}
+	var dImagesWG sync.WaitGroup
+	dImagesErrs := make(chan error)
 	for dFpath := range v.DockerfileImages {
-		if len(v.DockerfileImages[dFpath]) != len(lFile.DockerfileImages[dFpath]) {
-			err = fmt.Errorf("%s Found %d images in file %s. Expected %d.",
-				err,
-				len(lFile.DockerfileImages[dFpath]),
-				dFpath,
-				len(v.DockerfileImages[dFpath]))
-			return err
-		}
-		for i := range v.DockerfileImages[dFpath] {
-			if v.DockerfileImages[dFpath][i] != lFile.DockerfileImages[dFpath][i] {
-				err = fmt.Errorf("%s Found image:\n%+v\nExpected image:\n%+v",
+		dImagesWG.Add(1)
+		go func(dFpath string) {
+			defer dImagesWG.Done()
+			if len(v.DockerfileImages[dFpath]) != len(lFile.DockerfileImages[dFpath]) {
+				err = fmt.Errorf("%s Found %d images in file %s. Expected %d.",
 					err,
-					lFile.DockerfileImages[dFpath][i],
-					v.DockerfileImages[dFpath][i])
-				return err
+					len(lFile.DockerfileImages[dFpath]),
+					dFpath,
+					len(v.DockerfileImages[dFpath]))
+				dImagesErrs <- err
+				return
 			}
-		}
+			for i := range v.DockerfileImages[dFpath] {
+				if v.DockerfileImages[dFpath][i] != lFile.DockerfileImages[dFpath][i] {
+					err = fmt.Errorf("%s Found image:\n%+v\nExpected image:\n%+v",
+						err,
+						lFile.DockerfileImages[dFpath][i].Prettify(),
+						v.DockerfileImages[dFpath][i].Prettify())
+					dImagesErrs <- err
+					return
+				}
+			}
+		}(dFpath)
 	}
+	go func() {
+		dImagesWG.Wait()
+		close(dImagesErrs)
+	}()
+	for err := range dImagesErrs {
+		return err
+	}
+	var cImagesWG sync.WaitGroup
+	cImagesErrs := make(chan error)
 	for cFpath := range v.ComposefileImages {
-		if len(v.ComposefileImages[cFpath]) != len(lFile.ComposefileImages[cFpath]) {
-			err = fmt.Errorf("%s Found %d images in file %s. Expected %d.",
-				err,
-				len(lFile.ComposefileImages[cFpath]),
-				cFpath,
-				len(v.ComposefileImages[cFpath]))
-			return err
-		}
-		for i := range v.ComposefileImages[cFpath] {
-			if v.ComposefileImages[cFpath][i] != lFile.ComposefileImages[cFpath][i] {
-				err = fmt.Errorf("%s Found image:\n%+v\nExpected image:\n%+v",
+		cImagesWG.Add(1)
+		go func(cFpath string) {
+			defer cImagesWG.Done()
+			if len(v.ComposefileImages[cFpath]) != len(lFile.ComposefileImages[cFpath]) {
+				err = fmt.Errorf("%s Found %d images in file %s. Expected %d.",
 					err,
-					lFile.ComposefileImages[cFpath][i],
-					v.ComposefileImages[cFpath][i])
-				return err
+					len(lFile.ComposefileImages[cFpath]),
+					cFpath,
+					len(v.ComposefileImages[cFpath]))
+				cImagesErrs <- err
+				return
 			}
-		}
+			for i := range v.ComposefileImages[cFpath] {
+				if v.ComposefileImages[cFpath][i] != lFile.ComposefileImages[cFpath][i] {
+					err = fmt.Errorf("%s Found image:\n%+v\nExpected image:\n%+v",
+						err,
+						lFile.ComposefileImages[cFpath][i].Prettify(),
+						v.ComposefileImages[cFpath][i].Prettify())
+					cImagesErrs <- err
+					return
+				}
+			}
+		}(cFpath)
+	}
+	go func() {
+		cImagesWG.Wait()
+		close(cImagesErrs)
+	}()
+	for err := range cImagesErrs {
+		return err
 	}
 	return nil
 }
