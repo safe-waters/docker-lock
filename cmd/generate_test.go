@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/michaelperel/docker-lock/generate"
@@ -66,6 +67,89 @@ func TestComposeEnv(t *testing.T) {
 	flags := []string{fmt.Sprintf("--compose-files=%s", composefile), fmt.Sprintf("--env-file=%s", envFile)}
 	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+	}}
+	test(t, flags, results)
+}
+
+func TestComposeMultipleComposefiles(t *testing.T) {
+	t.Parallel()
+	composefileOne := filepath.Join(composeBaseDir, "multiple", "docker-compose-one.yml")
+	composefileTwo := filepath.Join(composeBaseDir, "multiple", "docker-compose-two.yml")
+	dockerfilesOne := []string{filepath.ToSlash(filepath.Join(composeBaseDir, "multiple", "build", "Dockerfile"))}
+	dockerfilesTwo := []string{
+		filepath.ToSlash(filepath.Join(composeBaseDir, "multiple", "context", "Dockerfile")),
+		filepath.ToSlash(filepath.Join(composeBaseDir, "multiple", "dockerfile", "Dockerfile")),
+	}
+	composefiles := strings.Join([]string{composefileOne, composefileTwo}, ",")
+	flags := []string{fmt.Sprintf("--compose-files=%s", composefiles)}
+	results := map[string][]generate.ComposefileImage{
+		filepath.ToSlash(composefileOne): []generate.ComposefileImage{
+			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "build-svc", Dockerfile: dockerfilesOne[0]},
+			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "image-svc", Dockerfile: ""},
+		},
+		filepath.ToSlash(composefileTwo): []generate.ComposefileImage{
+			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "context-svc", Dockerfile: dockerfilesTwo[0]},
+			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "dockerfile-svc", Dockerfile: dockerfilesTwo[1]},
+		}}
+	test(t, flags, results)
+}
+
+func TestComposeRecursive(t *testing.T) {
+	t.Parallel()
+	composefileTopLevel := filepath.Join(composeBaseDir, "recursive", "docker-compose.yml")
+	composefileRecursiveLevel := filepath.Join(composeBaseDir, "recursive", "build", "docker-compose.yml")
+	dockerfileRecursiveLevel := filepath.ToSlash(filepath.Join(composeBaseDir, "recursive", "build", "build", "Dockerfile"))
+	recursiveBaseDir := filepath.Join(composeBaseDir, "recursive")
+	flags := []string{fmt.Sprintf("--base-dir=%s", recursiveBaseDir), "--compose-file-recursive"}
+	results := map[string][]generate.ComposefileImage{
+		filepath.ToSlash(composefileTopLevel): []generate.ComposefileImage{
+			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""},
+		},
+		filepath.ToSlash(composefileRecursiveLevel): []generate.ComposefileImage{
+			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfileRecursiveLevel},
+		},
+	}
+	test(t, flags, results)
+}
+
+func TestComposeNoFileSpecified(t *testing.T) {
+	t.Parallel()
+	baseDir := filepath.Join(composeBaseDir, "nofile")
+	flags := []string{fmt.Sprintf("--base-dir=%s", baseDir)}
+	composefiles := []string{filepath.Join(baseDir, "docker-compose.yml"), filepath.Join(baseDir, "docker-compose.yaml")}
+	results := make(map[string][]generate.ComposefileImage)
+	for _, composefile := range composefiles {
+		results[filepath.ToSlash(composefile)] = append(results[filepath.ToSlash(composefile)], generate.ComposefileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""})
+	}
+	test(t, flags, results)
+}
+
+func TestComposeGlobs(t *testing.T) {
+	t.Parallel()
+	globs := strings.Join([]string{filepath.Join(composeBaseDir, "globs", "**", "docker-compose.yml"), filepath.Join(composeBaseDir, "globs", "docker-compose.yml")}, ",")
+	flags := []string{fmt.Sprintf("--compose-file-globs=%s", globs)}
+	composefiles := []string{filepath.Join(composeBaseDir, "globs", "image", "docker-compose.yml"), filepath.Join(composeBaseDir, "globs", "docker-compose.yml")}
+	results := make(map[string][]generate.ComposefileImage)
+	for _, composefile := range composefiles {
+		results[filepath.ToSlash(composefile)] = append(results[filepath.ToSlash(composefile)], generate.ComposefileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""})
+	}
+	test(t, flags, results)
+}
+
+func TestComposeAssortment(t *testing.T) {
+	t.Parallel()
+	composefile := filepath.Join(composeBaseDir, "assortment", "docker-compose.yml")
+	dockerfiles := []string{
+		filepath.ToSlash(filepath.Join(composeBaseDir, "assortment", "build", "Dockerfile")),
+		filepath.ToSlash(filepath.Join(composeBaseDir, "assortment", "context", "Dockerfile")),
+		filepath.ToSlash(filepath.Join(composeBaseDir, "assortment", "dockerfile", "Dockerfile")),
+	}
+	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
+	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
+		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "build-svc", Dockerfile: dockerfiles[0]},
+		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "context-svc", Dockerfile: dockerfiles[1]},
+		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "dockerfile-svc", Dockerfile: dockerfiles[2]},
+		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "image-svc", Dockerfile: ""},
 	}}
 	test(t, flags, results)
 }
@@ -137,6 +221,52 @@ func TestDockerfileArgsLocalArg(t *testing.T) {
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}},
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}},
 	}}
+	test(t, flags, results)
+}
+
+func TestDockerfileMultipleDockerfiles(t *testing.T) {
+	t.Parallel()
+	dockerfiles := []string{filepath.Join(dockerBaseDir, "multiple", "DockerfileOne"), filepath.Join(dockerBaseDir, "multiple", "DockerfileTwo")}
+	flags := []string{fmt.Sprintf("--dockerfiles=%s", strings.Join(dockerfiles, ","))}
+	results := make(map[string][]generate.DockerfileImage)
+	for _, dockerfile := range dockerfiles {
+		results[filepath.ToSlash(dockerfile)] = append(results[filepath.ToSlash(dockerfile)], generate.DockerfileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}})
+	}
+	test(t, flags, results)
+}
+
+func TestDockerfileRecursive(t *testing.T) {
+	t.Parallel()
+	recursiveBaseDir := filepath.Join(dockerBaseDir, "recursive")
+	flags := []string{fmt.Sprintf("--base-dir=%s", recursiveBaseDir), "--dockerfile-recursive"}
+	results := make(map[string][]generate.DockerfileImage)
+	dockerfiles := []string{filepath.Join(dockerBaseDir, "recursive", "Dockerfile"), filepath.Join(dockerBaseDir, "recursive", "recursive", "Dockerfile")}
+	for _, dockerfile := range dockerfiles {
+		results[filepath.ToSlash(dockerfile)] = append(results[filepath.ToSlash(dockerfile)], generate.DockerfileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}})
+	}
+	test(t, flags, results)
+}
+
+func TestDockerfileNoFileSpecified(t *testing.T) {
+	t.Parallel()
+	baseDir := filepath.Join(dockerBaseDir, "nofile")
+	flags := []string{fmt.Sprintf("--base-dir=%s", baseDir)}
+	dockerfile := filepath.Join(baseDir, "Dockerfile")
+	results := map[string][]generate.DockerfileImage{filepath.ToSlash(dockerfile): []generate.DockerfileImage{
+		{Image: generate.Image{Name: "busybox", Tag: "latest"}},
+	}}
+	test(t, flags, results)
+}
+
+func TestDockerfileGlobs(t *testing.T) {
+	t.Parallel()
+	globs := strings.Join([]string{filepath.Join(dockerBaseDir, "globs", "**", "Dockerfile"), filepath.Join(dockerBaseDir, "globs", "Dockerfile")}, ",")
+	flags := []string{fmt.Sprintf("--dockerfile-globs=%s", globs)}
+	dockerfiles := []string{filepath.Join(dockerBaseDir, "globs", "globs", "Dockerfile"), filepath.Join(dockerBaseDir, "globs", "Dockerfile")}
+	results := make(map[string][]generate.DockerfileImage)
+	for _, dockerfile := range dockerfiles {
+		results[filepath.ToSlash(dockerfile)] = append(results[filepath.ToSlash(dockerfile)], generate.DockerfileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}})
+	}
 	test(t, flags, results)
 }
 

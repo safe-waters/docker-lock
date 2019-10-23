@@ -1,0 +1,16 @@
+version: '3'
+services:
+  image-svc:
+    image: busybox
+  build-svc:
+    image: unused
+    build: ./build
+  context-svc:
+    image: unused
+    build:
+      context: ./context
+  dockerfile-svc:
+    image: unused
+    build:
+      context: ./dockerfile
+      dockerfile: Dockerfile

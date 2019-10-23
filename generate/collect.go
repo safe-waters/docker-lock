@@ -76,7 +76,7 @@ func collectFiles(baseDir string, files []string, recursive bool, isDefaultName 
 		if recursive {
 			err := filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "prevent panic by handling failure accessing a path %q: %v\n", path, err)
+					fmt.Fprintf(os.Stderr, "%v\n", err)
 					return err
 				}
 				if info.Mode().IsRegular() && isDefaultName(filepath.Base(path)) {

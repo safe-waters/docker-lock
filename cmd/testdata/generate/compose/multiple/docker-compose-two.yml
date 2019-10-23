@@ -1,0 +1,11 @@
+version: '3'
+services:
+  context-svc:
+    image: unused
+    build:
+      context: ./context
+  dockerfile-svc:
+    image: unused
+    build:
+      context: ./dockerfile
+      dockerfile: Dockerfile
