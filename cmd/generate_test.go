@@ -11,28 +11,19 @@ import (
 	"github.com/michaelperel/docker-lock/generate"
 )
 
-// docker-compose files
-func TestComposeImage(t *testing.T) {
-	t.Parallel()
-	baseDir := filepath.Join("testdata", "generate", "compose")
-	tmpFile, err := ioutil.TempFile("", "test-compose-image")
+var composeBaseDir = filepath.Join("testdata", "generate", "compose")
+
+func testCompose(t *testing.T, flags []string, results map[string][]generate.ComposefileImage) {
+	tmpFile, err := ioutil.TempFile("", "test-docker-lock-*")
 	if err != nil {
 		t.Error(err)
 	}
+	defer os.Remove(tmpFile.Name())
+	outPath := tmpFile.Name()
 	generateCmd := NewGenerateCmd()
-	generateCmd.SetArgs([]string{
-		"lock",
-		"generate",
-		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "image", "docker-compose.yml")),
-		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
-	})
-	generateCmd.Execute()
-	outPath, err := generateCmd.Flags().GetString("outpath")
-	if err != nil {
-		t.Error(err)
-	}
-	composefiles, err := generateCmd.Flags().GetStringSlice("compose-files")
-	if err != nil {
+	args := append([]string{"lock", "generate", fmt.Sprintf("--outpath=%s", outPath)}, flags...)
+	generateCmd.SetArgs(args)
+	if err := generateCmd.Execute(); err != nil {
 		t.Error(err)
 	}
 	lByt, err := ioutil.ReadFile(outPath)
@@ -43,297 +34,10 @@ func TestComposeImage(t *testing.T) {
 	if err := json.Unmarshal(lByt, &lFile); err != nil {
 		t.Error(err)
 	}
-	composefile := filepath.ToSlash(composefiles[0])
-	results := map[string][]generate.ComposefileImage{composefile: []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""},
-	}}
-	checkComposeResults(t, results, lFile)
-}
-
-func TestComposeBuild(t *testing.T) {
-	t.Parallel()
-	baseDir := filepath.Join("testdata", "generate", "compose")
-	tmpFile, err := ioutil.TempFile("", "test-compose-build")
-	if err != nil {
-		t.Error(err)
-	}
-	generateCmd := NewGenerateCmd()
-	generateCmd.SetArgs([]string{
-		"lock",
-		"generate",
-		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "build", "docker-compose.yml")),
-		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
-	})
-	generateCmd.Execute()
-	outPath, err := generateCmd.Flags().GetString("outpath")
-	if err != nil {
-		t.Error(err)
-	}
-	composefiles, err := generateCmd.Flags().GetStringSlice("compose-files")
-	if err != nil {
-		t.Error(err)
-	}
-	lByt, err := ioutil.ReadFile(outPath)
-	if err != nil {
-		t.Error(err)
-	}
-	var lFile generate.Lockfile
-	if err := json.Unmarshal(lByt, &lFile); err != nil {
-		t.Error(err)
-	}
-	composefile := filepath.ToSlash(composefiles[0])
-	dockerfile := filepath.ToSlash(filepath.Join(baseDir, "build", "build", "Dockerfile"))
-	results := map[string][]generate.ComposefileImage{composefile: []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
-	}}
-	checkComposeResults(t, results, lFile)
-}
-
-func TestComposeDockerfile(t *testing.T) {
-	t.Parallel()
-	baseDir := filepath.Join("testdata", "generate", "compose")
-	tmpFile, err := ioutil.TempFile("", "test-compose-dockerfile")
-	if err != nil {
-		t.Error(err)
-	}
-	generateCmd := NewGenerateCmd()
-	generateCmd.SetArgs([]string{
-		"lock",
-		"generate",
-		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "dockerfile", "docker-compose.yml")),
-		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
-	})
-	generateCmd.Execute()
-	outPath, err := generateCmd.Flags().GetString("outpath")
-	if err != nil {
-		t.Error(err)
-	}
-	composefiles, err := generateCmd.Flags().GetStringSlice("compose-files")
-	if err != nil {
-		t.Error(err)
-	}
-	lByt, err := ioutil.ReadFile(outPath)
-	if err != nil {
-		t.Error(err)
-	}
-	var lFile generate.Lockfile
-	if err := json.Unmarshal(lByt, &lFile); err != nil {
-		t.Error(err)
-	}
-	composefile := filepath.ToSlash(composefiles[0])
-	dockerfile := filepath.ToSlash(filepath.Join(baseDir, "dockerfile", "dockerfile", "Dockerfile"))
-	results := map[string][]generate.ComposefileImage{composefile: []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
-	}}
-	checkComposeResults(t, results, lFile)
-}
-
-func TestComposeContext(t *testing.T) {
-	t.Parallel()
-	baseDir := filepath.Join("testdata", "generate", "compose")
-	tmpFile, err := ioutil.TempFile("", "test-compose-context")
-	if err != nil {
-		t.Error(err)
-	}
-	generateCmd := NewGenerateCmd()
-	generateCmd.SetArgs([]string{
-		"lock",
-		"generate",
-		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "context", "docker-compose.yml")),
-		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
-	})
-	generateCmd.Execute()
-	outPath, err := generateCmd.Flags().GetString("outpath")
-	if err != nil {
-		t.Error(err)
-	}
-	composefiles, err := generateCmd.Flags().GetStringSlice("compose-files")
-	if err != nil {
-		t.Error(err)
-	}
-	lByt, err := ioutil.ReadFile(outPath)
-	if err != nil {
-		t.Error(err)
-	}
-	var lFile generate.Lockfile
-	if err := json.Unmarshal(lByt, &lFile); err != nil {
-		t.Error(err)
-	}
-	composefile := filepath.ToSlash(composefiles[0])
-	dockerfile := filepath.ToSlash(filepath.Join(baseDir, "context", "context", "Dockerfile"))
-	results := map[string][]generate.ComposefileImage{composefile: []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
-	}}
-	checkComposeResults(t, results, lFile)
-}
-
-func TestComposeEnv(t *testing.T) {
-	t.Parallel()
-	baseDir := filepath.Join("testdata", "generate", "compose")
-	tmpFile, err := ioutil.TempFile("", "test-compose-env")
-	if err != nil {
-		t.Error(err)
-	}
-	generateCmd := NewGenerateCmd()
-	generateCmd.SetArgs([]string{
-		"lock",
-		"generate",
-		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "env", "docker-compose.yml")),
-		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
-		fmt.Sprintf("--env-file=%s", filepath.Join(baseDir, "env", ".env")),
-	})
-	generateCmd.Execute()
-	outPath, err := generateCmd.Flags().GetString("outpath")
-	if err != nil {
-		t.Error(err)
-	}
-	composefiles, err := generateCmd.Flags().GetStringSlice("compose-files")
-	if err != nil {
-		t.Error(err)
-	}
-	lByt, err := ioutil.ReadFile(outPath)
-	if err != nil {
-		t.Error(err)
-	}
-	var lFile generate.Lockfile
-	if err := json.Unmarshal(lByt, &lFile); err != nil {
-		t.Error(err)
-	}
-	composefile := filepath.ToSlash(composefiles[0])
-	dockerfile := filepath.ToSlash(filepath.Join(baseDir, "env", "env", "Dockerfile"))
-	results := map[string][]generate.ComposefileImage{composefile: []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
-	}}
-	checkComposeResults(t, results, lFile)
-}
-
-func TestComposeArgsDockerfileOverride(t *testing.T) {
-	// ARG in Dockerfile, also in composefile.
-	// composefile should override
-	t.Parallel()
-	baseDir := filepath.Join("testdata", "generate", "compose", "args")
-	tmpFile, err := ioutil.TempFile("", "test-compose-args-dockerfile-override")
-	if err != nil {
-		t.Error(err)
-	}
-	generateCmd := NewGenerateCmd()
-	generateCmd.SetArgs([]string{
-		"lock",
-		"generate",
-		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "override", "docker-compose.yml")),
-		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
-	})
-	generateCmd.Execute()
-	outPath, err := generateCmd.Flags().GetString("outpath")
-	if err != nil {
-		t.Error(err)
-	}
-	composefiles, err := generateCmd.Flags().GetStringSlice("compose-files")
-	if err != nil {
-		t.Error(err)
-	}
-	lByt, err := ioutil.ReadFile(outPath)
-	if err != nil {
-		t.Error(err)
-	}
-	var lFile generate.Lockfile
-	if err := json.Unmarshal(lByt, &lFile); err != nil {
-		t.Error(err)
-	}
-	composefile := filepath.ToSlash(composefiles[0])
-	dockerfile := filepath.ToSlash(filepath.Join(baseDir, "override", "Dockerfile"))
-	results := map[string][]generate.ComposefileImage{composefile: []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
-	}}
-	checkComposeResults(t, results, lFile)
-}
-
-func TestComposeArgsDockerfileEmpty(t *testing.T) {
-	// Empty ARG in Dockerfile, definition in composefile.
-	// composefile should override.
-	t.Parallel()
-	baseDir := filepath.Join("testdata", "generate", "compose", "args")
-	tmpFile, err := ioutil.TempFile("", "test-compose-args-dockerfile-empty")
-	if err != nil {
-		t.Error(err)
-	}
-	generateCmd := NewGenerateCmd()
-	generateCmd.SetArgs([]string{
-		"lock",
-		"generate",
-		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "empty", "docker-compose.yml")),
-		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
-	})
-	generateCmd.Execute()
-	outPath, err := generateCmd.Flags().GetString("outpath")
-	if err != nil {
-		t.Error(err)
-	}
-	composefiles, err := generateCmd.Flags().GetStringSlice("compose-files")
-	if err != nil {
-		t.Error(err)
-	}
-	lByt, err := ioutil.ReadFile(outPath)
-	if err != nil {
-		t.Error(err)
-	}
-	var lFile generate.Lockfile
-	if err := json.Unmarshal(lByt, &lFile); err != nil {
-		t.Error(err)
-	}
-	composefile := filepath.ToSlash(composefiles[0])
-	dockerfile := filepath.ToSlash(filepath.Join(baseDir, "empty", "Dockerfile"))
-	results := map[string][]generate.ComposefileImage{composefile: []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
-	}}
-	checkComposeResults(t, results, lFile)
-}
-
-func TestComposeArgsDockerfileNoArg(t *testing.T) {
-	// ARG defined in Dockerfile, not in composefile.
-	// Should behave as though no composefile existed.
-	t.Parallel()
-	baseDir := filepath.Join("testdata", "generate", "compose", "args")
-	tmpFile, err := ioutil.TempFile("", "test-compose-args-dockerfile-noarg")
-	if err != nil {
-		t.Error(err)
-	}
-	generateCmd := NewGenerateCmd()
-	generateCmd.SetArgs([]string{
-		"lock",
-		"generate",
-		fmt.Sprintf("--compose-files=%s", filepath.Join(baseDir, "noarg", "docker-compose.yml")),
-		fmt.Sprintf("--outpath=%s", tmpFile.Name()),
-	})
-	generateCmd.Execute()
-	outPath, err := generateCmd.Flags().GetString("outpath")
-	if err != nil {
-		t.Error(err)
-	}
-	composefiles, err := generateCmd.Flags().GetStringSlice("compose-files")
-	if err != nil {
-		t.Error(err)
-	}
-	lByt, err := ioutil.ReadFile(outPath)
-	if err != nil {
-		t.Error(err)
-	}
-	var lFile generate.Lockfile
-	if err := json.Unmarshal(lByt, &lFile); err != nil {
-		t.Error(err)
-	}
-	composefile := filepath.ToSlash(composefiles[0])
-	dockerfile := filepath.ToSlash(filepath.Join(baseDir, "noarg", "Dockerfile"))
-	results := map[string][]generate.ComposefileImage{composefile: []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
-	}}
-	checkComposeResults(t, results, lFile)
-}
-
-func checkComposeResults(t *testing.T, results map[string][]generate.ComposefileImage, lFile generate.Lockfile) {
 	if len(lFile.ComposefileImages) != len(results) {
 		t.Errorf("Found '%d' docker-compose files. Expected '%d'.", len(lFile.ComposefileImages), len(results))
 	}
+	// TODO: PRETTY
 	for rCFile, rImages := range results {
 		fImages, ok := lFile.ComposefileImages[rCFile]
 		if !ok {
@@ -342,7 +46,6 @@ func checkComposeResults(t *testing.T, results map[string][]generate.Composefile
 		if len(fImages) != len(rImages) {
 			t.Errorf("Found '%d' images for '%s'. Expected '%d'.", len(fImages), rCFile, len(rImages))
 		}
-
 		for i, fImage := range fImages {
 			if results[rCFile][i].Image.Name != fImage.Image.Name ||
 				results[rCFile][i].Image.Tag != fImage.Image.Tag {
@@ -367,6 +70,101 @@ func checkComposeResults(t *testing.T, results map[string][]generate.Composefile
 			}
 		}
 	}
+}
+
+// docker-compose files
+func TestComposeImage(t *testing.T) {
+	t.Parallel()
+	composefile := filepath.Join(composeBaseDir, "image", "docker-compose.yml")
+	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
+	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
+		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""},
+	}}
+	testCompose(t, flags, results)
+}
+
+func TestComposeBuild(t *testing.T) {
+	t.Parallel()
+	composefile := filepath.Join(composeBaseDir, "build", "docker-compose.yml")
+	dockerfile := filepath.ToSlash(filepath.Join(composeBaseDir, "build", "build", "Dockerfile"))
+	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
+	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
+		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+	}}
+	testCompose(t, flags, results)
+}
+
+func TestComposeDockerfile(t *testing.T) {
+	t.Parallel()
+	composefile := filepath.Join(composeBaseDir, "dockerfile", "docker-compose.yml")
+	dockerfile := filepath.ToSlash(filepath.Join(composeBaseDir, "dockerfile", "dockerfile", "Dockerfile"))
+	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
+	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
+		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+	}}
+	testCompose(t, flags, results)
+}
+
+func TestComposeContext(t *testing.T) {
+	t.Parallel()
+	composefile := filepath.Join(composeBaseDir, "context", "docker-compose.yml")
+	dockerfile := filepath.ToSlash(filepath.Join(composeBaseDir, "context", "context", "Dockerfile"))
+	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
+	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
+		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+	}}
+	testCompose(t, flags, results)
+}
+
+func TestComposeEnv(t *testing.T) {
+	t.Parallel()
+	composefile := filepath.Join(composeBaseDir, "env", "docker-compose.yml")
+	dockerfile := filepath.ToSlash(filepath.Join(composeBaseDir, "env", "env", "Dockerfile"))
+	envFile := filepath.Join(composeBaseDir, "env", ".env")
+	flags := []string{fmt.Sprintf("--compose-files=%s", composefile), fmt.Sprintf("--env-file=%s", envFile)}
+	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
+		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+	}}
+	testCompose(t, flags, results)
+}
+
+func TestComposeArgsDockerfileOverride(t *testing.T) {
+	// ARG in Dockerfile, also in composefile.
+	// composefile should override
+	t.Parallel()
+	composefile := filepath.Join(composeBaseDir, "args", "override", "docker-compose.yml")
+	dockerfile := filepath.ToSlash(filepath.Join(composeBaseDir, "args", "override", "Dockerfile"))
+	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
+	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
+		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+	}}
+	testCompose(t, flags, results)
+}
+
+func TestComposeArgsDockerfileEmpty(t *testing.T) {
+	// Empty ARG in Dockerfile, definition in composefile.
+	// composefile should override.
+	t.Parallel()
+	composefile := filepath.Join(composeBaseDir, "args", "empty", "docker-compose.yml")
+	dockerfile := filepath.ToSlash(filepath.Join(composeBaseDir, "args", "empty", "Dockerfile"))
+	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
+	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
+		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+	}}
+	testCompose(t, flags, results)
+}
+
+func TestComposeArgsDockerfileNoArg(t *testing.T) {
+	// ARG defined in Dockerfile, not in composefile.
+	// Should behave as though no composefile existed.
+	t.Parallel()
+	composefile := filepath.Join(composeBaseDir, "args", "noarg", "docker-compose.yml")
+	dockerfile := filepath.ToSlash(filepath.Join(composeBaseDir, "args", "noarg", "Dockerfile"))
+	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
+	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
+		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+	}}
+	testCompose(t, flags, results)
 }
 
 // Dockerfiles
