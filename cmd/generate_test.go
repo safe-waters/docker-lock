@@ -16,17 +16,17 @@ var composeBaseDir = filepath.Join("testdata", "generate", "compose")
 var dockerBaseDir = filepath.Join("testdata", "generate", "docker")
 
 // docker-compose files
-func TestComposeImage(t *testing.T) {
+func TestGenerateComposeImage(t *testing.T) {
 	t.Parallel()
 	composefile := filepath.Join(composeBaseDir, "image", "docker-compose.yml")
 	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
 	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""},
 	}}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestComposeBuild(t *testing.T) {
+func TestGenerateComposeBuild(t *testing.T) {
 	t.Parallel()
 	composefile := filepath.Join(composeBaseDir, "build", "docker-compose.yml")
 	dockerfile := filepath.ToSlash(filepath.Join(composeBaseDir, "build", "build", "Dockerfile"))
@@ -34,10 +34,10 @@ func TestComposeBuild(t *testing.T) {
 	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
 	}}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestComposeDockerfile(t *testing.T) {
+func TestGenerateComposeDockerfile(t *testing.T) {
 	t.Parallel()
 	composefile := filepath.Join(composeBaseDir, "dockerfile", "docker-compose.yml")
 	dockerfile := filepath.ToSlash(filepath.Join(composeBaseDir, "dockerfile", "dockerfile", "Dockerfile"))
@@ -45,10 +45,10 @@ func TestComposeDockerfile(t *testing.T) {
 	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
 	}}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestComposeContext(t *testing.T) {
+func TestGenerateComposeContext(t *testing.T) {
 	t.Parallel()
 	composefile := filepath.Join(composeBaseDir, "context", "docker-compose.yml")
 	dockerfile := filepath.ToSlash(filepath.Join(composeBaseDir, "context", "context", "Dockerfile"))
@@ -56,10 +56,10 @@ func TestComposeContext(t *testing.T) {
 	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
 	}}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestComposeEnv(t *testing.T) {
+func TestGenerateComposeEnv(t *testing.T) {
 	t.Parallel()
 	composefile := filepath.Join(composeBaseDir, "env", "docker-compose.yml")
 	dockerfile := filepath.ToSlash(filepath.Join(composeBaseDir, "env", "env", "Dockerfile"))
@@ -68,10 +68,10 @@ func TestComposeEnv(t *testing.T) {
 	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
 	}}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestComposeMultipleComposefiles(t *testing.T) {
+func TestGenerateComposeMultipleComposefiles(t *testing.T) {
 	t.Parallel()
 	composefileOne := filepath.Join(composeBaseDir, "multiple", "docker-compose-one.yml")
 	composefileTwo := filepath.Join(composeBaseDir, "multiple", "docker-compose-two.yml")
@@ -91,10 +91,10 @@ func TestComposeMultipleComposefiles(t *testing.T) {
 			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "context-svc", Dockerfile: dockerfilesTwo[0]},
 			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "dockerfile-svc", Dockerfile: dockerfilesTwo[1]},
 		}}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestComposeRecursive(t *testing.T) {
+func TestGenerateComposeRecursive(t *testing.T) {
 	t.Parallel()
 	composefileTopLevel := filepath.Join(composeBaseDir, "recursive", "docker-compose.yml")
 	composefileRecursiveLevel := filepath.Join(composeBaseDir, "recursive", "build", "docker-compose.yml")
@@ -109,10 +109,10 @@ func TestComposeRecursive(t *testing.T) {
 			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfileRecursiveLevel},
 		},
 	}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestComposeNoFileSpecified(t *testing.T) {
+func TestGenerateComposeNoFileSpecified(t *testing.T) {
 	t.Parallel()
 	baseDir := filepath.Join(composeBaseDir, "nofile")
 	flags := []string{fmt.Sprintf("--base-dir=%s", baseDir)}
@@ -121,10 +121,10 @@ func TestComposeNoFileSpecified(t *testing.T) {
 	for _, composefile := range composefiles {
 		results[filepath.ToSlash(composefile)] = append(results[filepath.ToSlash(composefile)], generate.ComposefileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""})
 	}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestComposeGlobs(t *testing.T) {
+func TestGenerateComposeGlobs(t *testing.T) {
 	t.Parallel()
 	globs := strings.Join([]string{filepath.Join(composeBaseDir, "globs", "**", "docker-compose.yml"), filepath.Join(composeBaseDir, "globs", "docker-compose.yml")}, ",")
 	flags := []string{fmt.Sprintf("--compose-file-globs=%s", globs)}
@@ -133,10 +133,10 @@ func TestComposeGlobs(t *testing.T) {
 	for _, composefile := range composefiles {
 		results[filepath.ToSlash(composefile)] = append(results[filepath.ToSlash(composefile)], generate.ComposefileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""})
 	}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestComposeAssortment(t *testing.T) {
+func TestGenerateComposeAssortment(t *testing.T) {
 	t.Parallel()
 	composefile := filepath.Join(composeBaseDir, "assortment", "docker-compose.yml")
 	dockerfiles := []string{
@@ -151,10 +151,10 @@ func TestComposeAssortment(t *testing.T) {
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "dockerfile-svc", Dockerfile: dockerfiles[2]},
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "image-svc", Dockerfile: ""},
 	}}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestComposeArgsDockerfileOverride(t *testing.T) {
+func TestGenerateComposeArgsDockerfileOverride(t *testing.T) {
 	// ARG in Dockerfile, also in composefile.
 	// composefile should override
 	t.Parallel()
@@ -164,10 +164,10 @@ func TestComposeArgsDockerfileOverride(t *testing.T) {
 	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
 	}}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestComposeArgsDockerfileEmpty(t *testing.T) {
+func TestGenerateComposeArgsDockerfileEmpty(t *testing.T) {
 	// Empty ARG in Dockerfile, definition in composefile.
 	// composefile should override.
 	t.Parallel()
@@ -177,10 +177,10 @@ func TestComposeArgsDockerfileEmpty(t *testing.T) {
 	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
 	}}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestComposeArgsDockerfileNoArg(t *testing.T) {
+func TestGenerateComposeArgsDockerfileNoArg(t *testing.T) {
 	// ARG defined in Dockerfile, not in composefile.
 	// Should behave as though no composefile existed.
 	t.Parallel()
@@ -190,11 +190,11 @@ func TestComposeArgsDockerfileNoArg(t *testing.T) {
 	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
 	}}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
 // Dockerfiles
-func TestDockerfileArgsBuildStage(t *testing.T) {
+func TestGenerateDockerfileArgsBuildStage(t *testing.T) {
 	// Build stages should not be parsed.
 	// For instance:
 	// # Dockerfile
@@ -208,10 +208,10 @@ func TestDockerfileArgsBuildStage(t *testing.T) {
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}},
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}},
 	}}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestDockerfileArgsLocalArg(t *testing.T) {
+func TestGenerateDockerfileArgsLocalArg(t *testing.T) {
 	// ARG defined before FROM (aka global arg) should not
 	// be overridden by ARG defined after FROM (aka local arg)
 	t.Parallel()
@@ -221,10 +221,10 @@ func TestDockerfileArgsLocalArg(t *testing.T) {
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}},
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}},
 	}}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestDockerfileMultipleDockerfiles(t *testing.T) {
+func TestGenerateDockerfileMultipleDockerfiles(t *testing.T) {
 	t.Parallel()
 	dockerfiles := []string{filepath.Join(dockerBaseDir, "multiple", "DockerfileOne"), filepath.Join(dockerBaseDir, "multiple", "DockerfileTwo")}
 	flags := []string{fmt.Sprintf("--dockerfiles=%s", strings.Join(dockerfiles, ","))}
@@ -232,10 +232,10 @@ func TestDockerfileMultipleDockerfiles(t *testing.T) {
 	for _, dockerfile := range dockerfiles {
 		results[filepath.ToSlash(dockerfile)] = append(results[filepath.ToSlash(dockerfile)], generate.DockerfileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}})
 	}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestDockerfileRecursive(t *testing.T) {
+func TestGenerateDockerfileRecursive(t *testing.T) {
 	t.Parallel()
 	recursiveBaseDir := filepath.Join(dockerBaseDir, "recursive")
 	flags := []string{fmt.Sprintf("--base-dir=%s", recursiveBaseDir), "--dockerfile-recursive"}
@@ -244,10 +244,10 @@ func TestDockerfileRecursive(t *testing.T) {
 	for _, dockerfile := range dockerfiles {
 		results[filepath.ToSlash(dockerfile)] = append(results[filepath.ToSlash(dockerfile)], generate.DockerfileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}})
 	}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestDockerfileNoFileSpecified(t *testing.T) {
+func TestGenerateDockerfileNoFileSpecified(t *testing.T) {
 	t.Parallel()
 	baseDir := filepath.Join(dockerBaseDir, "nofile")
 	flags := []string{fmt.Sprintf("--base-dir=%s", baseDir)}
@@ -255,10 +255,10 @@ func TestDockerfileNoFileSpecified(t *testing.T) {
 	results := map[string][]generate.DockerfileImage{filepath.ToSlash(dockerfile): []generate.DockerfileImage{
 		{Image: generate.Image{Name: "busybox", Tag: "latest"}},
 	}}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestDockerfileGlobs(t *testing.T) {
+func TestGenerateDockerfileGlobs(t *testing.T) {
 	t.Parallel()
 	globs := strings.Join([]string{filepath.Join(dockerBaseDir, "globs", "**", "Dockerfile"), filepath.Join(dockerBaseDir, "globs", "Dockerfile")}, ",")
 	flags := []string{fmt.Sprintf("--dockerfile-globs=%s", globs)}
@@ -267,10 +267,10 @@ func TestDockerfileGlobs(t *testing.T) {
 	for _, dockerfile := range dockerfiles {
 		results[filepath.ToSlash(dockerfile)] = append(results[filepath.ToSlash(dockerfile)], generate.DockerfileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}})
 	}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
-func TestDockerfilePrivate(t *testing.T) {
+func TestGenerateDockerfilePrivate(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("CI_SERVER") != "TRUE" {
 		t.Skip("Only runs on CI server.")
@@ -280,11 +280,11 @@ func TestDockerfilePrivate(t *testing.T) {
 	results := map[string][]generate.DockerfileImage{filepath.ToSlash(dockerfile): []generate.DockerfileImage{
 		{Image: generate.Image{Name: "dockerlocktestaccount/busybox", Tag: "latest"}},
 	}}
-	test(t, flags, results)
+	testGenerate(t, flags, results)
 }
 
 // helpers
-func test(t *testing.T, flags []string, results interface{}) {
+func testGenerate(t *testing.T, flags []string, results interface{}) {
 	tmpFile, err := ioutil.TempFile("", "test-docker-lock-*")
 	if err != nil {
 		t.Error(err)
