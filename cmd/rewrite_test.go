@@ -1,23 +1,30 @@
 package cmd
 
 import (
-	"encoding/json"
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
-
-	"github.com/michaelperel/docker-lock/generate"
 )
 
 // TestRewriteDockerfileArgsLocalArg replaces the ARG referenced in
 // the FROM instruction with the image.
+
+var rewriteDockerBaseDir = filepath.Join("testdata", "rewrite", "docker")
+
 func TestRewriteDockerfileArgsLocalArg(t *testing.T) {
 
 }
 
 func TestRewriteDockerfileArgsBuildStage(t *testing.T) {
-
+	baseDir := filepath.Join(rewriteDockerBaseDir, "args", "buildstage")
+	outPath := filepath.Join(baseDir, "docker-lock.json")
+	wantPaths := []string{filepath.Join(baseDir, "Dockerfile-want")}
+	gotPaths := []string{filepath.Join(baseDir, "Dockerfile-got")}
+	testRewrite(t, outPath, wantPaths, gotPaths)
 }
 
 // TestComposefileEnv replaces the environment variable
@@ -50,33 +57,37 @@ func TestRewriteBuildStage(t *testing.T) {
 
 }
 
-func testRewrite(t *testing.T, flags []string, results interface{}) {
-	tmpFile, err := ioutil.TempFile("", "test-rewrite-docker-lock-*")
-	if err != nil {
+func testRewrite(t *testing.T, outPath string, wantPaths []string, gotPaths []string) {
+	rewriteCmd := NewRewriteCmd()
+	rewriteArgs := append([]string{"lock", "rewrite", fmt.Sprintf("--outpath=%s", outPath), "--suffix=got"})
+	rewriteCmd.SetArgs(rewriteArgs)
+	if err := rewriteCmd.Execute(); err != nil {
 		t.Error(err)
 	}
-	defer os.Remove(tmpFile.Name())
-	outPath := tmpFile.Name()
-	generateCmd := NewGenerateCmd()
-	args := append([]string{"lock", "generate", fmt.Sprintf("--outpath=%s", outPath)}, flags...)
-	generateCmd.SetArgs(args)
-	if err := generateCmd.Execute(); err != nil {
-		t.Error(err)
+	for _, gotPath := range gotPaths {
+		defer os.Remove(gotPath)
 	}
-	lByt, err := ioutil.ReadFile(outPath)
-	if err != nil {
-		t.Error(err)
-	}
-	var lFile generate.Lockfile
-	if err := json.Unmarshal(lByt, &lFile); err != nil {
-		t.Error(err)
-	}
-	switch r := results.(type) {
-	case map[string][]generate.ComposefileImage:
-		checkComposeResults(t, r, lFile)
-	case map[string][]generate.DockerfileImage:
-		checkDockerResults(t, r, lFile)
-	default:
-		t.Fatalf("Incorrect result type: %v", r)
+	for i := range gotPaths {
+		gotByt, err := ioutil.ReadFile(gotPaths[i])
+		if err != nil {
+			t.Error(err)
+		}
+		wantByt, err := ioutil.ReadFile(wantPaths[i])
+		if err != nil {
+			t.Error(err)
+		}
+		if bytes.Compare(gotByt, wantByt) != 0 {
+			t.Errorf("Files %s and %s differ.", gotPaths[i], wantPaths[i])
+		}
+		gotLines := strings.Split(string(gotByt), "\n")
+		wantLines := strings.Split(string(wantByt), "\n")
+		if len(gotLines) != len(wantLines) {
+			t.Errorf("%s and %s have a different number of lines.", gotPaths[i], wantPaths[i])
+		}
+		for j := range gotLines {
+			if gotLines[j] != wantLines[j] {
+				t.Errorf("Got %s, want %s.", gotLines[j], wantLines[j])
+			}
+		}
 	}
 }
