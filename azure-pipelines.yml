@@ -5,18 +5,40 @@ trigger:
   tags:
     include:
     - '*'
+
 jobs:
-- job: Test
-  strategy:
-    matrix:
-      Windows:
-        os.image: 'windows-latest'
-      MacOS:
-        os.image: 'macOS-latest'
-      Ubuntu:
-        os.image: 'ubuntu-latest'
+- job: TestWindows
+  pool: 
+    vmImage: windows-2019
+  steps:
+  - checkout: none
+  - bash: |
+      curl -sSL https://github.com/docker/docker-credential-helpers/releases/download/v0.6.3/docker-credential-wincred-v0.6.3-amd64.zip -o docker-credential-wincred.zip
+      unzip docker-credential-wincred.zip
+      mkdir -p /usr/bin
+      mv docker-credential-wincred.exe /usr/bin
+      mkdir -p "$USERPROFILE"/.docker"
+      echo '{"credsStore":"wincred"}' > "$USERPROFILE"/.docker/config.json"
+    displayName: Configure wincred
+  - bash: docker login --username "$DOCKER_USERNAME" --password "$DOCKER_PASSWORD"
+    displayName: Login to docker
+    env:
+      DOCKER_USERNAME: $(DOCKER_USERNAME)
+      DOCKER_PASSWORD: $(DOCKER_PASSWORD)
+  - bash: |
+      rm /c/ProgramData/Git/config
+      git config --global core.autcrlf false
+      git clone https://github.com/michaelperel/docker-lock.git
+    displayName: Clone docker-lock
+  - bash: |
+      cd docker-lock
+      # run without -race, because it requires gcc
+      go test ./...
+    displayName: Run tests
+
+- job: TestMacOS
   pool:
-    vmImage: $(os.image)
+    vmImage: macOS-10.14
   steps:
   - bash: |
       mkdir homebrew
@@ -25,54 +47,58 @@ jobs:
       brew install docker
       mkdir -p ""$HOME"/.docker"
       echo '{"credsStore":"osxkeychain"}' > ""$HOME"/.docker/config.json"
-    condition: eq(variables['os.image'], 'macos-latest')
-    displayName: Setup docker + credential helper on mac
-  - bash: |
-      curl -sSL https://github.com/docker/docker-credential-helpers/releases/download/v0.6.3/docker-credential-wincred-v0.6.3-amd64.zip -o docker-credential-wincred.zip
-      unzip docker-credential-wincred.zip
-      mkdir -p /usr/bin
-      mv docker-credential-wincred.exe /usr/bin
-      mkdir -p "$USERPROFILE"/.docker"
-      echo '{"credsStore":"wincred"}' > "$USERPROFILE"/.docker/config.json"
-    condition: eq(variables['os.image'], 'windows-latest')
-    displayName: Setup credential helper on windows
+    displayName: Configure osxkeychain
   - bash: docker login --username "$DOCKER_USERNAME" --password "$DOCKER_PASSWORD"
-    displayName: 'Login to Docker'
+    displayName: Login to docker
     env:
       DOCKER_USERNAME: $(DOCKER_USERNAME)
       DOCKER_PASSWORD: $(DOCKER_PASSWORD)
   - bash: go test -race ./...
-    displayName: 'Run tests with race detector'
-    condition: ne(variables['os.image'], 'windows-latest')
-  - bash: go test ./...
-    displayName: 'Run tests without race detector'
-    condition: eq(variables['os.image'], 'windows-latest')
-- job: Build
-  dependsOn: Test
-  condition: succeeded()
+    displayName: Run tests
+
+- job: TestLinux
   pool:
-    vmImage: 'ubuntu-latest'
+    vmImage: ubuntu-18.04
+  steps:
+  - bash: docker login --username "$DOCKER_USERNAME" --password "$DOCKER_PASSWORD"
+    displayName: Login to docker
+    env:
+      DOCKER_USERNAME: $(DOCKER_USERNAME)
+      DOCKER_PASSWORD: $(DOCKER_PASSWORD)
+  - bash: go test -race ./...
+    displayName: Run tests
+
+- job: Build
+  dependsOn:
+  - TestWindows
+  - TestMacOS
+  - TestLinux
+  condition: and(succeeded('TestWindows'), succeeded('TestMacOS'), succeeded('TestLinux'))
+  pool:
+    vmImage: ubuntu-18.04
   steps:
   - bash: GOOS=linux GOARCH=amd64 go build -o docker-lock-linux
-    displayName: 'Build linux'
+    displayName: Build linux
   - bash: GOOS=darwin GOARCH=amd64 go build -o docker-lock-mac
-    displayName: 'Build mac'
+    displayName: Build mac
   - bash: GOOS=windows GOARCH=amd64 go build -o docker-lock-windows.exe
-    displayName: 'Build windows'
+    displayName: Build windows
   - publish: $(System.DefaultWorkingDirectory)/docker-lock-linux
     artifact: docker-lock-linux
-    displayName: 'Publish docker-lock-linux'
+    displayName: Publish docker-lock-linux
   - publish: $(System.DefaultWorkingDirectory)/docker-lock-mac
     artifact: docker-lock-mac
-    displayName: 'Publish docker-lock-mac'
+    displayName: Publish docker-lock-mac
   - publish: $(System.DefaultWorkingDirectory)/docker-lock-windows.exe
     artifact: docker-lock-windows
-    displayName: 'Publish docker-lock-windows'
+    displayName: Publish docker-lock-windows
+
+# create a release by pushing a semver git tag such as v0.0.1 
 - job: Release
   dependsOn: Build
   condition: succeeded()
   pool:
-    vmImage: 'ubuntu-latest'
+    vmImage: ubuntu-18.04
   steps:
   - download: current
     artifact: docker-lock-linux
@@ -84,7 +110,7 @@ jobs:
     artifact: docker-lock-windows
     displayName: Download docker-lock-windows
   - task: GithubRelease@0 
-    displayName: 'Create GitHub Release'
+    displayName: Create github release
     inputs:
       gitHubConnection: docker-lock-release
       repositoryName: michaelperel/docker-lock
