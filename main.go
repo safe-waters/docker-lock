@@ -20,5 +20,8 @@ func main() {
 		fmt.Println(string(j))
 		os.Exit(0)
 	}
-	cmd.Execute()
+	if err := cmd.Execute(); err != nil {
+		fmt.Fprint(os.Stderr, err)
+		os.Exit(1)
+	}
 }

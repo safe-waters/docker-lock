@@ -13,19 +13,28 @@ func NewVerifyCmd() *cobra.Command {
 		Short: "Verifies that base images in Dockerfiles and docker-compose files refer to the same images as in the Lockfile.",
 		Long: `After generating a Lockfile with "docker lock generate", running "docker lock verify"
 will verify that all base images in files referenced in the Lockfile exist in the Lockfile and have up-to-date digests.`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			envFile, err := cmd.Flags().GetString("env-file")
-			handleError(err)
+			if err != nil {
+				return err
+			}
 			godotenv.Load(envFile)
 			verifier, err := verify.NewVerifier(cmd)
-			handleError(err)
+			if err != nil {
+				return err
+			}
 			configFile, err := cmd.Flags().GetString("config-file")
-			handleError(err)
+			if err != nil {
+				return err
+			}
 			defaultWrapper := &registry.DockerWrapper{ConfigFile: configFile}
 			wrapperManager := registry.NewWrapperManager(defaultWrapper)
 			wrappers := []registry.Wrapper{&registry.ElasticWrapper{}, &registry.MCRWrapper{}}
 			wrapperManager.Add(wrappers...)
-			handleError(verifier.VerifyLockfile(wrapperManager))
+			if err := verifier.VerifyLockfile(wrapperManager); err != nil {
+				return err
+			}
+			return nil
 		},
 	}
 	verifyCmd.Flags().String("outpath", "docker-lock.json", "Path to load Lockfile.")

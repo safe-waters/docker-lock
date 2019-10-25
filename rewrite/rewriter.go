@@ -201,7 +201,7 @@ func (r *Rewriter) getDockerfileRewriteInfo(dPath string, images []generate.Dock
 			// FROM <image> AS <stage>
 			// FROM <stage> AS <another stage>
 			if !stageNames[fields[1]] {
-				if imageIndex > len(images) {
+				if imageIndex >= len(images) {
 					return rewriteInfo{err: fmt.Errorf("More images exist in %s than in the Lockfile.", dPath)}
 				}
 				fields[1] = fmt.Sprintf("%s:%s@sha256:%s", images[imageIndex].Name, images[imageIndex].Tag, images[imageIndex].Digest)
@@ -290,7 +290,7 @@ func (r *Rewriter) getComposefileRewriteInfo(cPath string, images []generate.Com
 	for rwImageLine := range rwImageLines {
 		rwImageLinesMap[rwImageLine.serviceName] = rwImageLine.line
 	}
-	if len(rwImageLines) != 0 {
+	if len(rwImageLinesMap) != 0 {
 		var rwCFile map[string]interface{}
 		if err := yaml.Unmarshal(cByt, &rwCFile); err != nil {
 			rwInfo <- rewriteInfo{err: err}

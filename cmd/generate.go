@@ -15,20 +15,31 @@ func NewGenerateCmd() *cobra.Command {
 	docker lock's 'verify' and 'rewrite' subcommands. The Lockfile contains image
 	digests for all base images used by selected Dockerfiles and docker-compose
 	files.`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			envFile, err := cmd.Flags().GetString("env-file")
-			handleError(err)
+			if err != nil {
+				return err
+			}
 			godotenv.Load(envFile)
 			generator, err := generate.NewGenerator(cmd)
-			handleError(err)
+			if err != nil {
+				return err
+			}
 			configFile, err := cmd.Flags().GetString("config-file")
-			handleError(err)
+			if err != nil {
+				return err
+			}
 			defaultWrapper, err := registry.NewDockerWrapper(configFile)
-			handleError(err)
+			if err != nil {
+				return err
+			}
 			wrapperManager := registry.NewWrapperManager(defaultWrapper)
 			wrappers := []registry.Wrapper{&registry.ElasticWrapper{}, &registry.MCRWrapper{}}
 			wrapperManager.Add(wrappers...)
-			handleError(generator.GenerateLockfile(wrapperManager))
+			if err := generator.GenerateLockfile(wrapperManager); err != nil {
+				return err
+			}
+			return nil
 		},
 	}
 	generateCmd.Flags().String("base-dir", ".", "Top level directory to collect files from.")

@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +14,7 @@ func NewRootCmd() *cobra.Command {
 	return rootCmd
 }
 
-func Execute() {
+func Execute() error {
 	rootCmd := NewRootCmd()
 	lockCmd := NewLockCmd()
 	generateCmd := NewGenerateCmd()
@@ -28,7 +25,7 @@ func Execute() {
 	lockCmd.AddCommand(verifyCmd)
 	lockCmd.AddCommand(rewriteCmd)
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
+	return nil
 }
