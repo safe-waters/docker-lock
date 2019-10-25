@@ -24,5 +24,6 @@ will rewrite all referenced base images to include the digests from the Lockfile
 	}
 	rewriteCmd.Flags().String("outpath", "docker-lock.json", "Path to load Lockfile.")
 	rewriteCmd.Flags().String("suffix", "", "String to append to rewritten Dockerfiles and docker-compose files.")
+	rewriteCmd.Flags().String("tempdir", "", "Directory where temporary files will be written during the rewrite transaction.")
 	return rewriteCmd
 }

@@ -16,7 +16,8 @@ import (
 
 type Rewriter struct {
 	generate.Lockfile
-	Suffix string
+	Suffix  string
+	TempDir string
 }
 
 type rewriteInfo struct {
@@ -60,7 +61,11 @@ func NewRewriter(cmd *cobra.Command) (*Rewriter, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Rewriter{Lockfile: lockfile, Suffix: suffix}, nil
+	tmpDir, err := cmd.Flags().GetString("tempdir")
+	if err != nil {
+		return nil, err
+	}
+	return &Rewriter{Lockfile: lockfile, Suffix: suffix, TempDir: tmpDir}, nil
 }
 
 // Rewrite rewrites base images referenced in the Lockfile to include digests.
@@ -85,7 +90,7 @@ func (r *Rewriter) Rewrite() (err error) {
 		}
 		outPathRnInfoAtomicWriteDone <- struct{}{}
 	}()
-	tmpDirPath, err := ioutil.TempDir("", "docker-lock-tmp")
+	tmpDirPath, err := ioutil.TempDir(r.TempDir, "docker-lock-tmp")
 	if err != nil {
 		return err
 	}
