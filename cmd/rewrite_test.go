@@ -16,10 +16,16 @@ import (
 var rewriteDockerBaseDir = filepath.Join("testdata", "rewrite", "docker")
 var rewriteComposeBaseDir = filepath.Join("testdata", "rewrite", "compose")
 
-type FileType int
+type rewriteTestObject struct {
+	fileType  rewriteFileType
+	wantPaths []string
+	gotPaths  []string
+}
+
+type rewriteFileType int
 
 const (
-	Dockerfile FileType = iota + 1
+	Dockerfile rewriteFileType = iota
 	Composefile
 )
 
@@ -28,17 +34,33 @@ const (
 func TestRewriteDockerfileArgsLocalArg(t *testing.T) {
 	baseDir := filepath.Join(rewriteDockerBaseDir, "args", "localarg")
 	outPath := filepath.Join(baseDir, "docker-lock.json")
-	wantPaths := []string{filepath.Join(baseDir, "Dockerfile-want")}
-	gotPaths := []string{filepath.Join(baseDir, "Dockerfile-got")}
-	testRewrite(t, outPath, wantPaths, gotPaths, Dockerfile, false)
+	tOs := []rewriteTestObject{
+		{
+			fileType:  Dockerfile,
+			wantPaths: []string{filepath.Join(baseDir, "Dockerfile-want")},
+			gotPaths:  []string{filepath.Join(baseDir, "Dockerfile-got")},
+		},
+	}
+	testRewrite(t, outPath, tOs, false)
 }
 
+// TestRewriteDockerfileArgsBuildStage replaces newly defined images
+// in the case of multi-stage builds. For instance:
+// # Dockerfile
+// FROM busybox AS busy
+// FROM busy AS anotherbusy
+// should only replace the first busybox.
 func TestRewriteDockerfileArgsBuildStage(t *testing.T) {
 	baseDir := filepath.Join(rewriteDockerBaseDir, "args", "buildstage")
 	outPath := filepath.Join(baseDir, "docker-lock.json")
-	wantPaths := []string{filepath.Join(baseDir, "Dockerfile-want")}
-	gotPaths := []string{filepath.Join(baseDir, "Dockerfile-got")}
-	testRewrite(t, outPath, wantPaths, gotPaths, Dockerfile, false)
+	tOs := []rewriteTestObject{
+		{
+			fileType:  Dockerfile,
+			wantPaths: []string{filepath.Join(baseDir, "Dockerfile-want")},
+			gotPaths:  []string{filepath.Join(baseDir, "Dockerfile-got")},
+		},
+	}
+	testRewrite(t, outPath, tOs, false)
 }
 
 // TestRewriteMoreDockerfileImages ensures that when there are
@@ -46,9 +68,14 @@ func TestRewriteDockerfileArgsBuildStage(t *testing.T) {
 func TestRewriteMoreDockerfileImages(t *testing.T) {
 	baseDir := filepath.Join(rewriteDockerBaseDir, "fail", "moreImagesDockerfile")
 	outPath := filepath.Join(baseDir, "docker-lock.json")
-	wantPaths := []string{filepath.Join(baseDir, "Dockerfile-want")}
-	gotPaths := []string{filepath.Join(baseDir, "Dockerfile-got")}
-	testRewrite(t, outPath, wantPaths, gotPaths, Dockerfile, true)
+	tOs := []rewriteTestObject{
+		{
+			fileType:  Dockerfile,
+			wantPaths: []string{filepath.Join(baseDir, "Dockerfile-want")},
+			gotPaths:  []string{filepath.Join(baseDir, "Dockerfile-got")},
+		},
+	}
+	testRewrite(t, outPath, tOs, true)
 }
 
 // TestRewriteMoreLockfileImages ensures that when there are
@@ -56,33 +83,96 @@ func TestRewriteMoreDockerfileImages(t *testing.T) {
 func TestRewriteMoreLockfileImages(t *testing.T) {
 	baseDir := filepath.Join(rewriteDockerBaseDir, "fail", "moreImagesLockfile")
 	outPath := filepath.Join(baseDir, "docker-lock.json")
-	wantPaths := []string{filepath.Join(baseDir, "Dockerfile-want")}
-	gotPaths := []string{filepath.Join(baseDir, "Dockerfile-got")}
-	testRewrite(t, outPath, wantPaths, gotPaths, Dockerfile, true)
+	tOs := []rewriteTestObject{
+		{
+			fileType:  Dockerfile,
+			wantPaths: []string{filepath.Join(baseDir, "Dockerfile-want")},
+			gotPaths:  []string{filepath.Join(baseDir, "Dockerfile-got")},
+		},
+	}
+	testRewrite(t, outPath, tOs, true)
 }
 
-// TestComposefileImage replaces the image line with the image.
+// TestRewriteComposefileImage replaces the image line with the image.
 func TestRewriteComposefileImage(t *testing.T) {
 	baseDir := filepath.Join(rewriteComposeBaseDir, "image")
 	outPath := filepath.Join(baseDir, "docker-lock.json")
-	wantPaths := []string{filepath.Join(baseDir, "docker-compose-want.yml")}
-	gotPaths := []string{filepath.Join(baseDir, "docker-compose-got.yml")}
-	testRewrite(t, outPath, wantPaths, gotPaths, Composefile, false)
+	tOs := []rewriteTestObject{
+		{
+			fileType:  Composefile,
+			wantPaths: []string{filepath.Join(baseDir, "docker-compose-want.yml")},
+			gotPaths:  []string{filepath.Join(baseDir, "docker-compose-got.yml")},
+		},
+	}
+	testRewrite(t, outPath, tOs, false)
 }
 
-// TestComposefileEnv replaces the environment variable
+// TestRewriteComposefileEnv replaces the environment variable
 // referenced in the image line with the image.
 func TestRewriteComposefileEnv(t *testing.T) {
-
+	baseDir := filepath.Join(rewriteComposeBaseDir, "env")
+	outPath := filepath.Join(baseDir, "docker-lock.json")
+	tOs := []rewriteTestObject{
+		{
+			fileType:  Composefile,
+			wantPaths: []string{filepath.Join(baseDir, "docker-compose-want.yml")},
+			gotPaths:  []string{filepath.Join(baseDir, "docker-compose-got.yml")},
+		},
+	}
+	testRewrite(t, outPath, tOs, false)
 }
 
-// TestComposefileDockerfiles ensures that Dockerfiles
+// TestRewriteDockerfilesReferencedByComposefiles ensures that Dockerfiles
 // referenced in docker-compose files are rewritten.
-func TestRewriteComposefileDockerfiles(t *testing.T) {
-
+func TestRewriteDockerfilesReferencedByComposefiles(t *testing.T) {
+	baseDir := filepath.Join(rewriteComposeBaseDir, "dockerfile")
+	outPath := filepath.Join(baseDir, "docker-lock.json")
+	tOs := []rewriteTestObject{
+		{
+			fileType:  Dockerfile,
+			wantPaths: []string{filepath.Join(baseDir, "dockerfile", "Dockerfile-want")},
+			gotPaths:  []string{filepath.Join(baseDir, "dockerfile", "Dockerfile-got")},
+		},
+	}
+	testRewrite(t, outPath, tOs, false)
 }
 
-func testRewrite(t *testing.T, outPath string, wantPaths []string, gotPaths []string, fileType FileType, shouldErr bool) {
+// TestRewriteAssortment tests rewrite for a collection of arbitrary
+// docker-compose files and Dockerfiles.
+func TestRewriteAssortment(t *testing.T) {
+	baseDir := filepath.Join(rewriteComposeBaseDir, "assortment")
+	outPath := filepath.Join(baseDir, "docker-lock.json")
+	tOs := []rewriteTestObject{
+		{
+			fileType:  Dockerfile,
+			wantPaths: []string{filepath.Join(baseDir, "build", "Dockerfile-want")},
+			gotPaths:  []string{filepath.Join(baseDir, "build", "Dockerfile-got")},
+		},
+		{
+			fileType:  Dockerfile,
+			wantPaths: []string{filepath.Join(baseDir, "context", "Dockerfile-want")},
+			gotPaths:  []string{filepath.Join(baseDir, "context", "Dockerfile-got")},
+		},
+		{
+			fileType:  Dockerfile,
+			wantPaths: []string{filepath.Join(baseDir, "dockerfile", "Dockerfile-want")},
+			gotPaths:  []string{filepath.Join(baseDir, "dockerfile", "Dockerfile-got")},
+		},
+		{
+			fileType:  Composefile,
+			wantPaths: []string{filepath.Join(baseDir, "docker-compose-want.yml")},
+			gotPaths:  []string{filepath.Join(baseDir, "docker-compose-got.yml")},
+		},
+		{
+			fileType:  Composefile,
+			wantPaths: []string{filepath.Join(baseDir, "docker-compose-want.yaml")},
+			gotPaths:  []string{filepath.Join(baseDir, "docker-compose-got.yaml")},
+		},
+	}
+	testRewrite(t, outPath, tOs, false)
+}
+
+func testRewrite(t *testing.T, outPath string, tOs []rewriteTestObject, shouldErr bool) {
 	rewriteCmd := NewRewriteCmd()
 	tmpDir := filepath.Join("testdata", "rewrite", "tmp")
 	rewriteArgs := append([]string{"lock", "rewrite", fmt.Sprintf("--outpath=%s", outPath), fmt.Sprintf("--tempdir=%s", tmpDir), "--suffix=got"})
@@ -93,14 +183,16 @@ func testRewrite(t *testing.T, outPath string, wantPaths []string, gotPaths []st
 		}
 		t.Error(err)
 	}
-	for _, gotPath := range gotPaths {
-		defer os.Remove(gotPath)
-	}
-	switch fileType {
-	case Dockerfile:
-		checkRewriteDockerfile(t, wantPaths, gotPaths)
-	case Composefile:
-		checkRewriteComposefile(t, wantPaths, gotPaths)
+	for _, tO := range tOs {
+		for _, gotPath := range tO.gotPaths {
+			defer os.Remove(gotPath)
+		}
+		switch tO.fileType {
+		case Dockerfile:
+			checkRewriteDockerfile(t, tO.wantPaths, tO.gotPaths)
+		case Composefile:
+			checkRewriteComposefile(t, tO.wantPaths, tO.gotPaths)
+		}
 	}
 }
 

@@ -1,0 +1,7 @@
+version: '3'
+services:
+  image-svc:
+    image: busybox
+  both-svc:
+    image: unused
+    build: ./both

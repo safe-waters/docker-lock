@@ -1,0 +1,79 @@
+{
+	"dockerfiles": {},
+	"composefiles": {
+		"testdata/rewrite/compose/assortment/docker-compose.yaml": [
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "dd97a3fe6d721c5cf03abac0f50e2848dc583f7c4e41bf39102ceb42edfd1808",
+				"serviceName": "image-one-svc",
+				"dockerfile": ""
+			},
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "dd97a3fe6d721c5cf03abac0f50e2848dc583f7c4e41bf39102ceb42edfd1808",
+				"serviceName": "image-two-svc",
+				"dockerfile": ""
+			}
+		],
+		"testdata/rewrite/compose/assortment/docker-compose.yml": [
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "dd97a3fe6d721c5cf03abac0f50e2848dc583f7c4e41bf39102ceb42edfd1808",
+				"serviceName": "build-svc",
+				"dockerfile": "testdata/rewrite/compose/assortment/build/Dockerfile"
+			},
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "dd97a3fe6d721c5cf03abac0f50e2848dc583f7c4e41bf39102ceb42edfd1808",
+				"serviceName": "build-svc",
+				"dockerfile": "testdata/rewrite/compose/assortment/build/Dockerfile"
+			},
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "dd97a3fe6d721c5cf03abac0f50e2848dc583f7c4e41bf39102ceb42edfd1808",
+				"serviceName": "context-svc",
+				"dockerfile": "testdata/rewrite/compose/assortment/context/Dockerfile"
+			},
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "dd97a3fe6d721c5cf03abac0f50e2848dc583f7c4e41bf39102ceb42edfd1808",
+				"serviceName": "context-svc",
+				"dockerfile": "testdata/rewrite/compose/assortment/context/Dockerfile"
+			},
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "dd97a3fe6d721c5cf03abac0f50e2848dc583f7c4e41bf39102ceb42edfd1808",
+				"serviceName": "context-svc",
+				"dockerfile": "testdata/rewrite/compose/assortment/context/Dockerfile"
+			},
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "dd97a3fe6d721c5cf03abac0f50e2848dc583f7c4e41bf39102ceb42edfd1808",
+				"serviceName": "dockerfile-svc",
+				"dockerfile": "testdata/rewrite/compose/assortment/dockerfile/Dockerfile"
+			},
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "dd97a3fe6d721c5cf03abac0f50e2848dc583f7c4e41bf39102ceb42edfd1808",
+				"serviceName": "image-one-svc",
+				"dockerfile": ""
+			},
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "dd97a3fe6d721c5cf03abac0f50e2848dc583f7c4e41bf39102ceb42edfd1808",
+				"serviceName": "image-two-svc",
+				"dockerfile": ""
+			}
+		]
+	}
+}

@@ -1,0 +1,6 @@
+version: '3'
+services:
+  image-one-svc:
+    image: busybox
+  image-two-svc:
+    image: busybox
