@@ -55,7 +55,7 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine) 
 				} else {
 					dockerfile = filepath.Join(filepath.Dir(fileName), dockerfileDir, "Dockerfile")
 				}
-				parseDockerfile(dockerfile, nil, fileName, serviceName, parsedImageLines)
+				parseDockerfileFromComposefile(dockerfile, nil, fileName, serviceName, parsedImageLines)
 			case parse.Verbose:
 				context := os.ExpandEnv(build.Context)
 				if !filepath.IsAbs(context) {
@@ -72,14 +72,18 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine) 
 					kv := strings.SplitN(arg, "=", 2)
 					buildArgs[os.ExpandEnv(kv[0])] = os.ExpandEnv(kv[1])
 				}
-				parseDockerfile(dockerfile, buildArgs, fileName, serviceName, parsedImageLines)
+				parseDockerfileFromComposefile(dockerfile, buildArgs, fileName, serviceName, parsedImageLines)
 			}
 		}(serviceName, service)
 	}
 	wg.Wait()
 }
 
-func parseDockerfile(dockerfileName string, buildArgs map[string]string, composefileName string, serviceName string, parsedImageLines chan<- parsedImageLine) {
+func parseDockerfile(fileName string, buildArgs map[string]string, parsedImageLines chan<- parsedImageLine) {
+	parseDockerfileFromComposefile(fileName, buildArgs, "", "", parsedImageLines)
+}
+
+func parseDockerfileFromComposefile(dockerfileName string, buildArgs map[string]string, composefileName string, serviceName string, parsedImageLines chan<- parsedImageLine) {
 	dockerfile, err := os.Open(dockerfileName)
 	if err != nil {
 		extraErrInfo := fmt.Sprintf("%s From dockerfile: '%s'.", err, dockerfileName)
@@ -103,11 +107,9 @@ func parseDockerfile(dockerfileName string, buildArgs map[string]string, compose
 			case "arg":
 				if globalContext {
 					if strings.Contains(fields[1], "=") {
-						//ARG VAR1=VAL1 VAR2=VAL2
-						for _, pair := range fields[1:] {
-							splitPair := strings.Split(pair, "=")
-							globalArgs[splitPair[0]] = splitPair[1]
-						}
+						//ARG VAR=VAL
+						splitPair := strings.SplitN(fields[1], "=", 2)
+						globalArgs[stripQuotesFromArgInstruction(splitPair[0])] = stripQuotesFromArgInstruction(splitPair[1])
 					} else {
 						// ARG VAR1
 						globalArgs[fields[1]] = ""
@@ -142,20 +144,23 @@ func expandField(field string, globalArgs map[string]string, buildArgs map[strin
 		if !ok {
 			return ""
 		}
-		composeVal, ok := buildArgs[arg]
+		buildArg, ok := buildArgs[arg]
 		if ok {
-			val = composeVal
+			val = buildArg
 		} else {
 			val = globalVal
-		}
-		// Remove excess quotes, for instance ARG="val" should be equivalent to ARG=val
-		if len(val) > 0 && val[0] == '"' {
-			val = val[1:]
-		}
-		if len(val) > 0 && val[len(val)-1] == '"' {
-			val = val[:len(val)-1]
 		}
 		return val
 	}
 	return os.Expand(field, mapper)
+}
+
+func stripQuotesFromArgInstruction(s string) string {
+	// Valid in a Dockerfile - Any number of quotes as long as there is one on either side
+	// ARG "IMAGE"="busybox"
+	// ARG "IMAGE"""""="busybox"""""""""""""
+	if s[0] == '"' && s[len(s)-1] == '"' {
+		s = strings.TrimRight(strings.TrimLeft(s, "\""), "\"")
+	}
+	return s
 }

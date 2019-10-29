@@ -84,25 +84,7 @@ func NewGenerator(cmd *cobra.Command) (*Generator, error) {
 		return nil, err
 	}
 	if len(dockerfiles) == 0 && len(composefiles) == 0 {
-		defaultDockerfile := filepath.Join(baseDir, "Dockerfile")
-		fi, err := os.Stat(defaultDockerfile)
-		if err == nil {
-			if mode := fi.Mode(); mode.IsRegular() {
-				dockerfiles = []string{defaultDockerfile}
-			}
-		}
-		defaultComposefiles := []string{
-			filepath.Join(baseDir, "docker-compose.yml"),
-			filepath.Join(baseDir, "docker-compose.yaml"),
-		}
-		for _, defaultComposefile := range defaultComposefiles {
-			fi, err := os.Stat(defaultComposefile)
-			if err == nil {
-				if mode := fi.Mode(); mode.IsRegular() {
-					composefiles = append(composefiles, defaultComposefile)
-				}
-			}
-		}
+		dockerfiles, composefiles = collectDefaultFiles(baseDir)
 	}
 	outPath, err := cmd.Flags().GetString("outpath")
 	if err != nil {
@@ -140,7 +122,7 @@ func (g *Generator) GenerateLockfileBytes(wrapperManager *registry.WrapperManage
 					buildArgs[pair[0]] = pair[1]
 				}
 			}
-			parseDockerfile(fileName, buildArgs, "", "", parsedImageLines)
+			parseDockerfile(fileName, buildArgs, parsedImageLines)
 		}(fileName)
 	}
 	for _, fileName := range g.Composefiles {

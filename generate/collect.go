@@ -121,3 +121,38 @@ func collectFiles(baseDir string, files []string, recursive bool, isDefaultName 
 	}
 	return uniqueFiles, nil
 }
+
+func collectDefaultFiles(baseDir string) ([]string, []string) {
+	var dockerfiles []string
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defaultDockerfile := filepath.Join(baseDir, "Dockerfile")
+		fi, err := os.Stat(defaultDockerfile)
+		if err == nil {
+			if mode := fi.Mode(); mode.IsRegular() {
+				dockerfiles = []string{defaultDockerfile}
+			}
+		}
+	}()
+	var composefiles []string
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defaultComposefiles := []string{
+			filepath.Join(baseDir, "docker-compose.yml"),
+			filepath.Join(baseDir, "docker-compose.yaml"),
+		}
+		for _, defaultComposefile := range defaultComposefiles {
+			fi, err := os.Stat(defaultComposefile)
+			if err == nil {
+				if mode := fi.Mode(); mode.IsRegular() {
+					composefiles = append(composefiles, defaultComposefile)
+				}
+			}
+		}
+	}()
+	wg.Wait()
+	return dockerfiles, composefiles
+}
