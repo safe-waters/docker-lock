@@ -1,0 +1,14 @@
+{
+	"dockerfiles": {},
+	"composefiles": {
+		"testdata/verify/compose/diffdigests/docker-compose.yml": [
+			{
+				"name": "busybox",
+				"tag": "",
+				"digest": "incorrect digest",
+				"serviceName": "svc",
+				"dockerfile": ""
+			}
+		]
+	}
+}

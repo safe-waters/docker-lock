@@ -1,0 +1,12 @@
+{
+	"dockerfiles": {
+		"testdata/verify/docker/diffdigests/Dockerfile": [
+			{
+				"name": "busybox",
+				"tag": "",
+				"digest": "incorrect digest"
+			}
+		]
+	},
+	"composefiles": {}
+}

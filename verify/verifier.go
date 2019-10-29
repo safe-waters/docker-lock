@@ -59,14 +59,14 @@ func (v *Verifier) VerifyLockfile(wrapperManager *registry.WrapperManager) error
 	}
 	err = errors.New("Failed to verify.")
 	if len(v.DockerfileImages) != len(lFile.DockerfileImages) {
-		err = fmt.Errorf("%s Found %d Dockerfiles. Expected %d.",
+		err = fmt.Errorf("%s Got %d Dockerfiles. Want %d.",
 			err,
 			len(lFile.DockerfileImages),
 			len(v.DockerfileImages))
 		return err
 	}
 	if len(v.ComposefileImages) != len(lFile.ComposefileImages) {
-		err = fmt.Errorf("%s Found %d Composefiles. Expected %d.",
+		err = fmt.Errorf("%s Got %d Composefiles. Want %d.",
 			err,
 			len(lFile.ComposefileImages),
 			len(v.ComposefileImages))
@@ -79,7 +79,7 @@ func (v *Verifier) VerifyLockfile(wrapperManager *registry.WrapperManager) error
 		go func(dFpath string) {
 			defer dImagesWG.Done()
 			if len(v.DockerfileImages[dFpath]) != len(lFile.DockerfileImages[dFpath]) {
-				err = fmt.Errorf("%s Found %d images in file %s. Expected %d.",
+				err = fmt.Errorf("%s Got %d images in file %s. Want %d.",
 					err,
 					len(lFile.DockerfileImages[dFpath]),
 					dFpath,
@@ -89,7 +89,7 @@ func (v *Verifier) VerifyLockfile(wrapperManager *registry.WrapperManager) error
 			}
 			for i := range v.DockerfileImages[dFpath] {
 				if v.DockerfileImages[dFpath][i] != lFile.DockerfileImages[dFpath][i] {
-					err = fmt.Errorf("%s Found image:\n%+v\nExpected image:\n%+v",
+					err = fmt.Errorf("%s Got image:\n%+v\nWant image:\n%+v",
 						err,
 						lFile.DockerfileImages[dFpath][i].Prettify(),
 						v.DockerfileImages[dFpath][i].Prettify())
@@ -113,7 +113,7 @@ func (v *Verifier) VerifyLockfile(wrapperManager *registry.WrapperManager) error
 		go func(cFpath string) {
 			defer cImagesWG.Done()
 			if len(v.ComposefileImages[cFpath]) != len(lFile.ComposefileImages[cFpath]) {
-				err = fmt.Errorf("%s Found %d images in file %s. Expected %d.",
+				err = fmt.Errorf("%s Got %d images in file %s. Want %d.",
 					err,
 					len(lFile.ComposefileImages[cFpath]),
 					cFpath,
@@ -123,7 +123,7 @@ func (v *Verifier) VerifyLockfile(wrapperManager *registry.WrapperManager) error
 			}
 			for i := range v.ComposefileImages[cFpath] {
 				if v.ComposefileImages[cFpath][i] != lFile.ComposefileImages[cFpath][i] {
-					err = fmt.Errorf("%s Found image:\n%+v\nExpected image:\n%+v",
+					err = fmt.Errorf("%s Got image:\n%+v\nWant image:\n%+v",
 						err,
 						lFile.ComposefileImages[cFpath][i].Prettify(),
 						v.ComposefileImages[cFpath][i].Prettify())

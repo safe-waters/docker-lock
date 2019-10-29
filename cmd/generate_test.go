@@ -16,16 +16,28 @@ var generateComposeBaseDir = filepath.Join("testdata", "generate", "compose")
 var generateDockerBaseDir = filepath.Join("testdata", "generate", "docker")
 var generateBothBaseDir = filepath.Join("testdata", "generate", "both")
 
+type generateTestObject struct {
+	filePath   string
+	wantImages interface{}
+	testFn     func(*testing.T, generateTestObject, generate.Lockfile)
+}
+
 // TestGenerateComposefileImage ensures Lockfiles from docker-compose files with
 // the image key are correct.
 func TestGenerateComposefileImage(t *testing.T) {
 	t.Parallel()
 	composefile := filepath.Join(generateComposeBaseDir, "image", "docker-compose.yml")
 	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
-	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""},
-	}}
-	testGenerate(t, flags, results)
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(composefile),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""},
+			},
+			testFn: checkGenerateComposefile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateComposefileBuild ensures Lockfiles from docker-compose files with
@@ -35,10 +47,16 @@ func TestGenerateComposefileBuild(t *testing.T) {
 	composefile := filepath.Join(generateComposeBaseDir, "build", "docker-compose.yml")
 	dockerfile := filepath.ToSlash(filepath.Join(generateComposeBaseDir, "build", "build", "Dockerfile"))
 	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
-	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
-	}}
-	testGenerate(t, flags, results)
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(composefile),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+			},
+			testFn: checkGenerateComposefile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateComposefileDockerfile ensures Lockfiles from docker-compose files with
@@ -48,10 +66,16 @@ func TestGenerateComposefileDockerfile(t *testing.T) {
 	composefile := filepath.Join(generateComposeBaseDir, "dockerfile", "docker-compose.yml")
 	dockerfile := filepath.ToSlash(filepath.Join(generateComposeBaseDir, "dockerfile", "dockerfile", "Dockerfile"))
 	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
-	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
-	}}
-	testGenerate(t, flags, results)
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(composefile),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+			},
+			testFn: checkGenerateComposefile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateComposefileContext ensures Lockfiles from docker-compose files with
@@ -61,10 +85,16 @@ func TestGenerateComposefileContext(t *testing.T) {
 	composefile := filepath.Join(generateComposeBaseDir, "context", "docker-compose.yml")
 	dockerfile := filepath.ToSlash(filepath.Join(generateComposeBaseDir, "context", "context", "Dockerfile"))
 	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
-	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
-	}}
-	testGenerate(t, flags, results)
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(composefile),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+			},
+			testFn: checkGenerateComposefile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateComposefileEnv ensures Lockfiles from docker-compose files with
@@ -75,10 +105,16 @@ func TestGenerateComposefileEnv(t *testing.T) {
 	dockerfile := filepath.ToSlash(filepath.Join(generateComposeBaseDir, "env", "env", "Dockerfile"))
 	envFile := filepath.Join(generateComposeBaseDir, "env", ".env")
 	flags := []string{fmt.Sprintf("--compose-files=%s", composefile), fmt.Sprintf("--env-file=%s", envFile)}
-	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
-	}}
-	testGenerate(t, flags, results)
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(composefile),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+			},
+			testFn: checkGenerateComposefile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateComposefileMultipleComposefiles ensures Lockfiles from multiple
@@ -93,16 +129,25 @@ func TestGenerateComposefileMultipleComposefiles(t *testing.T) {
 		filepath.ToSlash(filepath.Join(generateComposeBaseDir, "multiple", "dockerfile", "Dockerfile")),
 	}
 	flags := []string{fmt.Sprintf("--compose-files=%s,%s", composefileOne, composefileTwo)}
-	results := map[string][]generate.ComposefileImage{
-		filepath.ToSlash(composefileOne): []generate.ComposefileImage{
-			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "build-svc", Dockerfile: dockerfilesOne[0]},
-			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "image-svc", Dockerfile: ""},
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(composefileOne),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "build-svc", Dockerfile: dockerfilesOne[0]},
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "image-svc", Dockerfile: ""},
+			},
+			testFn: checkGenerateComposefile,
 		},
-		filepath.ToSlash(composefileTwo): []generate.ComposefileImage{
-			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "context-svc", Dockerfile: dockerfilesTwo[0]},
-			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "dockerfile-svc", Dockerfile: dockerfilesTwo[1]},
-		}}
-	testGenerate(t, flags, results)
+		{
+			filePath: filepath.ToSlash(composefileTwo),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "context-svc", Dockerfile: dockerfilesTwo[0]},
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "dockerfile-svc", Dockerfile: dockerfilesTwo[1]},
+			},
+			testFn: checkGenerateComposefile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateComposefileRecursive ensures Lockfiles from multiple docker-compose
@@ -114,15 +159,23 @@ func TestGenerateComposefileRecursive(t *testing.T) {
 	dockerfileRecursiveLevel := filepath.ToSlash(filepath.Join(generateComposeBaseDir, "recursive", "build", "build", "Dockerfile"))
 	recursiveBaseDir := filepath.Join(generateComposeBaseDir, "recursive")
 	flags := []string{fmt.Sprintf("--base-dir=%s", recursiveBaseDir), "--compose-file-recursive"}
-	results := map[string][]generate.ComposefileImage{
-		filepath.ToSlash(composefileTopLevel): []generate.ComposefileImage{
-			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""},
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(composefileTopLevel),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""},
+			},
+			testFn: checkGenerateComposefile,
 		},
-		filepath.ToSlash(composefileRecursiveLevel): []generate.ComposefileImage{
-			{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfileRecursiveLevel},
+		{
+			filePath: filepath.ToSlash(composefileRecursiveLevel),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfileRecursiveLevel},
+			},
+			testFn: checkGenerateComposefile,
 		},
 	}
-	testGenerate(t, flags, results)
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateComposefileNoFileSpecified ensures Lockfiles include docker-compose.yml
@@ -132,11 +185,23 @@ func TestGenerateComposefileNoFileSpecified(t *testing.T) {
 	baseDir := filepath.Join(generateComposeBaseDir, "nofile")
 	flags := []string{fmt.Sprintf("--base-dir=%s", baseDir)}
 	composefiles := []string{filepath.Join(baseDir, "docker-compose.yml"), filepath.Join(baseDir, "docker-compose.yaml")}
-	results := make(map[string][]generate.ComposefileImage)
-	for _, composefile := range composefiles {
-		results[filepath.ToSlash(composefile)] = append(results[filepath.ToSlash(composefile)], generate.ComposefileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""})
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(composefiles[0]),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""},
+			},
+			testFn: checkGenerateComposefile,
+		},
+		{
+			filePath: filepath.ToSlash(composefiles[1]),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""},
+			},
+			testFn: checkGenerateComposefile,
+		},
 	}
-	testGenerate(t, flags, results)
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateComposefileGlobs ensures Lockfiles include docker-compose files found
@@ -146,11 +211,18 @@ func TestGenerateComposefileGlobs(t *testing.T) {
 	globs := strings.Join([]string{filepath.Join(generateComposeBaseDir, "globs", "**", "docker-compose.yml"), filepath.Join(generateComposeBaseDir, "globs", "docker-compose.yml")}, ",")
 	flags := []string{fmt.Sprintf("--compose-file-globs=%s", globs)}
 	composefiles := []string{filepath.Join(generateComposeBaseDir, "globs", "image", "docker-compose.yml"), filepath.Join(generateComposeBaseDir, "globs", "docker-compose.yml")}
-	results := make(map[string][]generate.ComposefileImage)
+	var tOs []generateTestObject
 	for _, composefile := range composefiles {
-		results[filepath.ToSlash(composefile)] = append(results[filepath.ToSlash(composefile)], generate.ComposefileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""})
+		tO := generateTestObject{
+			filePath: filepath.ToSlash(composefile),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: ""},
+			},
+			testFn: checkGenerateComposefile,
+		}
+		tOs = append(tOs, tO)
 	}
-	testGenerate(t, flags, results)
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateComposefileAssortment ensures that Lockfiles with an assortment of keys
@@ -164,13 +236,19 @@ func TestGenerateComposefileAssortment(t *testing.T) {
 		filepath.ToSlash(filepath.Join(generateComposeBaseDir, "assortment", "dockerfile", "Dockerfile")),
 	}
 	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
-	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "build-svc", Dockerfile: dockerfiles[0]},
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "context-svc", Dockerfile: dockerfiles[1]},
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "dockerfile-svc", Dockerfile: dockerfiles[2]},
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "image-svc", Dockerfile: ""},
-	}}
-	testGenerate(t, flags, results)
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(composefile),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "build-svc", Dockerfile: dockerfiles[0]},
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "context-svc", Dockerfile: dockerfiles[1]},
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "dockerfile-svc", Dockerfile: dockerfiles[2]},
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "image-svc", Dockerfile: ""},
+			},
+			testFn: checkGenerateComposefile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateComposefileArgsDockerfileOverride ensures that build args in docker-compose
@@ -180,10 +258,16 @@ func TestGenerateComposefileArgsDockerfileOverride(t *testing.T) {
 	composefile := filepath.Join(generateComposeBaseDir, "args", "override", "docker-compose.yml")
 	dockerfile := filepath.ToSlash(filepath.Join(generateComposeBaseDir, "args", "override", "Dockerfile"))
 	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
-	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
-	}}
-	testGenerate(t, flags, results)
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(composefile),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+			},
+			testFn: checkGenerateComposefile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateComposefileArgsDockerfileEmpty ensures that build args in docker-compose
@@ -193,10 +277,16 @@ func TestGenerateComposefileArgsDockerfileEmpty(t *testing.T) {
 	composefile := filepath.Join(generateComposeBaseDir, "args", "empty", "docker-compose.yml")
 	dockerfile := filepath.ToSlash(filepath.Join(generateComposeBaseDir, "args", "empty", "Dockerfile"))
 	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
-	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
-	}}
-	testGenerate(t, flags, results)
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(composefile),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+			},
+			testFn: checkGenerateComposefile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateComposefileArgsDockerfileNoArg ensures that args defined in Dockerfiles
@@ -206,10 +296,16 @@ func TestGenerateComposefileArgsDockerfileNoArg(t *testing.T) {
 	composefile := filepath.Join(generateComposeBaseDir, "args", "noarg", "docker-compose.yml")
 	dockerfile := filepath.ToSlash(filepath.Join(generateComposeBaseDir, "args", "noarg", "Dockerfile"))
 	flags := []string{fmt.Sprintf("--compose-files=%s", composefile)}
-	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
-	}}
-	testGenerate(t, flags, results)
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(composefile),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "svc", Dockerfile: dockerfile},
+			},
+			testFn: checkGenerateComposefile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateComposefileAndDockerfileDuplicates ensures that Lockfiles do not
@@ -219,11 +315,24 @@ func TestGenerateComposefileAndDockerfileDuplicates(t *testing.T) {
 	composefile := filepath.Join(generateBothBaseDir, "both", "docker-compose.yml")
 	dockerfile := filepath.ToSlash(filepath.Join(generateBothBaseDir, "both", "both", "Dockerfile"))
 	flags := []string{fmt.Sprintf("--compose-files=%s,%s", composefile, composefile), fmt.Sprintf("--dockerfiles=%s,%s", dockerfile, dockerfile)}
-	results := map[string][]generate.ComposefileImage{filepath.ToSlash(composefile): []generate.ComposefileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "both-svc", Dockerfile: dockerfile},
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "image-svc", Dockerfile: ""},
-	}}
-	testGenerate(t, flags, results)
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(dockerfile),
+			wantImages: []generate.DockerfileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}},
+			},
+			testFn: checkGenerateDockerfile,
+		},
+		{
+			filePath: filepath.ToSlash(composefile),
+			wantImages: []generate.ComposefileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "both-svc", Dockerfile: dockerfile},
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}, ServiceName: "image-svc", Dockerfile: ""},
+			},
+			testFn: checkGenerateComposefile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateDockerfileArgsBuildStage ensures that previously defined build stages
@@ -236,11 +345,17 @@ func TestGenerateDockerfileArgsBuildStage(t *testing.T) {
 	t.Parallel()
 	dockerfile := filepath.Join(generateDockerBaseDir, "args", "buildstage", "Dockerfile")
 	flags := []string{fmt.Sprintf("--dockerfiles=%s", dockerfile)}
-	results := map[string][]generate.DockerfileImage{filepath.ToSlash(dockerfile): []generate.DockerfileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}},
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}},
-	}}
-	testGenerate(t, flags, results)
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(dockerfile),
+			wantImages: []generate.DockerfileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}},
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}},
+			},
+			testFn: checkGenerateDockerfile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateDockerfileArgsLocalArg ensures that args defined before from statements
@@ -250,11 +365,17 @@ func TestGenerateDockerfileArgsLocalArg(t *testing.T) {
 	t.Parallel()
 	dockerfile := filepath.Join(generateDockerBaseDir, "args", "localarg", "Dockerfile")
 	flags := []string{fmt.Sprintf("--dockerfiles=%s", dockerfile)}
-	results := map[string][]generate.DockerfileImage{filepath.ToSlash(dockerfile): []generate.DockerfileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}},
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}},
-	}}
-	testGenerate(t, flags, results)
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(dockerfile),
+			wantImages: []generate.DockerfileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}},
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}},
+			},
+			testFn: checkGenerateDockerfile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateDockerfileMultipleDockerfiles ensures that Lockfiles from multiple
@@ -263,11 +384,18 @@ func TestGenerateDockerfileMultipleDockerfiles(t *testing.T) {
 	t.Parallel()
 	dockerfiles := []string{filepath.Join(generateDockerBaseDir, "multiple", "DockerfileOne"), filepath.Join(generateDockerBaseDir, "multiple", "DockerfileTwo")}
 	flags := []string{fmt.Sprintf("--dockerfiles=%s,%s", dockerfiles[0], dockerfiles[1])}
-	results := make(map[string][]generate.DockerfileImage)
+	var tOs []generateTestObject
 	for _, dockerfile := range dockerfiles {
-		results[filepath.ToSlash(dockerfile)] = append(results[filepath.ToSlash(dockerfile)], generate.DockerfileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}})
+		tO := generateTestObject{
+			filePath: filepath.ToSlash(dockerfile),
+			wantImages: []generate.DockerfileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}},
+			},
+			testFn: checkGenerateDockerfile,
+		}
+		tOs = append(tOs, tO)
 	}
-	testGenerate(t, flags, results)
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateDockerfileRecursive ensures Lockfiles from multiple Dockerfiles
@@ -276,12 +404,20 @@ func TestGenerateDockerfileRecursive(t *testing.T) {
 	t.Parallel()
 	recursiveBaseDir := filepath.Join(generateDockerBaseDir, "recursive")
 	flags := []string{fmt.Sprintf("--base-dir=%s", recursiveBaseDir), "--dockerfile-recursive"}
-	results := make(map[string][]generate.DockerfileImage)
 	dockerfiles := []string{filepath.Join(generateDockerBaseDir, "recursive", "Dockerfile"), filepath.Join(generateDockerBaseDir, "recursive", "recursive", "Dockerfile")}
+	var tOs []generateTestObject
 	for _, dockerfile := range dockerfiles {
-		results[filepath.ToSlash(dockerfile)] = append(results[filepath.ToSlash(dockerfile)], generate.DockerfileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}})
+		tO := generateTestObject{
+			filePath: filepath.ToSlash(dockerfile),
+			wantImages: []generate.DockerfileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}},
+			},
+			testFn: checkGenerateDockerfile,
+		}
+		tOs = append(tOs, tO)
 	}
-	testGenerate(t, flags, results)
+
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateDockerfileNoFileSpecified ensures Lockfiles include a Dockerfile
@@ -291,10 +427,16 @@ func TestGenerateDockerfileNoFileSpecified(t *testing.T) {
 	baseDir := filepath.Join(generateDockerBaseDir, "nofile")
 	flags := []string{fmt.Sprintf("--base-dir=%s", baseDir)}
 	dockerfile := filepath.Join(baseDir, "Dockerfile")
-	results := map[string][]generate.DockerfileImage{filepath.ToSlash(dockerfile): []generate.DockerfileImage{
-		{Image: generate.Image{Name: "busybox", Tag: "latest"}},
-	}}
-	testGenerate(t, flags, results)
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(dockerfile),
+			wantImages: []generate.DockerfileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}},
+			},
+			testFn: checkGenerateDockerfile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateDockerfileGlobs ensures Lockfiles include Dockerfiles files found
@@ -304,11 +446,18 @@ func TestGenerateDockerfileGlobs(t *testing.T) {
 	globs := strings.Join([]string{filepath.Join(generateDockerBaseDir, "globs", "**", "Dockerfile"), filepath.Join(generateDockerBaseDir, "globs", "Dockerfile")}, ",")
 	flags := []string{fmt.Sprintf("--dockerfile-globs=%s", globs)}
 	dockerfiles := []string{filepath.Join(generateDockerBaseDir, "globs", "globs", "Dockerfile"), filepath.Join(generateDockerBaseDir, "globs", "Dockerfile")}
-	results := make(map[string][]generate.DockerfileImage)
+	var tOs []generateTestObject
 	for _, dockerfile := range dockerfiles {
-		results[filepath.ToSlash(dockerfile)] = append(results[filepath.ToSlash(dockerfile)], generate.DockerfileImage{Image: generate.Image{Name: "busybox", Tag: "latest"}})
+		tO := generateTestObject{
+			filePath: filepath.ToSlash(dockerfile),
+			wantImages: []generate.DockerfileImage{
+				{Image: generate.Image{Name: "busybox", Tag: "latest"}},
+			},
+			testFn: checkGenerateDockerfile,
+		}
+		tOs = append(tOs, tO)
 	}
-	testGenerate(t, flags, results)
+	testGenerate(t, flags, tOs)
 }
 
 // TestGenerateDockerfilePrivate ensures Lockfiles work with private images
@@ -320,13 +469,19 @@ func TestGenerateDockerfilePrivate(t *testing.T) {
 	}
 	dockerfile := filepath.Join(generateDockerBaseDir, "private", "Dockerfile")
 	flags := []string{fmt.Sprintf("--dockerfiles=%s", dockerfile)}
-	results := map[string][]generate.DockerfileImage{filepath.ToSlash(dockerfile): []generate.DockerfileImage{
-		{Image: generate.Image{Name: "dockerlocktestaccount/busybox", Tag: "latest"}},
-	}}
-	testGenerate(t, flags, results)
+	tOs := []generateTestObject{
+		{
+			filePath: filepath.ToSlash(dockerfile),
+			wantImages: []generate.DockerfileImage{
+				{Image: generate.Image{Name: "dockerlocktestaccount/busybox", Tag: "latest"}},
+			},
+			testFn: checkGenerateDockerfile,
+		},
+	}
+	testGenerate(t, flags, tOs)
 }
 
-func testGenerate(t *testing.T, flags []string, results interface{}) {
+func testGenerate(t *testing.T, flags []string, tOs []generateTestObject) {
 	tmpFile, err := ioutil.TempFile("", "test-docker-lock-*")
 	if err != nil {
 		t.Error(err)
@@ -347,80 +502,69 @@ func testGenerate(t *testing.T, flags []string, results interface{}) {
 	if err := json.Unmarshal(lByt, &lFile); err != nil {
 		t.Error(err)
 	}
-	switch r := results.(type) {
-	case map[string][]generate.ComposefileImage:
-		checkComposeResults(t, r, lFile)
-	case map[string][]generate.DockerfileImage:
-		checkDockerResults(t, r, lFile)
-	default:
-		t.Fatalf("Incorrect result type: %v", r)
+	numFiles := len(lFile.ComposefileImages) + len(lFile.DockerfileImages)
+	if numFiles != len(tOs) {
+		t.Errorf("Got '%d' files in the Lockfile. Want '%d'.", numFiles, len(tOs))
+	}
+	for _, tO := range tOs {
+		tO.testFn(t, tO, lFile)
 	}
 }
 
-func checkComposeResults(t *testing.T, results map[string][]generate.ComposefileImage, lFile generate.Lockfile) {
-	if len(lFile.ComposefileImages) != len(results) {
-		t.Errorf("Found '%d' docker-compose files. Expected '%d'.", len(lFile.ComposefileImages), len(results))
+func checkGenerateComposefile(t *testing.T, tO generateTestObject, lFile generate.Lockfile) {
+	wantImages := tO.wantImages.([]generate.ComposefileImage)
+	fImages, ok := lFile.ComposefileImages[tO.filePath]
+	if !ok {
+		t.Errorf("Want '%s' filepath, but did not find it.", tO.filePath)
 	}
-	for rCFile, rImages := range results {
-		fImages, ok := lFile.ComposefileImages[rCFile]
-		if !ok {
-			t.Errorf("Expected '%s' key, but did not find it.", rCFile)
+	if len(fImages) != len(wantImages) {
+		t.Errorf("Got '%d' images for '%s'. Want '%d'.", len(fImages), tO.filePath, len(wantImages))
+	}
+	for i, fImage := range fImages {
+		if wantImages[i].Image.Name != fImage.Image.Name ||
+			wantImages[i].Image.Tag != fImage.Image.Tag {
+			t.Errorf("Got '%s:%s'. Want '%s:%s'.",
+				fImage.Image.Name,
+				fImage.Image.Tag,
+				wantImages[i].Image.Name,
+				wantImages[i].Image.Tag)
 		}
-		if len(fImages) != len(rImages) {
-			t.Errorf("Found '%d' images for '%s'. Expected '%d'.", len(fImages), rCFile, len(rImages))
+		if fImage.Image.Digest == "" {
+			t.Errorf("Want digest. Got image with empty digest %+v.", fImage)
 		}
-
-		for i, fImage := range fImages {
-			if results[rCFile][i].Image.Name != fImage.Image.Name ||
-				results[rCFile][i].Image.Tag != fImage.Image.Tag {
-				t.Errorf("Found '%s:%s'. Expected '%s:%s'.",
-					fImage.Image.Name,
-					fImage.Image.Tag,
-					results[rCFile][i].Image.Name,
-					results[rCFile][i].Image.Tag)
-			}
-			if fImage.Image.Digest == "" {
-				t.Errorf("%+v has an empty digest.", fImage)
-			}
-			if fImage.ServiceName != results[rCFile][i].ServiceName {
-				t.Errorf("Found '%s' service. Expected '%s'.",
-					fImage.ServiceName,
-					results[rCFile][i].ServiceName)
-			}
-			if fImage.Dockerfile != results[rCFile][i].Dockerfile {
-				t.Errorf("Found '%s' dockerfile. Expected '%s'.",
-					filepath.FromSlash(fImage.Dockerfile),
-					results[rCFile][i].Dockerfile)
-			}
+		if fImage.ServiceName != wantImages[i].ServiceName {
+			t.Errorf("Got '%s' service. Want '%s'.",
+				fImage.ServiceName,
+				wantImages[i].ServiceName)
+		}
+		if fImage.Dockerfile != wantImages[i].Dockerfile {
+			t.Errorf("Got '%s' dockerfile. Want '%s'.",
+				filepath.FromSlash(fImage.Dockerfile),
+				wantImages[i].Dockerfile)
 		}
 	}
 }
 
-func checkDockerResults(t *testing.T, results map[string][]generate.DockerfileImage, lFile generate.Lockfile) {
-	if len(lFile.DockerfileImages) != len(results) {
-		t.Errorf("Found '%d' Dockerfiles. Expected '%d'.", len(lFile.DockerfileImages), len(results))
+func checkGenerateDockerfile(t *testing.T, tO generateTestObject, lFile generate.Lockfile) {
+	wantImages := tO.wantImages.([]generate.DockerfileImage)
+	fImages, ok := lFile.DockerfileImages[tO.filePath]
+	if !ok {
+		t.Errorf("Got '%s' filepath, but did not find it.", tO.filePath)
 	}
-	for rDFile, rImages := range results {
-		fImages, ok := lFile.DockerfileImages[rDFile]
-		if !ok {
-			t.Errorf("Expected '%s' key, but did not find it.", rDFile)
+	if len(fImages) != len(wantImages) {
+		t.Errorf("Got '%d' images for '%s'. Want '%d'.", len(fImages), tO.filePath, len(wantImages))
+	}
+	for i, fImage := range fImages {
+		if wantImages[i].Image.Name != fImage.Image.Name ||
+			wantImages[i].Image.Tag != fImage.Image.Tag {
+			t.Errorf("Got '%s:%s'. Want '%s:%s'.",
+				fImage.Image.Name,
+				fImage.Image.Tag,
+				wantImages[i].Image.Name,
+				wantImages[i].Image.Tag)
 		}
-		if len(fImages) != len(rImages) {
-			t.Errorf("Found '%d' images for '%s'. Expected '%d'.", len(fImages), rDFile, len(rImages))
-		}
-
-		for i, fImage := range fImages {
-			if results[rDFile][i].Image.Name != fImage.Image.Name ||
-				results[rDFile][i].Image.Tag != fImage.Image.Tag {
-				t.Errorf("Found '%s:%s'. Expected '%s:%s'.",
-					fImage.Image.Name,
-					fImage.Image.Tag,
-					results[rDFile][i].Image.Name,
-					results[rDFile][i].Image.Tag)
-			}
-			if fImage.Image.Digest == "" {
-				t.Errorf("%+v has an empty digest.", fImage)
-			}
+		if fImage.Image.Digest == "" {
+			t.Errorf("Want digest. Got image with empty digest %+v.", fImage)
 		}
 	}
 }

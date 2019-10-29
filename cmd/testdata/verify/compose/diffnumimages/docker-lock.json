@@ -1,0 +1,14 @@
+{
+	"dockerfiles": {},
+	"composefiles": {
+		"testdata/verify/compose/diffnumimages/docker-compose.yml": [
+			{
+				"name": "busybox",
+				"tag": "",
+				"digest": "dd97a3fe6d721c5cf03abac0f50e2848dc583f7c4e41bf39102ceb42edfd1808",
+				"serviceName": "svc-two",
+				"dockerfile": ""
+			}
+		]
+	}
+}
