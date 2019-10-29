@@ -69,8 +69,8 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine) 
 				}
 				buildArgs := make(map[string]string)
 				for _, arg := range build.Args {
-					kv := strings.Split(os.ExpandEnv(arg), "=")
-					buildArgs[kv[0]] = kv[1]
+					kv := strings.SplitN(arg, "=", 2)
+					buildArgs[os.ExpandEnv(kv[0])] = os.ExpandEnv(kv[1])
 				}
 				parseDockerfile(dockerfile, buildArgs, fileName, serviceName, parsedImageLines)
 			}
@@ -79,7 +79,7 @@ func parseComposefile(fileName string, parsedImageLines chan<- parsedImageLine) 
 	wg.Wait()
 }
 
-func parseDockerfile(dockerfileName string, composeArgs map[string]string, composefileName string, serviceName string, parsedImageLines chan<- parsedImageLine) {
+func parseDockerfile(dockerfileName string, buildArgs map[string]string, composefileName string, serviceName string, parsedImageLines chan<- parsedImageLine) {
 	dockerfile, err := os.Open(dockerfileName)
 	if err != nil {
 		extraErrInfo := fmt.Sprintf("%s From dockerfile: '%s'.", err, dockerfileName)
@@ -91,10 +91,10 @@ func parseDockerfile(dockerfileName string, composeArgs map[string]string, compo
 	}
 	defer dockerfile.Close()
 	stageNames := make(map[string]bool)
+	globalContext := true
 	globalArgs := make(map[string]string)
 	scanner := bufio.NewScanner(dockerfile)
 	scanner.Split(bufio.ScanLines)
-	globalContext := true
 	position := 0
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
@@ -115,7 +115,7 @@ func parseDockerfile(dockerfileName string, composeArgs map[string]string, compo
 				}
 			case "from":
 				globalContext = false
-				line := expandField(fields[1], globalArgs, composeArgs)
+				line := expandField(fields[1], globalArgs, buildArgs)
 				if !stageNames[line] {
 					parsedImageLines <- parsedImageLine{line: line,
 						dockerfileName:  dockerfileName,
@@ -127,7 +127,7 @@ func parseDockerfile(dockerfileName string, composeArgs map[string]string, compo
 				// FROM <image> AS <stage>
 				// FROM <stage> AS <another stage>
 				if len(fields) == 4 {
-					stageName := expandField(fields[3], globalArgs, composeArgs)
+					stageName := expandField(fields[3], globalArgs, buildArgs)
 					stageNames[stageName] = true
 				}
 			}
@@ -135,14 +135,14 @@ func parseDockerfile(dockerfileName string, composeArgs map[string]string, compo
 	}
 }
 
-func expandField(field string, globalArgs map[string]string, composeArgs map[string]string) string {
+func expandField(field string, globalArgs map[string]string, buildArgs map[string]string) string {
 	mapper := func(arg string) string {
 		var val string
 		globalVal, ok := globalArgs[arg]
 		if !ok {
 			return ""
 		}
-		composeVal, ok := composeArgs[arg]
+		composeVal, ok := buildArgs[arg]
 		if ok {
 			val = composeVal
 		} else {

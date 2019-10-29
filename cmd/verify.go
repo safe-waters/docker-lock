@@ -40,5 +40,6 @@ will verify that all base images in files referenced in the Lockfile exist in th
 	verifyCmd.Flags().String("outpath", "docker-lock.json", "Path to load Lockfile.")
 	verifyCmd.Flags().String("config-file", getDefaultConfigFile(), "Path to config file for auth credentials.")
 	verifyCmd.Flags().String("env-file", ".env", "Path to .env file.")
+	verifyCmd.Flags().Bool("dockerfile-env-build-args", false, "Use environment variables as build args for Dockerfiles.")
 	return verifyCmd
 }

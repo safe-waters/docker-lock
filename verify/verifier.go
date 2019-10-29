@@ -44,7 +44,11 @@ func NewVerifier(cmd *cobra.Command) (*Verifier, error) {
 		dFpaths[i] = filepath.FromSlash(fpath)
 		i++
 	}
-	g := &generate.Generator{Dockerfiles: dFpaths, Composefiles: cFpaths}
+	dockerfileEnvBuildArgs, err := cmd.Flags().GetBool("dockerfile-env-build-args")
+	if err != nil {
+		return nil, err
+	}
+	g := &generate.Generator{Dockerfiles: dFpaths, Composefiles: cFpaths, DockerfileEnvBuildArgs: dockerfileEnvBuildArgs}
 	return &Verifier{Generator: g, Lockfile: &lFile, outPath: outPath}, nil
 }
 

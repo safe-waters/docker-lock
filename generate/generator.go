@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/michaelperel/docker-lock/registry"
@@ -15,9 +16,10 @@ import (
 )
 
 type Generator struct {
-	Dockerfiles  []string
-	Composefiles []string
-	outPath      string
+	Dockerfiles            []string
+	Composefiles           []string
+	DockerfileEnvBuildArgs bool
+	outPath                string
 }
 
 type Image struct {
@@ -106,7 +108,14 @@ func NewGenerator(cmd *cobra.Command) (*Generator, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Generator{Dockerfiles: dockerfiles, Composefiles: composefiles, outPath: outPath}, nil
+	dockerfileEnvBuildArgs, err := cmd.Flags().GetBool("dockerfile-env-build-args")
+	if err != nil {
+		return nil, err
+	}
+	return &Generator{Dockerfiles: dockerfiles,
+		Composefiles:           composefiles,
+		DockerfileEnvBuildArgs: dockerfileEnvBuildArgs,
+		outPath:                outPath}, nil
 }
 
 func (g *Generator) GenerateLockfile(wrapperManager *registry.WrapperManager) error {
@@ -124,7 +133,14 @@ func (g *Generator) GenerateLockfileBytes(wrapperManager *registry.WrapperManage
 		parseWg.Add(1)
 		go func(fileName string) {
 			defer parseWg.Done()
-			parseDockerfile(fileName, nil, "", "", parsedImageLines)
+			var buildArgs = make(map[string]string)
+			if g.DockerfileEnvBuildArgs {
+				for _, e := range os.Environ() {
+					pair := strings.SplitN(e, "=", 2)
+					buildArgs[pair[0]] = pair[1]
+				}
+			}
+			parseDockerfile(fileName, buildArgs, "", "", parsedImageLines)
 		}(fileName)
 	}
 	for _, fileName := range g.Composefiles {

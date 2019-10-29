@@ -52,5 +52,6 @@ func NewGenerateCmd() *cobra.Command {
 	generateCmd.Flags().String("outpath", "docker-lock.json", "Path to save Lockfile.")
 	generateCmd.Flags().String("config-file", getDefaultConfigFile(), "Path to config file for auth credentials.")
 	generateCmd.Flags().String("env-file", ".env", "Path to .env file.")
+	generateCmd.Flags().Bool("dockerfile-env-build-args", false, "Use environment variables as build args for Dockerfiles.")
 	return generateCmd
 }
