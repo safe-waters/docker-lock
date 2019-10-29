@@ -27,9 +27,16 @@ will verify that all base images in files referenced in the Lockfile exist in th
 			if err != nil {
 				return err
 			}
-			defaultWrapper := &registry.DockerWrapper{ConfigFile: configFile}
+			defaultWrapper, err := registry.NewDockerWrapper(configFile)
+			if err != nil {
+				return err
+			}
+			ACRWrapper, err := registry.NewACRWrapper(configFile)
+			if err != nil {
+				return err
+			}
 			wrapperManager := registry.NewWrapperManager(defaultWrapper)
-			wrappers := []registry.Wrapper{&registry.ElasticWrapper{}, &registry.MCRWrapper{}}
+			wrappers := []registry.Wrapper{&registry.ElasticWrapper{}, &registry.MCRWrapper{}, ACRWrapper}
 			wrapperManager.Add(wrappers...)
 			if err := verifier.VerifyLockfile(wrapperManager); err != nil {
 				return err

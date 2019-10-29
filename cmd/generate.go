@@ -33,8 +33,12 @@ func NewGenerateCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			ACRWrapper, err := registry.NewACRWrapper(configFile)
+			if err != nil {
+				return err
+			}
 			wrapperManager := registry.NewWrapperManager(defaultWrapper)
-			wrappers := []registry.Wrapper{&registry.ElasticWrapper{}, &registry.MCRWrapper{}}
+			wrappers := []registry.Wrapper{&registry.ElasticWrapper{}, &registry.MCRWrapper{}, ACRWrapper}
 			wrapperManager.Add(wrappers...)
 			if err := generator.GenerateLockfile(wrapperManager); err != nil {
 				return err
