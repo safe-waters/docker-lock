@@ -27,6 +27,7 @@ jobs:
     displayName: Clone docker-lock
   - bash: |
       cd docker-lock
+      pwd
       ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
     env:
