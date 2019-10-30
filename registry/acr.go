@@ -23,15 +23,9 @@ type acrTokenResponse struct {
 	Token string `json:"access_token"`
 }
 
-type Auth struct {
-	Auth string `json:"auth"`
-}
-
 type acrConfig struct {
-	Auths struct {
-		Index map[string]Auth
-	} `json:"auths"`
-	CredsStore string `json:"credsStore"`
+	Auths      map[string]map[string]string `json:"auths"`
+	CredsStore string                       `json:"credsStore"`
 }
 
 func NewACRWrapper(configFile string) (*ACRWrapper, error) {
@@ -100,7 +94,6 @@ func (w *ACRWrapper) getAuthCredentials() (authCredentials, error) {
 	password := os.Getenv("ACR_PASSWORD")
 	registryName := os.Getenv("ACR_REGISTRY_NAME")
 	w.RegistryName = registryName
-
 	if username != "" && password != "" {
 		return authCredentials{username: username, password: password}, nil
 	}
@@ -116,15 +109,14 @@ func (w *ACRWrapper) getAuthCredentials() (authCredentials, error) {
 		return authCredentials{}, err
 	}
 	var authByt []byte
-	var decodeErr error
-	for server := range conf.Auths.Index {
-		serverName := w.RegistryName + ".azurecr.io"
-		if server == serverName {
-			authByt, decodeErr = base64.StdEncoding.DecodeString(conf.Auths.Index[serverName].Auth)
+	for serverName, authInfo := range conf.Auths {
+		if serverName == w.RegistryName+".azurecr.io" {
+			authByt, err = base64.StdEncoding.DecodeString(authInfo["auth"])
+			if err != nil {
+				return authCredentials{}, err
+			}
+			break
 		}
-	}
-	if decodeErr != nil {
-		return authCredentials{}, err
 	}
 	authString := string(authByt)
 	if authString != "" {
