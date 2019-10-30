@@ -28,6 +28,7 @@ jobs:
   - bash: |
       cd docker-lock
       pwd
+      ls -al
       ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
     env:
