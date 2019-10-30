@@ -96,8 +96,8 @@ func (w *ACRWrapper) getToken(name string) (string, error) {
 }
 
 func (w *ACRWrapper) getAuthCredentials() (authCredentials, error) {
-	username := os.Getenv("DOCKER_USERNAME")
-	password := os.Getenv("DOCKER_PASSWORD")
+	username := os.Getenv("ACR_USERNAME")
+	password := os.Getenv("ACR_PASSWORD")
 	registryName := os.Getenv("ACR_REGISTRY_NAME")
 	w.RegistryName = registryName
 

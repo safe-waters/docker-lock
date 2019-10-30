@@ -20,11 +20,14 @@ jobs:
       mkdir -p "$USERPROFILE"/.docker"
       echo '{"credsStore":"wincred"}' > "$USERPROFILE"/.docker/config.json"
     displayName: Configure wincred
-  - bash: docker login --username "$DOCKER_USERNAME" --password "$DOCKER_PASSWORD"
-    displayName: Login to docker
+  - bash: . ./integration_tests/integration_tests.sh
+    displayName: Run Integration Tests
     env:
       DOCKER_USERNAME: $(DOCKER_USERNAME)
       DOCKER_PASSWORD: $(DOCKER_PASSWORD)
+      ACR_USERNAME: $(ACR_USERNAME)
+      ACR_PASSWORD: $(ACR_PASSWORD)
+      ACR_REGISTRY_NAME: $(ACR_REGISTRY_NAME)
   - bash: |
       rm /c/ProgramData/Git/config
       git config --global core.autcrlf false
@@ -48,11 +51,14 @@ jobs:
       mkdir -p ""$HOME"/.docker"
       echo '{"credsStore":"osxkeychain"}' > ""$HOME"/.docker/config.json"
     displayName: Configure osxkeychain
-  - bash: docker login --username "$DOCKER_USERNAME" --password "$DOCKER_PASSWORD"
-    displayName: Login to docker
+  - bash: . ./integration_tests/integration_tests.sh
+    displayName: Run Integration Tests
     env:
       DOCKER_USERNAME: $(DOCKER_USERNAME)
       DOCKER_PASSWORD: $(DOCKER_PASSWORD)
+      ACR_USERNAME: $(ACR_USERNAME)
+      ACR_PASSWORD: $(ACR_PASSWORD)
+      ACR_REGISTRY_NAME: $(ACR_REGISTRY_NAME)
   - bash: go test -race ./...
     displayName: Run tests
 
@@ -60,11 +66,14 @@ jobs:
   pool:
     vmImage: ubuntu-18.04
   steps:
-  - bash: docker login --username "$DOCKER_USERNAME" --password "$DOCKER_PASSWORD"
-    displayName: Login to docker
+  - bash: . ./integration_tests/integration_tests.sh
+    displayName: Run Integration Tests
     env:
       DOCKER_USERNAME: $(DOCKER_USERNAME)
       DOCKER_PASSWORD: $(DOCKER_PASSWORD)
+      ACR_USERNAME: $(ACR_USERNAME)
+      ACR_PASSWORD: $(ACR_PASSWORD)
+      ACR_REGISTRY_NAME: $(ACR_REGISTRY_NAME)
   - bash: go test -race ./...
     displayName: Run tests
 
