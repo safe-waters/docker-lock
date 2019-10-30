@@ -32,6 +32,12 @@ jobs:
       mv docker-lock.exe ""$USERPROFILE"/.docker/cli-plugins/"
       ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
+    env:
+      DOCKER_USERNAME: $(DOCKER_USERNAME)
+      DOCKER_PASSWORD: $(DOCKER_PASSWORD)
+      ACR_USERNAME: $(ACR_USERNAME)
+      ACR_PASSWORD: $(ACR_PASSWORD)
+      ACR_REGISTRY_NAME: $(ACR_REGISTRY_NAME)
 
 - job: TestMacOS
   pool:
