@@ -11,7 +11,8 @@ jobs:
   pool: 
     vmImage: windows-2019
   steps:
-  - checkout: none
+  - bash: find . -type f -print0 | xargs -0 dos2unix
+    displayName: Convert CLRF to LF
   - bash: |
       curl -sSL https://github.com/docker/docker-credential-helpers/releases/download/v0.6.3/docker-credential-wincred-v0.6.3-amd64.zip -o docker-credential-wincred.zip
       unzip docker-credential-wincred.zip
@@ -21,27 +22,16 @@ jobs:
       echo '{"credsStore":"wincred"}' > "$USERPROFILE"/.docker/config.json"
     displayName: Configure wincred
   - bash: |
-      rm /c/ProgramData/Git/config
-      git config --global core.autcrlf false
-      git clone https://github.com/michaelperel/docker-lock.git
-    displayName: Clone docker-lock
-  - bash: |
-      cd docker-lock
-      pwd
-      ls -al
-      ./integration_tests/integration_tests.sh
-    displayName: Run Integration Tests
-    env:
-      DOCKER_USERNAME: $(DOCKER_USERNAME)
-      DOCKER_PASSWORD: $(DOCKER_PASSWORD)
-      ACR_USERNAME: $(ACR_USERNAME)
-      ACR_PASSWORD: $(ACR_PASSWORD)
-      ACR_REGISTRY_NAME: $(ACR_REGISTRY_NAME)
-  - bash: |
-      cd docker-lock
       # run without -race, because it requires gcc
       go test ./...
-    displayName: Run tests
+    displayName: Run unit tests
+  - bash: |
+      go build
+      chmod +x docker-lock
+      mkdir -p ~/.docker/cli-plugins/
+      mv docker-lock ~/.docker/cli-plugins/
+      ./integration_tests/integration_tests.sh
+    displayName: Run Integration Tests
 
 - job: TestMacOS
   pool:
@@ -56,7 +46,7 @@ jobs:
       echo '{"credsStore":"osxkeychain"}' > ""$HOME"/.docker/config.json"
     displayName: Configure osxkeychain
   - bash: go test -race ./...
-    displayName: Run tests
+    displayName: Run unit tests
   - bash: |
       brew install gettext
       brew link --force gettext
@@ -78,7 +68,7 @@ jobs:
     vmImage: ubuntu-18.04
   steps:
   - bash: go test -race ./...
-    displayName: Run tests
+    displayName: Run unit tests
   - bash: |
       go build
       chmod +x docker-lock
