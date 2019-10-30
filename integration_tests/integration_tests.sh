@@ -1,6 +1,7 @@
 #! /usr/bin/env bash
 (
-    cd "$(dirname "$0")/.." || exit
+    cd "$(dirname "$0")" || exit
+    pwd
     run_integration_tests() {
         # docker logged out with no creds in .env, generate should fail
         if ! docker lock verify --env-file .envwithoutcreds > /dev/null 2>&1; then
