@@ -76,13 +76,6 @@ jobs:
   - bash: go test -race ./...
     displayName: Run tests
   - bash: |
-      export DOCKER_USERNAME=$(DOCKER_USERNAME)
-      export DOCKER_PASSWORD=$(DOCKER_PASSWORD)
-      export ACR_USERNAME=$(ACR_USERNAME)
-      export ACR_PASSWORD=$(ACR_PASSWORD)
-      export ACR_REGISTRY_NAME=$(ACR_REGISTRY_NAME)
-      export FAKE=$(FAKE)
-      echo $FAKE
       ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
     env:
