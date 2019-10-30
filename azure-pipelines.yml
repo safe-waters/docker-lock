@@ -72,7 +72,13 @@ jobs:
   steps:
   - bash: go test -race ./...
     displayName: Run tests
-  - bash: ./integration_tests/integration_tests.sh
+  - bash: |
+      export DOCKER_USERNAME=$(DOCKER_USERNAME)
+      export DOCKER_PASSWORD=$(DOCKER_PASSWORD)
+      export ACR_USERNAME=$(ACR_USERNAME)
+      export ACR_PASSWORD=$(ACR_PASSWORD)
+      export ACR_REGISTRY=$(ACR_REGISTRY_NAME)
+      ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
     env:
       DOCKER_USERNAME: $(DOCKER_USERNAME)
