@@ -60,6 +60,10 @@ jobs:
   - bash: |
       brew install gettext
       brew link --force gettext
+      go build
+      chmod +x docker-lock
+      mkdir -p ~/.docker/cli-plugins/
+      mv docker-lock ~/.docker/cli-plugins/
       ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
     env:
@@ -76,6 +80,10 @@ jobs:
   - bash: go test -race ./...
     displayName: Run tests
   - bash: |
+      go build
+      chmod +x docker-lock
+      mkdir -p ~/.docker/cli-plugins/
+      mv docker-lock ~/.docker/cli-plugins/
       ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
     env:
