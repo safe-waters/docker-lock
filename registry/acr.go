@@ -16,7 +16,7 @@ import (
 type ACRWrapper struct {
 	ConfigFile   string
 	authCreds    authCredentials
-	RegistryName string
+	registryName string
 }
 
 type acrTokenResponse struct {
@@ -30,6 +30,7 @@ type acrConfig struct {
 
 func NewACRWrapper(configFile string) (*ACRWrapper, error) {
 	w := &ACRWrapper{ConfigFile: configFile}
+	w.registryName = os.Getenv("ACR_REGISTRY_NAME")
 	authCreds, err := w.getAuthCredentials()
 	if err != nil {
 		return nil, err
@@ -66,7 +67,7 @@ func (w *ACRWrapper) GetDigest(name string, tag string) (string, error) {
 func (w *ACRWrapper) getToken(name string) (string, error) {
 	prefix := w.Prefix()
 	client := &http.Client{}
-	url := "https://" + prefix + "oauth2/token?service=" + w.RegistryName + ".azurecr.io" + "&scope=repository:" + name + ":pull"
+	url := "https://" + prefix + "oauth2/token?service=" + w.registryName + ".azurecr.io" + "&scope=repository:" + name + ":pull"
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -92,8 +93,6 @@ func (w *ACRWrapper) getToken(name string) (string, error) {
 func (w *ACRWrapper) getAuthCredentials() (authCredentials, error) {
 	username := os.Getenv("ACR_USERNAME")
 	password := os.Getenv("ACR_PASSWORD")
-	registryName := os.Getenv("ACR_REGISTRY_NAME")
-	w.RegistryName = registryName
 	if username != "" && password != "" {
 		return authCredentials{username: username, password: password}, nil
 	}
@@ -110,7 +109,7 @@ func (w *ACRWrapper) getAuthCredentials() (authCredentials, error) {
 	}
 	var authByt []byte
 	for serverName, authInfo := range conf.Auths {
-		if serverName == w.RegistryName+".azurecr.io" {
+		if serverName == w.registryName+".azurecr.io" {
 			authByt, err = base64.StdEncoding.DecodeString(authInfo["auth"])
 			if err != nil {
 				return authCredentials{}, err
@@ -146,7 +145,7 @@ func (w *ACRWrapper) getAuthCredentialsFromCredsStore(credsStore string) (authCr
 		}
 	}()
 	p := c.NewShellProgramFunc(credsStore)
-	credResponse, err := c.Get(p, w.RegistryName+".azurecr.io")
+	credResponse, err := c.Get(p, w.registryName+".azurecr.io")
 	if err != nil {
 		return authCreds, err
 	}
@@ -154,5 +153,5 @@ func (w *ACRWrapper) getAuthCredentialsFromCredsStore(credsStore string) (authCr
 }
 
 func (w *ACRWrapper) Prefix() string {
-	return w.RegistryName + ".azurecr.io/"
+	return w.registryName + ".azurecr.io/"
 }
