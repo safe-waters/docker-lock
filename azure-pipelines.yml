@@ -20,6 +20,11 @@ jobs:
       mkdir -p "$USERPROFILE"/.docker"
       echo '{"credsStore":"wincred"}' > "$USERPROFILE"/.docker/config.json"
     displayName: Configure wincred
+  - bash: |
+      rm /c/ProgramData/Git/config
+      git config --global core.autcrlf false
+      git clone https://github.com/michaelperel/docker-lock.git
+    displayName: Clone docker-lock
   - bash: ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
     env:
@@ -28,11 +33,6 @@ jobs:
       ACR_USERNAME: $(ACR_USERNAME)
       ACR_PASSWORD: $(ACR_PASSWORD)
       ACR_REGISTRY_NAME: $(ACR_REGISTRY_NAME)
-  - bash: |
-      rm /c/ProgramData/Git/config
-      git config --global core.autcrlf false
-      git clone https://github.com/michaelperel/docker-lock.git
-    displayName: Clone docker-lock
   - bash: |
       cd docker-lock
       # run without -race, because it requires gcc
@@ -51,6 +51,8 @@ jobs:
       mkdir -p ""$HOME"/.docker"
       echo '{"credsStore":"osxkeychain"}' > ""$HOME"/.docker/config.json"
     displayName: Configure osxkeychain
+  - bash: go test -race ./...
+    displayName: Run tests
   - bash: ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
     env:
@@ -59,13 +61,13 @@ jobs:
       ACR_USERNAME: $(ACR_USERNAME)
       ACR_PASSWORD: $(ACR_PASSWORD)
       ACR_REGISTRY_NAME: $(ACR_REGISTRY_NAME)
-  - bash: go test -race ./...
-    displayName: Run tests
 
 - job: TestLinux
   pool:
     vmImage: ubuntu-18.04
   steps:
+  - bash: go test -race ./...
+    displayName: Run tests
   - bash: ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
     env:
@@ -74,8 +76,6 @@ jobs:
       ACR_USERNAME: $(ACR_USERNAME)
       ACR_PASSWORD: $(ACR_PASSWORD)
       ACR_REGISTRY_NAME: $(ACR_REGISTRY_NAME)
-  - bash: go test -race ./...
-    displayName: Run tests
 
 - job: Build
   dependsOn:
