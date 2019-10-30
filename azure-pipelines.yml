@@ -57,7 +57,10 @@ jobs:
     displayName: Configure osxkeychain
   - bash: go test -race ./...
     displayName: Run tests
-  - bash: ./integration_tests/integration_tests.sh
+  - bash: |
+      brew install gettext
+      brew link --force gettext
+      ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
     env:
       DOCKER_USERNAME: $(DOCKER_USERNAME)
