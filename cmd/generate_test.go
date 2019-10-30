@@ -477,27 +477,6 @@ func TestGenerateDockerfileEnvBuildArgs(t *testing.T) {
 	testGenerate(t, flags, tOs)
 }
 
-// TestGenerateDockerfilePrivate ensures Lockfiles work with private images
-// hosted on Dockerhub.
-func TestGenerateDockerfilePrivate(t *testing.T) {
-	t.Parallel()
-	if os.Getenv("CI_SERVER") != "TRUE" {
-		t.Skip("Only runs on CI server.")
-	}
-	dockerfile := filepath.Join(generateDockerBaseDir, "private", "Dockerfile")
-	flags := []string{fmt.Sprintf("--dockerfiles=%s", dockerfile)}
-	tOs := []generateTestObject{
-		{
-			filePath: filepath.ToSlash(dockerfile),
-			wantImages: []generate.DockerfileImage{
-				{Image: generate.Image{Name: "dockerlocktestaccount/busybox", Tag: "latest"}},
-			},
-			testFn: checkGenerateDockerfile,
-		},
-	}
-	testGenerate(t, flags, tOs)
-}
-
 func testGenerate(t *testing.T, flags []string, tOs []generateTestObject) {
 	tmpFile, err := ioutil.TempFile("", "test-docker-lock-*")
 	if err != nil {
