@@ -18,8 +18,8 @@ jobs:
       unzip docker-credential-wincred.zip
       mkdir -p /usr/bin
       mv docker-credential-wincred.exe /usr/bin
-      mkdir -p "$USERPROFILE"/.docker"
-      echo '{"credsStore":"wincred"}' > "$USERPROFILE"/.docker/config.json"
+      mkdir -p "$USERPROFILE"/.docker
+      echo '{"credsStore":"wincred"}' > "$USERPROFILE"/.docker/config.json
     displayName: Configure wincred
   - bash: |
       # run without -race, because it requires gcc
@@ -27,9 +27,9 @@ jobs:
     displayName: Run unit tests
   - bash: |
       go build
-      chmod +x docker-lock
-      mkdir -p ~/.docker/cli-plugins/
-      mv docker-lock.exe ~/.docker/cli-plugins/
+      chmod +x docker-lock.exe
+      mkdir -p "$USERPROFILE"/.docker/cli-plugins/
+      mv docker-lock.exe "$USERPROFILE"/.docker/cli-plugins/
       ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
 
