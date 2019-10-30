@@ -1,6 +1,27 @@
 #! /usr/bin/env bash
 (
     cd "$(dirname "$0")" || exit
+    integration_tests_dir="$(pwd)"
+
+    cleanup () {
+        cd "${integration_tests_dir}"
+        rm **/.envwithcreds
+        rm **/.envwithoutcreds
+    }
+
+    before_test () {
+        envsubst < .envreplacewithcreds > .envwithcreds
+        envsubst < .envreplacewithoutcreds > .envwithoutcreds
+        for v in $(cat .envreplacewithcreds | cut -d= -f1)
+        do
+            unset "$v"
+        done
+    }
+
+    after_test () {
+        cd "${integration_tests_dir}"
+    }
+
     run_integration_tests() {
         # docker logged out with no creds in .env, generate should fail
         if ! docker lock verify --env-file .envwithoutcreds > /dev/null 2>&1; then
@@ -30,29 +51,28 @@
         docker logout $3 > /dev/null 2>&1
     }
 
-    cd docker/
-    USERNAME="$DOCKER_USERNAME"
-    PASSWORD="$DOCKER_PASSWORD"
-    envsubst < .envreplacewithcreds > .envwithcreds
-    envsubst < .envreplacewithoutcreds > .envwithoutcreds
-    unset DOCKER_USERNAME
-    unset DOCKER_PASSWORD
-    run_integration_tests "$USERNAME" "$PASSWORD"
-    cd ..
+    main() {
+        trap cleanup EXIT
 
-    echo -e "\n ------ PASSED PRIVATE DOCKER TESTS ------ \n"
+        cd docker/
+        USERNAME="$DOCKER_USERNAME"
+        PASSWORD="$DOCKER_PASSWORD"
+        before_test
+        run_integration_tests "$USERNAME" "$PASSWORD"
+        after_test
 
-    cd acr/
-    USERNAME="$ACR_USERNAME"
-    PASSWORD="$ACR_PASSWORD"
-    SERVER="$ACR_REGISTRY_NAME.azurecr.io"
-    envsubst < .envreplacewithcreds > .envwithcreds
-    envsubst < .envreplacewithoutcreds > .envwithoutcreds
-    unset ACR_USERNAME
-    unset ACR_PASSWORD
-    unset ACR_REGISTRY_NAME
-    run_integration_tests "$USERNAME" "$PASSWORD" "$SERVER"
-    cd ..
+        echo -e "\n ------ PASSED PRIVATE DOCKER TESTS ------ \n"
 
-    echo -e "\n ------ PASSED PRIVATE ACR TESTS ------ \n"
+        cd acr/
+        USERNAME="$ACR_USERNAME"
+        PASSWORD="$ACR_PASSWORD"
+        SERVER="$ACR_REGISTRY_NAME.azurecr.io"
+        before_test
+        run_integration_tests "$USERNAME" "$PASSWORD" "$SERVER"
+        after_test
+
+        echo -e "\n ------ PASSED PRIVATE ACR TESTS ------ \n"
+    }
+
+    main
 )

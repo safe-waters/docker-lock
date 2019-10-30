@@ -20,7 +20,7 @@ jobs:
       mkdir -p "$USERPROFILE"/.docker"
       echo '{"credsStore":"wincred"}' > "$USERPROFILE"/.docker/config.json"
     displayName: Configure wincred
-  - bash: . ./integration_tests/integration_tests.sh
+  - bash: ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
     env:
       DOCKER_USERNAME: $(DOCKER_USERNAME)
@@ -51,7 +51,7 @@ jobs:
       mkdir -p ""$HOME"/.docker"
       echo '{"credsStore":"osxkeychain"}' > ""$HOME"/.docker/config.json"
     displayName: Configure osxkeychain
-  - bash: . ./integration_tests/integration_tests.sh
+  - bash: ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
     env:
       DOCKER_USERNAME: $(DOCKER_USERNAME)
@@ -66,7 +66,7 @@ jobs:
   pool:
     vmImage: ubuntu-18.04
   steps:
-  - bash: . ./integration_tests/integration_tests.sh
+  - bash: ./integration_tests/integration_tests.sh
     displayName: Run Integration Tests
     env:
       DOCKER_USERNAME: $(DOCKER_USERNAME)
