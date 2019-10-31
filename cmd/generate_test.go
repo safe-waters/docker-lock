@@ -100,6 +100,7 @@ func TestGenerateComposefileContext(t *testing.T) {
 // TestGenerateComposefileEnv ensures Lockfiles from docker-compose files with
 // environment variables replaced by values in a .env file are correct.
 func TestGenerateComposefileEnv(t *testing.T) {
+	t.Parallel()
 	composefile := filepath.Join(generateComposeBaseDir, "env", "docker-compose.yml")
 	dockerfile := filepath.ToSlash(filepath.Join(generateComposeBaseDir, "env", "env", "Dockerfile"))
 	envFile := filepath.Join(generateComposeBaseDir, "env", ".env")
@@ -462,6 +463,7 @@ func TestGenerateDockerfileGlobs(t *testing.T) {
 // TestGenerateDockerfileEnvBuildArgs ensures environment variables are used as
 // build args.
 func TestGenerateDockerfileEnvBuildArgs(t *testing.T) {
+	t.Parallel()
 	dockerfile := filepath.Join(generateDockerBaseDir, "args", "buildargs", "Dockerfile")
 	envFile := filepath.Join(generateDockerBaseDir, "args", "buildargs", ".env")
 	flags := []string{fmt.Sprintf("--dockerfiles=%s", dockerfile), fmt.Sprintf("--env-file=%s", envFile), fmt.Sprintf("--dockerfile-env-build-args")}

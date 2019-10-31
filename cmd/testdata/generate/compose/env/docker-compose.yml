@@ -2,7 +2,7 @@ version: '3'
 
 services:
   svc:
-    image: ${IMAGE}
+    image: ${TestGenerateComposefileEnv_IMAGE}
     build:
-      context: ${CONTEXT}
-      dockerfile: ${DOCKERFILE}
+      context: ${TestGenerateComposefileEnv_CONTEXT}
+      dockerfile: ${TestGenerateComposefileEnv_DOCKERFILE}

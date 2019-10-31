@@ -56,6 +56,7 @@ func TestVerifyDockerfileDiffDigests(t *testing.T) {
 // TestVerifyDockerfileEnvBuildArgs ensures environment variables are used as
 // build args.
 func TestVerifyDockerfileEnvBuildArgs(t *testing.T) {
+	t.Parallel()
 	outpath := filepath.Join(verifyDockerBaseDir, "buildargs", "docker-lock.json")
 	envFile := filepath.Join(verifyDockerBaseDir, "buildargs", ".env")
 	flags := []string{fmt.Sprintf("--env-file=%s", envFile), fmt.Sprintf("--dockerfile-env-build-args"), fmt.Sprintf("--outpath=%s", outpath)}

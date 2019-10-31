@@ -1,2 +1,2 @@
-ARG IMAGE
-FROM ${IMAGE}
+ARG TestGenerateDockerfileEnvBuildArgs_IMAGE
+FROM ${TestGenerateDockerfileEnvBuildArgs_IMAGE}
