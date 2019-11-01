@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/joho/godotenv"
 	"github.com/michaelperel/docker-lock/registry"
 	"github.com/michaelperel/docker-lock/verify"
@@ -42,7 +39,7 @@ will verify that all base images in files referenced in the Lockfile exist in th
 			wrappers := []registry.Wrapper{&registry.ElasticWrapper{}, &registry.MCRWrapper{}, ACRWrapper}
 			wrapperManager.Add(wrappers...)
 			if err := verifier.VerifyLockfile(wrapperManager); err != nil {
-				fmt.Fprintln(os.Stderr, err)
+				return err
 			}
 			return nil
 		},

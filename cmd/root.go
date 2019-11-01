@@ -16,6 +16,8 @@ func NewRootCmd() *cobra.Command {
 
 func Execute() error {
 	rootCmd := NewRootCmd()
+	rootCmd.SilenceUsage = true
+	rootCmd.SilenceErrors = true
 	lockCmd := NewLockCmd()
 	generateCmd := NewGenerateCmd()
 	verifyCmd := NewVerifyCmd()
