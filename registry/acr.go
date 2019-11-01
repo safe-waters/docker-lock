@@ -43,7 +43,7 @@ func (w *ACRWrapper) GetDigest(name string, tag string) (string, error) {
 	prefix := w.Prefix()
 	name = strings.Replace(name, prefix, "", 1)
 	token, err := w.getToken(name)
-	registryURL := "https://" + prefix + "v2/" + name + "/manifests/" + tag
+	registryURL := fmt.Sprintf("https://%sv2/%s/manifests/%s", prefix, name, tag)
 	req, err := http.NewRequest("GET", registryURL, nil)
 	if err != nil {
 		return "", err
@@ -67,7 +67,7 @@ func (w *ACRWrapper) GetDigest(name string, tag string) (string, error) {
 func (w *ACRWrapper) getToken(name string) (string, error) {
 	prefix := w.Prefix()
 	client := &http.Client{}
-	url := "https://" + prefix + "oauth2/token?service=" + w.registryName + ".azurecr.io" + "&scope=repository:" + name + ":pull"
+	url := fmt.Sprintf("https://%soauth2/token?service=%s.azurecr.io&scope=repository:%s:pull", prefix, w.registryName, name)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -109,7 +109,7 @@ func (w *ACRWrapper) getAuthCredentials() (authCredentials, error) {
 	}
 	var authByt []byte
 	for serverName, authInfo := range conf.Auths {
-		if serverName == w.registryName+".azurecr.io" {
+		if serverName == fmt.Sprintf("%s.azurecr.io", w.registryName) {
 			authByt, err = base64.StdEncoding.DecodeString(authInfo["auth"])
 			if err != nil {
 				return authCredentials{}, err
@@ -141,7 +141,7 @@ func (w *ACRWrapper) getAuthCredentialsFromCredsStore(credsStore string) (authCr
 		}
 	}()
 	p := c.NewShellProgramFunc(credsStore)
-	credResponse, err := c.Get(p, w.registryName+".azurecr.io")
+	credResponse, err := c.Get(p, fmt.Sprintf("%s.azurecr.io", w.registryName))
 	if err != nil {
 		return authCreds, err
 	}
@@ -149,5 +149,5 @@ func (w *ACRWrapper) getAuthCredentialsFromCredsStore(credsStore string) (authCr
 }
 
 func (w *ACRWrapper) Prefix() string {
-	return w.registryName + ".azurecr.io/"
+	return fmt.Sprintf("%s.azurecr.io/", w.registryName)
 }
