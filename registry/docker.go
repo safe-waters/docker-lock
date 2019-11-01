@@ -132,10 +132,6 @@ func (w *DockerWrapper) getAuthCredentials() (authCredentials, error) {
 	} else if conf.CredsStore != "" {
 		authCreds, err := w.getAuthCredentialsFromCredsStore(conf.CredsStore)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: '%s' found, but unable to get auth credentials. "+
-				"Proceeding as if user not logged in, so private repositories will be unavailable. "+
-				"Try logging in with 'docker login' to have access to private repositories.\n",
-				w.ConfigFile)
 			return authCredentials{}, nil
 		}
 		return authCreds, nil
