@@ -1,3 +1,4 @@
+![Docker-Lock-Banner](./static/readme-banner.png)
 # About
 [![Go Report Card](https://goreportcard.com/badge/github.com/michaelperel/docker-lock)](https://goreportcard.com/report/github.com/michaelperel/docker-lock)
 [![Build Status](https://dev.azure.com/michaelsethperel/docker-lock/_apis/build/status/michaelperel.docker-lock?branchName=master)](https://dev.azure.com/michaelsethperel/docker-lock/_build?definitionId=4&branchName=master)
