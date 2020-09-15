@@ -2,296 +2,89 @@ package generate
 
 import (
 	"errors"
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-	"sync"
+
+	"github.com/safe-waters/docker-lock/generate/collect"
 )
 
-// Collector gathers Dockerfiles and docker-compose files.
-type Collector struct {
-	BaseDir      string
-	DefaultPaths []string
-	ManualPaths  []string
-	Globs        []string
-	Recursive    bool
+// PathCollector contains PathCollectors for Dockerfiles
+// and docker-compose files.
+type PathCollector struct {
+	DockerfileCollector  *collect.PathCollector
+	ComposefileCollector *collect.PathCollector
 }
 
-// ICollector provides an interface for Collector's exported
+// IPathCollector provides an interface for PathCollector's exported
 // methods, which are used by Generator.
-type ICollector interface {
-	Paths(done <-chan struct{}) <-chan *PathResult
+type IPathCollector interface {
+	CollectPaths(done <-chan struct{}) (
+		dockerfilePaths <-chan *collect.PathResult,
+		composefilePaths <-chan *collect.PathResult,
+	)
 }
 
-// PathResult holds collected paths and errors that occurred
-// while gathering them.
-type PathResult struct {
-	Path string
-	Err  error
-}
-
-// NewCollector returns a Collector after validating its fields.
-func NewCollector(
-	baseDir string,
-	defaultPaths []string,
-	manualPaths []string,
-	globs []string,
-	recursive bool,
-) (*Collector, error) {
-	if recursive && len(defaultPaths) == 0 {
-		return nil,
-			errors.New("if recursive is true, defaultPaths must also be set")
+// CollectPaths collects Dockerfile and docker-compose file paths.
+func (p *PathCollector) CollectPaths(
+	done <-chan struct{},
+) (
+	dockerfilePaths <-chan *collect.PathResult,
+	composefilePaths <-chan *collect.PathResult,
+) {
+	if p.DockerfileCollector != nil {
+		dockerfilePaths = p.DockerfileCollector.CollectPaths(done)
 	}
 
-	return &Collector{
-		BaseDir:      baseDir,
-		DefaultPaths: defaultPaths,
-		ManualPaths:  manualPaths,
-		Globs:        globs,
-		Recursive:    recursive,
-	}, nil
-}
-
-// Paths gathers file paths specified by Collector. It removes duplicates and
-// ensures that the file paths are within a subdirectory of the base directory.
-func (c *Collector) Paths(done <-chan struct{}) <-chan *PathResult {
-	pathResults := make(chan *PathResult)
-
-	var waitGroup sync.WaitGroup
-
-	waitGroup.Add(1)
-
-	go func() {
-		defer waitGroup.Done()
-
-		intermediatePathResults := make(chan *PathResult)
-		intermediateDone := make(chan struct{})
-
-		var intermediateWaitGroup sync.WaitGroup
-
-		if len(c.ManualPaths) != 0 {
-			intermediateWaitGroup.Add(1)
-
-			go c.collectManualPaths(
-				intermediatePathResults, intermediateDone,
-				&intermediateWaitGroup,
-			)
-		}
-
-		if len(c.Globs) != 0 {
-			intermediateWaitGroup.Add(1)
-
-			go c.collectGlobs(
-				intermediatePathResults, intermediateDone,
-				&intermediateWaitGroup,
-			)
-		}
-
-		if c.Recursive {
-			intermediateWaitGroup.Add(1)
-
-			go c.collectRecursive(
-				intermediatePathResults, intermediateDone,
-				&intermediateWaitGroup,
-			)
-		}
-
-		if len(c.ManualPaths) == 0 &&
-			len(c.Globs) == 0 &&
-			!c.Recursive &&
-			len(c.DefaultPaths) != 0 {
-			intermediateWaitGroup.Add(1)
-
-			go c.collectDefaultPaths(
-				intermediatePathResults, intermediateDone,
-				&intermediateWaitGroup,
-			)
-		}
-
-		go func() {
-			intermediateWaitGroup.Wait()
-			close(intermediatePathResults)
-		}()
-
-		seenPaths := map[string]struct{}{}
-
-		for result := range intermediatePathResults {
-			if result.Err != nil {
-				close(intermediateDone)
-
-				select {
-				case <-done:
-				case pathResults <- result:
-				}
-
-				return
-			}
-
-			if _, ok := seenPaths[result.Path]; !ok {
-				seenPaths[result.Path] = struct{}{}
-
-				select {
-				case <-done:
-				case pathResults <- result:
-				}
-			}
-		}
-	}()
-
-	go func() {
-		waitGroup.Wait()
-		close(pathResults)
-	}()
-
-	return pathResults
-}
-
-func (c *Collector) collectManualPaths(
-	pathResults chan<- *PathResult,
-	done <-chan struct{},
-	waitGroup *sync.WaitGroup,
-) {
-	defer waitGroup.Done()
-
-	for _, path := range c.ManualPaths {
-		path = filepath.Join(c.BaseDir, path)
-
-		if err := c.validatePath(path); err != nil {
-			select {
-			case <-done:
-			case pathResults <- &PathResult{Err: err}:
-			}
-
-			return
-		}
-
-		select {
-		case <-done:
-			return
-		case pathResults <- &PathResult{Path: path}:
-		}
+	if p.ComposefileCollector != nil {
+		composefilePaths = p.ComposefileCollector.CollectPaths(done)
 	}
+
+	return
 }
 
-func (c *Collector) collectDefaultPaths(
-	pathResults chan<- *PathResult,
-	done <-chan struct{},
-	waitGroup *sync.WaitGroup,
-) {
-	defer waitGroup.Done()
-
-	for _, path := range c.DefaultPaths {
-		path = filepath.Join(c.BaseDir, path)
-
-		if err := c.validatePath(path); err != nil {
-			select {
-			case <-done:
-			case pathResults <- &PathResult{Err: err}:
-			}
-
-			return
-		}
-
-		if err := c.fileExists(path); err == nil {
-			select {
-			case <-done:
-				return
-			case pathResults <- &PathResult{Path: path}:
-			}
-		}
+// DefaultPathCollector creates a Collector for Generator.
+func DefaultPathCollector(flags *Flags) (IPathCollector, error) {
+	if flags == nil {
+		return nil, errors.New("flags cannot be nil")
 	}
-}
 
-func (c *Collector) collectGlobs(
-	pathResults chan<- *PathResult,
-	done <-chan struct{},
-	waitGroup *sync.WaitGroup,
-) {
-	defer waitGroup.Done()
+	if flags.DockerfileFlags == nil {
+		return nil, errors.New("flags.DockerfileFlags cannot be nil")
+	}
 
-	for _, glob := range c.Globs {
-		glob = filepath.Join(c.BaseDir, glob)
+	if flags.ComposefileFlags == nil {
+		return nil, errors.New("flags.ComposefileFlags cannot be nil")
+	}
 
-		paths, err := filepath.Glob(glob)
+	var dockerfileCollector *collect.PathCollector
+
+	var composefileCollector *collect.PathCollector
+
+	var err error
+
+	if !flags.DockerfileFlags.ExcludePaths {
+		dockerfileCollector, err = collect.NewPathCollector(
+			flags.FlagsWithSharedValues.BaseDir, []string{"Dockerfile"},
+			flags.DockerfileFlags.ManualPaths, flags.DockerfileFlags.Globs,
+			flags.DockerfileFlags.Recursive,
+		)
 		if err != nil {
-			select {
-			case <-done:
-			case pathResults <- &PathResult{Err: err}:
-			}
-
-			return
-		}
-
-		for _, path := range paths {
-			if err := c.validatePath(path); err != nil {
-				select {
-				case <-done:
-				case pathResults <- &PathResult{Err: err}:
-				}
-
-				return
-			}
-
-			select {
-			case <-done:
-				return
-			case pathResults <- &PathResult{Path: path}:
-			}
+			return nil, err
 		}
 	}
-}
 
-func (c *Collector) collectRecursive(
-	pathResults chan<- *PathResult,
-	done <-chan struct{},
-	waitGroup *sync.WaitGroup,
-) {
-	defer waitGroup.Done()
-
-	defaultSet := map[string]struct{}{}
-
-	for _, p := range c.DefaultPaths {
-		defaultSet[p] = struct{}{}
-	}
-
-	if err := filepath.Walk(
-		c.BaseDir, func(path string, info os.FileInfo, err error,
-		) error {
-			if err != nil {
-				return err
-			}
-
-			if _, ok := defaultSet[filepath.Base(path)]; ok {
-				if err := c.validatePath(path); err != nil {
-					return err
-				}
-
-				select {
-				case <-done:
-				case pathResults <- &PathResult{Path: path}:
-				}
-			}
-
-			return nil
-		},
-	); err != nil {
-		select {
-		case <-done:
-		case pathResults <- &PathResult{Err: err}:
+	if !flags.ComposefileFlags.ExcludePaths {
+		composefileCollector, err = collect.NewPathCollector(
+			flags.FlagsWithSharedValues.BaseDir,
+			[]string{"docker-compose.yml", "docker-compose.yaml"},
+			flags.ComposefileFlags.ManualPaths, flags.ComposefileFlags.Globs,
+			flags.ComposefileFlags.Recursive,
+		)
+		if err != nil {
+			return nil, err
 		}
 	}
-}
 
-func (c *Collector) fileExists(path string) error {
-	_, err := os.Stat(path)
-	return err
-}
-
-func (c *Collector) validatePath(path string) error {
-	if strings.HasPrefix(path, "..") {
-		return fmt.Errorf("'%s' is outside the current working directory", path)
-	}
-
-	return nil
+	return &PathCollector{
+		DockerfileCollector:  dockerfileCollector,
+		ComposefileCollector: composefileCollector,
+	}, nil
 }

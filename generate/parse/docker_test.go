@@ -1,4 +1,4 @@
-package generate_test
+package parse_test
 
 import (
 	"os"
@@ -6,19 +6,20 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/safe-waters/docker-lock/generate"
+	"github.com/safe-waters/docker-lock/generate/collect"
+	"github.com/safe-waters/docker-lock/generate/parse"
 )
 
-const dockerfileParserTestDir = "dockerfileParser-tests"
+const dockerfileImageParserTestDir = "dockerfileParser-tests"
 
-func TestDockerfileParser(t *testing.T) {
+func TestDockerfileImageParser(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		Name               string
 		DockerfilePaths    []string
 		DockerfileContents [][]byte
-		Expected           []*generate.DockerfileImage
+		Expected           []*parse.DockerfileImage
 	}{
 		{
 			Name:            "Position",
@@ -30,19 +31,19 @@ FROM golang:1.14
 FROM node
 `),
 			},
-			Expected: []*generate.DockerfileImage{
+			Expected: []*parse.DockerfileImage{
 				{
-					Image:    &generate.Image{Name: "ubuntu", Tag: "bionic"},
+					Image:    &parse.Image{Name: "ubuntu", Tag: "bionic"},
 					Position: 0,
 					Path:     "Dockerfile",
 				},
 				{
-					Image:    &generate.Image{Name: "golang", Tag: "1.14"},
+					Image:    &parse.Image{Name: "golang", Tag: "1.14"},
 					Position: 1,
 					Path:     "Dockerfile",
 				},
 				{
-					Image:    &generate.Image{Name: "node", Tag: "latest"},
+					Image:    &parse.Image{Name: "node", Tag: "latest"},
 					Position: 2,
 					Path:     "Dockerfile",
 				},
@@ -59,14 +60,14 @@ ARG IMAGE=ubuntu
 FROM ${IMAGE}
 `),
 			},
-			Expected: []*generate.DockerfileImage{
+			Expected: []*parse.DockerfileImage{
 				{
-					Image:    &generate.Image{Name: "busybox", Tag: "latest"},
+					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
 					Position: 0,
 					Path:     "Dockerfile",
 				},
 				{
-					Image:    &generate.Image{Name: "busybox", Tag: "latest"},
+					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
 					Position: 1,
 					Path:     "Dockerfile",
 				},
@@ -82,14 +83,14 @@ FROM busy as anotherbusy
 FROM ubuntu as worker
 `),
 			},
-			Expected: []*generate.DockerfileImage{
+			Expected: []*parse.DockerfileImage{
 				{
-					Image:    &generate.Image{Name: "busybox", Tag: "latest"},
+					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
 					Position: 0,
 					Path:     "Dockerfile",
 				},
 				{
-					Image:    &generate.Image{Name: "ubuntu", Tag: "latest"},
+					Image:    &parse.Image{Name: "ubuntu", Tag: "latest"},
 					Position: 1,
 					Path:     "Dockerfile",
 				},
@@ -108,25 +109,25 @@ FROM ubuntu
 FROM busybox
 `),
 			},
-			Expected: []*generate.DockerfileImage{
+			Expected: []*parse.DockerfileImage{
 				{
-					Image:    &generate.Image{Name: "busybox", Tag: "latest"},
+					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
 					Position: 0,
 					Path:     "Dockerfile-one",
 				},
 				{
-					Image:    &generate.Image{Name: "ubuntu", Tag: "latest"},
+					Image:    &parse.Image{Name: "ubuntu", Tag: "latest"},
 					Position: 1,
 					Path:     "Dockerfile-one",
 				},
 
 				{
-					Image:    &generate.Image{Name: "ubuntu", Tag: "latest"},
+					Image:    &parse.Image{Name: "ubuntu", Tag: "latest"},
 					Position: 0,
 					Path:     "Dockerfile-two",
 				},
 				{
-					Image:    &generate.Image{Name: "busybox", Tag: "latest"},
+					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
 					Position: 1,
 					Path:     "Dockerfile-two",
 				},
@@ -140,7 +141,7 @@ FROM busybox
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := makeTempDir(t, dockerfileParserTestDir)
+			tempDir := makeTempDir(t, dockerfileImageParserTestDir)
 			defer os.RemoveAll(tempDir)
 
 			makeParentDirsInTempDirFromFilePaths(
@@ -150,20 +151,20 @@ FROM busybox
 				t, tempDir, test.DockerfilePaths, test.DockerfileContents,
 			)
 
-			pathsToParseCh := make(chan *generate.PathResult, len(pathsToParse))
+			pathsToParseCh := make(chan *collect.PathResult, len(pathsToParse))
 			for _, path := range pathsToParse {
-				pathsToParseCh <- &generate.PathResult{Path: path}
+				pathsToParseCh <- &collect.PathResult{Path: path}
 			}
 			close(pathsToParseCh)
 
 			done := make(chan struct{})
 
-			dockerfileParser := &generate.DockerfileParser{}
+			dockerfileParser := &parse.DockerfileImageParser{}
 			dockerfileImages := dockerfileParser.ParseFiles(
 				pathsToParseCh, done,
 			)
 
-			var got []*generate.DockerfileImage
+			var got []*parse.DockerfileImage
 
 			for dockerfileImage := range dockerfileImages {
 				if dockerfileImage.Err != nil {
@@ -173,7 +174,7 @@ FROM busybox
 				got = append(got, dockerfileImage)
 			}
 
-			sortDockerfileParserResults(t, got)
+			sortDockerfileImageParserResults(t, got)
 
 			for _, dockerfileImage := range test.Expected {
 				dockerfileImage.Path = filepath.Join(
@@ -186,9 +187,9 @@ FROM busybox
 	}
 }
 
-func sortDockerfileParserResults(
+func sortDockerfileImageParserResults(
 	t *testing.T,
-	results []*generate.DockerfileImage,
+	results []*parse.DockerfileImage,
 ) {
 	t.Helper()
 

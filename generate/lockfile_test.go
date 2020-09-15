@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/safe-waters/docker-lock/generate"
+	"github.com/safe-waters/docker-lock/generate/parse"
 )
 
 func TestLockfile(t *testing.T) {
@@ -14,8 +15,8 @@ func TestLockfile(t *testing.T) {
 
 	tests := []struct {
 		Name              string
-		DockerfileImages  map[string][]*generate.DockerfileImage
-		ComposefileImages map[string][]*generate.ComposefileImage
+		DockerfileImages  map[string][]*parse.DockerfileImage
+		ComposefileImages map[string][]*parse.ComposefileImage
 		Expected          *generate.Lockfile
 	}{
 		{
@@ -24,10 +25,10 @@ func TestLockfile(t *testing.T) {
 		},
 		{
 			Name: "Non Nil Images",
-			DockerfileImages: map[string][]*generate.DockerfileImage{
+			DockerfileImages: map[string][]*parse.DockerfileImage{
 				"Dockerfile": {
 					{
-						Image: &generate.Image{
+						Image: &parse.Image{
 							Name: "busybox",
 							Tag:  "latest",
 						},
@@ -35,10 +36,10 @@ func TestLockfile(t *testing.T) {
 					},
 				},
 			},
-			ComposefileImages: map[string][]*generate.ComposefileImage{
+			ComposefileImages: map[string][]*parse.ComposefileImage{
 				"docker-compose.yml": {
 					{
-						Image: &generate.Image{
+						Image: &parse.Image{
 							Name: "busybox",
 							Tag:  "latest",
 						},
@@ -49,10 +50,10 @@ func TestLockfile(t *testing.T) {
 				},
 			},
 			Expected: &generate.Lockfile{
-				DockerfileImages: map[string][]*generate.DockerfileImage{
+				DockerfileImages: map[string][]*parse.DockerfileImage{
 					"Dockerfile": {
 						{
-							Image: &generate.Image{
+							Image: &parse.Image{
 								Name: "busybox",
 								Tag:  "latest",
 							},
@@ -60,10 +61,10 @@ func TestLockfile(t *testing.T) {
 						},
 					},
 				},
-				ComposefileImages: map[string][]*generate.ComposefileImage{
+				ComposefileImages: map[string][]*parse.ComposefileImage{
 					"docker-compose.yml": {
 						{
-							Image: &generate.Image{
+							Image: &parse.Image{
 								Name: "busybox",
 								Tag:  "latest",
 							},
@@ -77,10 +78,10 @@ func TestLockfile(t *testing.T) {
 		},
 		{
 			Name: "Nil Dockerfile Images",
-			ComposefileImages: map[string][]*generate.ComposefileImage{
+			ComposefileImages: map[string][]*parse.ComposefileImage{
 				"docker-compose.yml": {
 					{
-						Image: &generate.Image{
+						Image: &parse.Image{
 							Name: "busybox",
 							Tag:  "latest",
 						},
@@ -91,10 +92,10 @@ func TestLockfile(t *testing.T) {
 				},
 			},
 			Expected: &generate.Lockfile{
-				ComposefileImages: map[string][]*generate.ComposefileImage{
+				ComposefileImages: map[string][]*parse.ComposefileImage{
 					"docker-compose.yml": {
 						{
-							Image: &generate.Image{
+							Image: &parse.Image{
 								Name: "busybox",
 								Tag:  "latest",
 							},
@@ -108,10 +109,10 @@ func TestLockfile(t *testing.T) {
 		},
 		{
 			Name: "Nil Composefile Images",
-			DockerfileImages: map[string][]*generate.DockerfileImage{
+			DockerfileImages: map[string][]*parse.DockerfileImage{
 				"Dockerfile": {
 					{
-						Image: &generate.Image{
+						Image: &parse.Image{
 							Name: "busybox",
 							Tag:  "latest",
 						},
@@ -120,10 +121,10 @@ func TestLockfile(t *testing.T) {
 				},
 			},
 			Expected: &generate.Lockfile{
-				DockerfileImages: map[string][]*generate.DockerfileImage{
+				DockerfileImages: map[string][]*parse.DockerfileImage{
 					"Dockerfile": {
 						{
-							Image: &generate.Image{
+							Image: &parse.Image{
 								Name: "busybox",
 								Tag:  "latest",
 							},
@@ -135,10 +136,10 @@ func TestLockfile(t *testing.T) {
 		},
 		{
 			Name: "Sorted Images",
-			DockerfileImages: map[string][]*generate.DockerfileImage{
+			DockerfileImages: map[string][]*parse.DockerfileImage{
 				"Dockerfile": {
 					{
-						Image: &generate.Image{
+						Image: &parse.Image{
 							Name: "busybox",
 							Tag:  "latest",
 						},
@@ -146,7 +147,7 @@ func TestLockfile(t *testing.T) {
 						Path:     "Dockerfile",
 					},
 					{
-						Image: &generate.Image{
+						Image: &parse.Image{
 							Name: "busybox",
 							Tag:  "latest",
 						},
@@ -155,10 +156,10 @@ func TestLockfile(t *testing.T) {
 					},
 				},
 			},
-			ComposefileImages: map[string][]*generate.ComposefileImage{
+			ComposefileImages: map[string][]*parse.ComposefileImage{
 				"docker-compose.yml": {
 					{
-						Image: &generate.Image{
+						Image: &parse.Image{
 							Name: "busybox",
 							Tag:  "latest",
 						},
@@ -168,7 +169,7 @@ func TestLockfile(t *testing.T) {
 						Path:           "docker-compose.yml",
 					},
 					{
-						Image: &generate.Image{
+						Image: &parse.Image{
 							Name: "busybox",
 							Tag:  "latest",
 						},
@@ -180,10 +181,10 @@ func TestLockfile(t *testing.T) {
 				},
 			},
 			Expected: &generate.Lockfile{
-				DockerfileImages: map[string][]*generate.DockerfileImage{
+				DockerfileImages: map[string][]*parse.DockerfileImage{
 					"Dockerfile": {
 						{
-							Image: &generate.Image{
+							Image: &parse.Image{
 								Name: "busybox",
 								Tag:  "latest",
 							},
@@ -191,7 +192,7 @@ func TestLockfile(t *testing.T) {
 							Path:     "Dockerfile",
 						},
 						{
-							Image: &generate.Image{
+							Image: &parse.Image{
 								Name: "busybox",
 								Tag:  "latest",
 							},
@@ -200,10 +201,10 @@ func TestLockfile(t *testing.T) {
 						},
 					},
 				},
-				ComposefileImages: map[string][]*generate.ComposefileImage{
+				ComposefileImages: map[string][]*parse.ComposefileImage{
 					"docker-compose.yml": {
 						{
-							Image: &generate.Image{
+							Image: &parse.Image{
 								Name: "busybox",
 								Tag:  "latest",
 							},
@@ -213,7 +214,7 @@ func TestLockfile(t *testing.T) {
 							Path:           "docker-compose.yml",
 						},
 						{
-							Image: &generate.Image{
+							Image: &parse.Image{
 								Name: "busybox",
 								Tag:  "latest",
 							},
@@ -236,12 +237,12 @@ func TestLockfile(t *testing.T) {
 
 			done := make(chan struct{})
 
-			var dockerfileImages chan *generate.DockerfileImage
+			var dockerfileImages chan *parse.DockerfileImage
 
 			var waitGroup sync.WaitGroup
 
 			if len(test.DockerfileImages) != 0 {
-				dockerfileImages = make(chan *generate.DockerfileImage)
+				dockerfileImages = make(chan *parse.DockerfileImage)
 
 				waitGroup.Add(1)
 
@@ -260,10 +261,10 @@ func TestLockfile(t *testing.T) {
 				}()
 			}
 
-			var composefileImages chan *generate.ComposefileImage
+			var composefileImages chan *parse.ComposefileImage
 
 			if len(test.ComposefileImages) != 0 {
-				composefileImages = make(chan *generate.ComposefileImage)
+				composefileImages = make(chan *parse.ComposefileImage)
 
 				waitGroup.Add(1)
 

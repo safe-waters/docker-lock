@@ -1,4 +1,4 @@
-package generate_test
+package parse_test
 
 import (
 	"os"
@@ -6,12 +6,13 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/safe-waters/docker-lock/generate"
+	"github.com/safe-waters/docker-lock/generate/collect"
+	"github.com/safe-waters/docker-lock/generate/parse"
 )
 
-const composefileParserTestDir = "composefileParser-tests"
+const composefileImageParserTestDir = "composefileParser-tests"
 
-func TestComposefileParser(t *testing.T) {
+func TestComposefileImageParser(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -21,7 +22,7 @@ func TestComposefileParser(t *testing.T) {
 		ComposefileContents  [][]byte
 		DockerfilePaths      []string
 		DockerfileContents   [][]byte
-		Expected             []*generate.ComposefileImage
+		Expected             []*parse.ComposefileImage
 	}{
 		{
 			Name:             "Image",
@@ -34,9 +35,9 @@ services:
     image: busybox
 `),
 			},
-			Expected: []*generate.ComposefileImage{
+			Expected: []*parse.ComposefileImage{
 				{
-					Image: &generate.Image{
+					Image: &parse.Image{
 						Name: "busybox",
 						Tag:  "latest",
 					},
@@ -59,9 +60,9 @@ services:
 			},
 			DockerfilePaths:    []string{filepath.Join("build", "Dockerfile")},
 			DockerfileContents: [][]byte{[]byte(`FROM busybox`)},
-			Expected: []*generate.ComposefileImage{
+			Expected: []*parse.ComposefileImage{
 				{
-					Image: &generate.Image{
+					Image: &parse.Image{
 						Name: "busybox",
 						Tag:  "latest",
 					},
@@ -88,9 +89,9 @@ services:
 				filepath.Join("dockerfile", "Dockerfile"),
 			},
 			DockerfileContents: [][]byte{[]byte(`FROM busybox`)},
-			Expected: []*generate.ComposefileImage{
+			Expected: []*parse.ComposefileImage{
 				{
-					Image: &generate.Image{
+					Image: &parse.Image{
 						Name: "busybox",
 						Tag:  "latest",
 					},
@@ -118,9 +119,9 @@ services:
 				filepath.Join("dockerfile", "Dockerfile"),
 			},
 			DockerfileContents: [][]byte{[]byte(`FROM busybox`)},
-			Expected: []*generate.ComposefileImage{
+			Expected: []*parse.ComposefileImage{
 				{
-					Image: &generate.Image{
+					Image: &parse.Image{
 						Name: "busybox",
 						Tag:  "latest",
 					},
@@ -150,9 +151,9 @@ services:
 				filepath.Join("dockerfile", "Dockerfile"),
 			},
 			DockerfileContents: [][]byte{[]byte(`FROM busybox`)},
-			Expected: []*generate.ComposefileImage{
+			Expected: []*parse.ComposefileImage{
 				{
-					Image: &generate.Image{
+					Image: &parse.Image{
 						Name: "busybox",
 						Tag:  "latest",
 					},
@@ -185,9 +186,9 @@ services:
 ARG ARGS_ENV_LIST_IMAGE
 FROM ${ARGS_ENV_LIST_IMAGE}
 `)},
-			Expected: []*generate.ComposefileImage{
+			Expected: []*parse.ComposefileImage{
 				{
-					Image: &generate.Image{
+					Image: &parse.Image{
 						Name: "busybox",
 						Tag:  "latest",
 					},
@@ -217,9 +218,9 @@ services:
 ARG IMAGE
 FROM ${IMAGE}
 `)},
-			Expected: []*generate.ComposefileImage{
+			Expected: []*parse.ComposefileImage{
 				{
-					Image: &generate.Image{
+					Image: &parse.Image{
 						Name: "busybox",
 						Tag:  "latest",
 					},
@@ -249,9 +250,9 @@ services:
 ARG IMAGE
 FROM ${IMAGE}
 `)},
-			Expected: []*generate.ComposefileImage{
+			Expected: []*parse.ComposefileImage{
 				{
-					Image: &generate.Image{
+					Image: &parse.Image{
 						Name: "busybox",
 						Tag:  "latest",
 					},
@@ -281,9 +282,9 @@ services:
 ARG IMAGE=ubuntu
 FROM ${IMAGE}
 `)},
-			Expected: []*generate.ComposefileImage{
+			Expected: []*parse.ComposefileImage{
 				{
-					Image: &generate.Image{
+					Image: &parse.Image{
 						Name: "busybox",
 						Tag:  "latest",
 					},
@@ -311,9 +312,9 @@ services:
 ARG IMAGE=busybox
 FROM ${IMAGE}
 `)},
-			Expected: []*generate.ComposefileImage{
+			Expected: []*parse.ComposefileImage{
 				{
-					Image: &generate.Image{
+					Image: &parse.Image{
 						Name: "busybox",
 						Tag:  "latest",
 					},
@@ -351,9 +352,9 @@ services:
 			DockerfileContents: [][]byte{
 				[]byte(`FROM busybox`), []byte(`FROM busybox`),
 			},
-			Expected: []*generate.ComposefileImage{
+			Expected: []*parse.ComposefileImage{
 				{
-					Image: &generate.Image{
+					Image: &parse.Image{
 						Name: "busybox",
 						Tag:  "latest",
 					},
@@ -362,7 +363,7 @@ services:
 					ServiceName:    "svc-one",
 				},
 				{
-					Image: &generate.Image{
+					Image: &parse.Image{
 						Name: "busybox",
 						Tag:  "latest",
 					},
@@ -394,9 +395,9 @@ services:
 			DockerfileContents: [][]byte{
 				[]byte(`FROM busybox`), []byte(`FROM busybox`),
 			},
-			Expected: []*generate.ComposefileImage{
+			Expected: []*parse.ComposefileImage{
 				{
-					Image: &generate.Image{
+					Image: &parse.Image{
 						Name: "busybox",
 						Tag:  "latest",
 					},
@@ -405,7 +406,7 @@ services:
 					ServiceName:    "svc-one",
 				},
 				{
-					Image: &generate.Image{
+					Image: &parse.Image{
 						Name: "busybox",
 						Tag:  "latest",
 					},
@@ -423,7 +424,7 @@ services:
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := makeTempDir(t, composefileParserTestDir)
+			tempDir := makeTempDir(t, composefileImageParserTestDir)
 			defer os.RemoveAll(tempDir)
 
 			for k, v := range test.EnvironmentVariables {
@@ -444,19 +445,19 @@ services:
 				t, tempDir, test.ComposefilePaths, test.ComposefileContents,
 			)
 
-			pathsToParseCh := make(chan *generate.PathResult, len(pathsToParse))
+			pathsToParseCh := make(chan *collect.PathResult, len(pathsToParse))
 			for _, path := range pathsToParse {
-				pathsToParseCh <- &generate.PathResult{Path: path}
+				pathsToParseCh <- &collect.PathResult{Path: path}
 			}
 			close(pathsToParseCh)
 
 			done := make(chan struct{})
-			composefileParser := &generate.ComposefileParser{}
+			composefileParser := &parse.ComposefileImageParser{}
 			composefileImages := composefileParser.ParseFiles(
 				pathsToParseCh, done,
 			)
 
-			var got []*generate.ComposefileImage
+			var got []*parse.ComposefileImage
 
 			for composefileImage := range composefileImages {
 				if composefileImage.Err != nil {
@@ -477,16 +478,16 @@ services:
 					)
 				}
 			}
-			sortComposefileParserResults(t, got)
+			sortComposefileImageParserResults(t, got)
 
 			assertComposefileImagesEqual(t, test.Expected, got)
 		})
 	}
 }
 
-func sortComposefileParserResults(
+func sortComposefileImageParserResults(
 	t *testing.T,
-	results []*generate.ComposefileImage,
+	results []*parse.ComposefileImage,
 ) {
 	t.Helper()
 

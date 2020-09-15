@@ -8,36 +8,38 @@ import (
 	"reflect"
 	"sort"
 	"sync"
+
+	"github.com/safe-waters/docker-lock/generate/parse"
 )
 
 // Lockfile represents the canonical 'docker-lock.json'. It provides
 // the capability to write its contents in JSON format.
 type Lockfile struct {
-	DockerfileImages  map[string][]*DockerfileImage  `json:"dockerfiles,omitempty"`  // nolint: lll
-	ComposefileImages map[string][]*ComposefileImage `json:"composefiles,omitempty"` // nolint: lll
+	DockerfileImages  map[string][]*parse.DockerfileImage  `json:"dockerfiles,omitempty"`  // nolint: lll
+	ComposefileImages map[string][]*parse.ComposefileImage `json:"composefiles,omitempty"` // nolint: lll
 }
 
 // NewLockfile sorts DockerfileImages and Composefile images and
 // returns a Lockfile.
 func NewLockfile(
-	dockerfileImages <-chan *DockerfileImage,
-	composefileImages <-chan *ComposefileImage,
+	dockerfileImages <-chan *parse.DockerfileImage,
+	composefileImages <-chan *parse.ComposefileImage,
 	done <-chan struct{},
 ) (*Lockfile, error) {
 	if dockerfileImages == nil && composefileImages == nil {
 		return &Lockfile{}, nil
 	}
 
-	var dockerfileImagesWithPath map[string][]*DockerfileImage
+	var dockerfileImagesWithPath map[string][]*parse.DockerfileImage
 
-	var composefileImagesWithPath map[string][]*ComposefileImage
+	var composefileImagesWithPath map[string][]*parse.ComposefileImage
 
 	errCh := make(chan error)
 
 	var waitGroup sync.WaitGroup
 
 	if dockerfileImages != nil {
-		dockerfileImagesWithPath = map[string][]*DockerfileImage{}
+		dockerfileImagesWithPath = map[string][]*parse.DockerfileImage{}
 
 		waitGroup.Add(1)
 
@@ -65,7 +67,7 @@ func NewLockfile(
 	}
 
 	if composefileImages != nil {
-		composefileImagesWithPath = map[string][]*ComposefileImage{}
+		composefileImagesWithPath = map[string][]*parse.ComposefileImage{}
 
 		waitGroup.Add(1)
 
@@ -151,7 +153,7 @@ func (l *Lockfile) sortDockerfileImages(waitGroup *sync.WaitGroup) {
 	for _, images := range l.DockerfileImages {
 		waitGroup.Add(1)
 
-		go func(images []*DockerfileImage) {
+		go func(images []*parse.DockerfileImage) {
 			defer waitGroup.Done()
 
 			sort.Slice(images, func(i, j int) bool {
@@ -167,7 +169,7 @@ func (l *Lockfile) sortComposefileImages(waitGroup *sync.WaitGroup) {
 	for _, images := range l.ComposefileImages {
 		waitGroup.Add(1)
 
-		go func(images []*ComposefileImage) {
+		go func(images []*parse.ComposefileImage) {
 			defer waitGroup.Done()
 
 			sort.Slice(images, func(i, j int) bool {

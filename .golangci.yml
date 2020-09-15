@@ -16,7 +16,6 @@ linters:
     - bodyclose
     - depguard
     - dogsled
-    - dupl
     - gochecknoglobals
     - gochecknoinits
     - goconst
@@ -44,6 +43,7 @@ linters:
 
     # potentially enable in the future
     # - gocognit
+    # - dupl
 
     # useless
     # - funlen

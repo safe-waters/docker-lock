@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/safe-waters/docker-lock/generate"
+	"github.com/safe-waters/docker-lock/generate/parse"
 )
 
 // Rewriter is used to rewrite base images in docker and docker-compose files
@@ -120,7 +121,7 @@ func (r *Rewriter) Rewrite() (err error) {
 // service in a docker-compose file.
 func dImsNotInCfiles(
 	lfile *generate.Lockfile,
-) (map[string][]*generate.DockerfileImage, error) {
+) (map[string][]*parse.DockerfileImage, error) {
 	// map (Dockerfile path) -> (set of "docker-compose path/service name")
 	dPathsInCPathSvcs := map[string]map[string]struct{}{}
 
@@ -184,7 +185,7 @@ func dImsNotInCfiles(
 
 	// Collect DockerfileImages that are not referenced by docker-compose
 	// files.
-	dImsNotInCfiles := map[string][]*generate.DockerfileImage{}
+	dImsNotInCfiles := map[string][]*parse.DockerfileImage{}
 
 	for dPath, ims := range lfile.DockerfileImages {
 		if dPathsInCPathSvcs[dPath] == nil {

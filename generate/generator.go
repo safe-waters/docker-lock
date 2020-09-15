@@ -9,11 +9,9 @@ import (
 
 // Generator creates a Lockfile.
 type Generator struct {
-	DockerfileCollector  ICollector
-	ComposefileCollector ICollector
-	DockerfileParser     IDockerfileParser
-	ComposefileParser    IComposefileParser
-	Updater              IUpdater
+	PathCollector      IPathCollector
+	ImageParser        IImageParser
+	ImageDigestUpdater IImageDigestUpdater
 }
 
 // IGenerator provides an interface for Generator's exported
@@ -24,30 +22,27 @@ type IGenerator interface {
 
 // NewGenerator returns a Generator after validating its fields.
 func NewGenerator(
-	dockerfileCollector ICollector,
-	composefileCollector ICollector,
-	dockerfileParser IDockerfileParser,
-	composefileParser IComposefileParser,
-	updater IUpdater,
+	pathCollector IPathCollector,
+	imageParser IImageParser,
+	imageDigestUpdater IImageDigestUpdater,
 ) (*Generator, error) {
-	if dockerfileParser == nil || reflect.ValueOf(dockerfileParser).IsNil() {
-		return nil, errors.New("dockerfileParser may not be nil")
+	if pathCollector == nil || reflect.ValueOf(pathCollector).IsNil() {
+		return nil, errors.New("pathCollector may not be nil")
 	}
 
-	if composefileParser == nil || reflect.ValueOf(composefileParser).IsNil() {
-		return nil, errors.New("composefileParser may not be nil")
+	if imageParser == nil || reflect.ValueOf(imageParser).IsNil() {
+		return nil, errors.New("imageParser may not be nil")
 	}
 
-	if updater == nil || reflect.ValueOf(updater).IsNil() {
-		return nil, errors.New("updater may not be nil")
+	if imageDigestUpdater == nil ||
+		reflect.ValueOf(imageDigestUpdater).IsNil() {
+		return nil, errors.New("imageDigestUpdater may not be nil")
 	}
 
 	return &Generator{
-		DockerfileCollector:  dockerfileCollector,
-		ComposefileCollector: composefileCollector,
-		DockerfileParser:     dockerfileParser,
-		ComposefileParser:    composefileParser,
-		Updater:              updater,
+		PathCollector:      pathCollector,
+		ImageParser:        imageParser,
+		ImageDigestUpdater: imageDigestUpdater,
 	}, nil
 }
 
@@ -59,65 +54,23 @@ func (g *Generator) GenerateLockfile(writer io.Writer) error {
 
 	done := make(chan struct{})
 
-	var dockerfilePaths <-chan *PathResult
+	dockerfilePaths, composefilePaths := g.PathCollector.CollectPaths(done)
 
-	if g.DockerfileCollector != nil &&
-		!reflect.ValueOf(g.DockerfileCollector).IsNil() {
-		dockerfilePaths = g.DockerfileCollector.Paths(done)
-	}
+	dockerfileImages, composefileImages := g.ImageParser.ParseFiles(
+		dockerfilePaths, composefilePaths, done,
+	)
 
-	var composefilePaths <-chan *PathResult
-
-	if g.ComposefileCollector != nil &&
-		!reflect.ValueOf(g.ComposefileCollector).IsNil() {
-		composefilePaths = g.ComposefileCollector.Paths(done)
-	}
-
-	dockerfileImages := g.DockerfileParser.ParseFiles(dockerfilePaths, done)
-	composefileImages := g.ComposefileParser.ParseFiles(composefilePaths, done)
-
-	dockerfileImages, composefileImages = g.Updater.UpdateDigests(
+	updatedDockerfileImages, updatedComposefileImages := g.ImageDigestUpdater.UpdateDigests( // nolint: lll
 		dockerfileImages, composefileImages, done,
 	)
 
-	lockfile, err := NewLockfile(dockerfileImages, composefileImages, done)
+	lockfile, err := NewLockfile(
+		updatedDockerfileImages, updatedComposefileImages, done,
+	)
 	if err != nil {
 		close(done)
 		return err
 	}
 
 	return lockfile.Write(writer)
-}
-
-// DockerfileCollector provides an easy to use Collector for
-// collecting Dockerfiles.
-func DockerfileCollector(
-	flags *Flags,
-) (*Collector, error) {
-	if flags == nil {
-		return nil, errors.New("flags cannot be nil")
-	}
-
-	return NewCollector(
-		flags.FlagsWithSharedValues.BaseDir, []string{"Dockerfile"},
-		flags.DockerfileFlags.ManualPaths, flags.DockerfileFlags.Globs,
-		flags.DockerfileFlags.Recursive,
-	)
-}
-
-// ComposefileCollector provides an easy to use Collector for
-// collecting docker-compose files.
-func ComposefileCollector(
-	flags *Flags,
-) (*Collector, error) {
-	if flags == nil {
-		return nil, errors.New("flags cannot be nil")
-	}
-
-	return NewCollector(
-		flags.FlagsWithSharedValues.BaseDir,
-		[]string{"docker-compose.yml", "docker-compose.yaml"},
-		flags.ComposefileFlags.ManualPaths, flags.ComposefileFlags.Globs,
-		flags.ComposefileFlags.Recursive,
-	)
 }

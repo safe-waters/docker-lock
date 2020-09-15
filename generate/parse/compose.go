@@ -1,4 +1,4 @@
-package generate
+package parse
 
 import (
 	"fmt"
@@ -8,21 +8,13 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/safe-waters/docker-lock/generate/collect"
 	"gopkg.in/yaml.v2"
 )
 
-// ComposefileParser extracts image values from docker-compose files
+// ComposefileImageParser extracts image values from docker-compose files
 // and Dockerfiles referenced by those docker-compose files.
-type ComposefileParser struct{}
-
-// IComposefileParser provides an interface for ComposefileParser's exported
-// methods, which are used by Generator.
-type IComposefileParser interface {
-	ParseFiles(
-		pathResults <-chan *PathResult,
-		done <-chan struct{},
-	) <-chan *ComposefileImage
-}
+type ComposefileImageParser struct{}
 
 // ComposefileImage annotates an image with data about the docker-compose file
 // and/or the Dockerfile from which it was parsed.
@@ -36,9 +28,9 @@ type ComposefileImage struct {
 }
 
 // ParseFiles reads docker-compose YAML to parse all images
-// referenced by a service.
-func (c *ComposefileParser) ParseFiles(
-	pathResults <-chan *PathResult,
+// referenced services.
+func (c *ComposefileImageParser) ParseFiles(
+	pathResults <-chan *collect.PathResult,
 	done <-chan struct{},
 ) <-chan *ComposefileImage {
 	composefileImages := make(chan *ComposefileImage)
@@ -82,7 +74,7 @@ func (c *ComposefileParser) ParseFiles(
 	return composefileImages
 }
 
-func (c *ComposefileParser) parseFile(
+func (c *ComposefileImageParser) parseFile(
 	path string,
 	composefileImages chan<- *ComposefileImage,
 	done <-chan struct{},
@@ -121,7 +113,7 @@ func (c *ComposefileParser) parseFile(
 	}
 }
 
-func (c *ComposefileParser) parseService(
+func (c *ComposefileImageParser) parseService(
 	svcName string,
 	svc *service,
 	path string,
@@ -147,7 +139,7 @@ func (c *ComposefileParser) parseService(
 		return
 	}
 
-	dockerfileParser := &DockerfileParser{}
+	dockerfileParser := &DockerfileImageParser{}
 	dockerfileImages := make(chan *DockerfileImage)
 
 	var dockerfileImageWaitGroup sync.WaitGroup
@@ -232,7 +224,9 @@ func (c *ComposefileParser) parseService(
 	}
 }
 
-func (c *ComposefileParser) parseBuildArgs(build verbose) map[string]string {
+func (c *ComposefileImageParser) parseBuildArgs(
+	build verbose,
+) map[string]string {
 	buildArgs := map[string]string{}
 
 	if build.ArgsWrapper == nil {

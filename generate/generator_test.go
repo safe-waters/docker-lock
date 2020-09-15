@@ -7,6 +7,7 @@ import (
 
 	"github.com/safe-waters/docker-lock/cmd"
 	"github.com/safe-waters/docker-lock/generate"
+	"github.com/safe-waters/docker-lock/generate/parse"
 	"github.com/safe-waters/docker-lock/registry"
 )
 
@@ -26,17 +27,17 @@ func TestGenerator(t *testing.T) {
 				false, false, false,
 			),
 			Expected: &generate.Lockfile{
-				DockerfileImages: map[string][]*generate.DockerfileImage{
+				DockerfileImages: map[string][]*parse.DockerfileImage{
 					"testdata/success/nocompose/Dockerfile": {
 						{
-							Image: &generate.Image{
+							Image: &parse.Image{
 								Name:   "redis",
 								Tag:    "latest",
 								Digest: redisLatestSHA,
 							},
 						},
 						{
-							Image: &generate.Image{
+							Image: &parse.Image{
 								Name:   "golang",
 								Tag:    "latest",
 								Digest: golangLatestSHA,
@@ -44,10 +45,10 @@ func TestGenerator(t *testing.T) {
 						},
 					},
 				},
-				ComposefileImages: map[string][]*generate.ComposefileImage{
+				ComposefileImages: map[string][]*parse.ComposefileImage{
 					"testdata/success/docker-compose.yml": {
 						{
-							Image: &generate.Image{
+							Image: &parse.Image{
 								Name:   "redis",
 								Tag:    "latest",
 								Digest: redisLatestSHA,
@@ -56,7 +57,7 @@ func TestGenerator(t *testing.T) {
 							ServiceName:    "database",
 						},
 						{
-							Image: &generate.Image{
+							Image: &parse.Image{
 								Name:   "golang",
 								Tag:    "latest",
 								Digest: golangLatestSHA,

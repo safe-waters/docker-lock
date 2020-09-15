@@ -102,23 +102,12 @@ func SetupGenerator(
 		return nil, err
 	}
 
-	var dockerfileCollector *generate.Collector
-
-	if !flags.DockerfileFlags.ExcludePaths {
-		dockerfileCollector, err = generate.DockerfileCollector(flags)
-		if err != nil {
-			return nil, err
-		}
+	collector, err := generate.DefaultPathCollector(flags)
+	if err != nil {
+		return nil, err
 	}
 
-	var composefileCollector *generate.Collector
-
-	if !flags.ComposefileFlags.ExcludePaths {
-		composefileCollector, err = generate.ComposefileCollector(flags)
-		if err != nil {
-			return nil, err
-		}
-	}
+	parser := generate.DefaultImageParser(flags)
 
 	wrapperManager, err := defaultWrapperManager(
 		client, flags.FlagsWithSharedValues.ConfigPath,
@@ -127,18 +116,12 @@ func SetupGenerator(
 		return nil, err
 	}
 
-	updater, err := generate.NewUpdater(wrapperManager)
+	updater, err := generate.DefaultImageDigestUpdater(wrapperManager)
 	if err != nil {
 		return nil, err
 	}
 
-	dockerfileParser := &generate.DockerfileParser{}
-	composefileParser := &generate.ComposefileParser{}
-
-	generator, err := generate.NewGenerator(
-		dockerfileCollector, composefileCollector,
-		dockerfileParser, composefileParser, updater,
-	)
+	generator, err := generate.NewGenerator(collector, parser, updater)
 	if err != nil {
 		return nil, err
 	}

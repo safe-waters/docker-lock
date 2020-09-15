@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/safe-waters/docker-lock/generate"
+	"github.com/safe-waters/docker-lock/generate/parse"
 	"gopkg.in/yaml.v2"
 )
 
@@ -86,7 +86,7 @@ func (r *Rewriter) writeCfiles(
 // is provided, the temporary file will be named Dockerfile-suffix.
 func (r *Rewriter) writeDfile(
 	dPath string,
-	ims []*generate.DockerfileImage,
+	ims []*parse.DockerfileImage,
 	tmpDirPath string,
 	rnCh chan<- *rnInfo,
 	wg *sync.WaitGroup,
@@ -184,7 +184,7 @@ func (r *Rewriter) writeDfile(
 // (2) In referenced Dockerfiles with FROM instructions
 func (r *Rewriter) writeCfile(
 	cPath string,
-	ims []*generate.ComposefileImage,
+	ims []*parse.ComposefileImage,
 	tmpDirPath string,
 	rnCh chan<- *rnInfo,
 	wg *sync.WaitGroup,
@@ -208,7 +208,7 @@ func (r *Rewriter) writeCfile(
 		return
 	}
 
-	svcIms := map[string][]*generate.ComposefileImage{}
+	svcIms := map[string][]*parse.ComposefileImage{}
 
 	for _, im := range ims {
 		svcIms[im.ServiceName] = append(svcIms[im.ServiceName], im)
@@ -266,7 +266,7 @@ func (r *Rewriter) writeCfile(
 func (r *Rewriter) writeDfileOrGetCImageLine(
 	cPath string,
 	svc *service,
-	ims []*generate.ComposefileImage,
+	ims []*parse.ComposefileImage,
 	tmpDirPath string,
 	cilCh chan<- *composeImageLine,
 	rnCh chan<- *rnInfo,
@@ -290,7 +290,7 @@ func (r *Rewriter) writeDfileOrGetCImageLine(
 
 	switch hasDfile {
 	case true:
-		dIms := make([]*generate.DockerfileImage, len(ims))
+		dIms := make([]*parse.DockerfileImage, len(ims))
 		// There must be at least one Image, and all Images must reference
 		// the same Dockerfile.
 		dPath := ims[0].DockerfilePath
@@ -300,7 +300,7 @@ func (r *Rewriter) writeDfileOrGetCImageLine(
 		)
 
 		for i, im := range ims {
-			dIms[i] = &generate.DockerfileImage{Image: im.Image}
+			dIms[i] = &parse.DockerfileImage{Image: im.Image}
 		}
 
 		wg.Add(1)
@@ -485,7 +485,7 @@ func (r *Rewriter) dPathWithSuffix(dPath string) string {
 	}
 }
 
-func (r *Rewriter) convertImToLine(im *generate.Image) string {
+func (r *Rewriter) convertImToLine(im *parse.Image) string {
 	switch {
 	case im.Tag == "" || r.ExcludeTags:
 		return fmt.Sprintf(

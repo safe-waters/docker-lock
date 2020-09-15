@@ -1,29 +1,30 @@
-package generate_test
+package collect_test
 
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 
-	"github.com/safe-waters/docker-lock/generate"
+	"github.com/safe-waters/docker-lock/generate/collect"
 )
 
-func TestNewCollector(t *testing.T) {
+const collectTestDir = "collect"
+
+func TestNewPathCollector(t *testing.T) {
 	t.Parallel()
 
-	_, err := generate.NewCollector("", nil, nil, nil, true)
+	_, err := collect.NewPathCollector("", nil, nil, nil, true)
 	if err == nil {
 		t.Fatal(err)
 	}
 }
 
-func TestCollector(t *testing.T) {
+func TestPathCollector(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		Name                  string
-		Collector             *generate.Collector
+		PathCollector         *collect.PathCollector
 		AddTempDirToCollector bool
 		BaseDirIsTempDir      bool
 		ShouldFail            bool
@@ -32,7 +33,7 @@ func TestCollector(t *testing.T) {
 	}{
 		{
 			Name: "Default Path Exists",
-			Collector: &generate.Collector{
+			PathCollector: &collect.PathCollector{
 				DefaultPaths: []string{"Dockerfile"},
 			},
 			AddTempDirToCollector: true,
@@ -41,13 +42,13 @@ func TestCollector(t *testing.T) {
 		},
 		{
 			Name: "Default Path Does Not Exist",
-			Collector: &generate.Collector{
+			PathCollector: &collect.PathCollector{
 				DefaultPaths: []string{"Dockerfile"},
 			},
 		},
 		{
 			Name: "Do Not Use Default Paths If Other Methods Specified",
-			Collector: &generate.Collector{
+			PathCollector: &collect.PathCollector{
 				DefaultPaths: []string{"Dockerfile"},
 				ManualPaths:  []string{"Dockerfile-Manual"},
 			},
@@ -57,7 +58,7 @@ func TestCollector(t *testing.T) {
 		},
 		{
 			Name: "Manual Paths",
-			Collector: &generate.Collector{
+			PathCollector: &collect.PathCollector{
 				ManualPaths: []string{"Dockerfile"},
 			},
 			AddTempDirToCollector: true,
@@ -66,7 +67,7 @@ func TestCollector(t *testing.T) {
 		},
 		{
 			Name: "Globs",
-			Collector: &generate.Collector{
+			PathCollector: &collect.PathCollector{
 				Globs: []string{filepath.Join("**", "Dockerfile")},
 			},
 			AddTempDirToCollector: true,
@@ -79,7 +80,7 @@ func TestCollector(t *testing.T) {
 		},
 		{
 			Name: "Recursive",
-			Collector: &generate.Collector{
+			PathCollector: &collect.PathCollector{
 				DefaultPaths: []string{"Dockerfile"},
 				Recursive:    true,
 			},
@@ -93,14 +94,14 @@ func TestCollector(t *testing.T) {
 		},
 		{
 			Name: "Path Outside Of Base Directory",
-			Collector: &generate.Collector{
+			PathCollector: &collect.PathCollector{
 				ManualPaths: []string{filepath.Join("..", "Dockerfile")},
 			},
 			ShouldFail: true,
 		},
 		{
 			Name: "Duplicate Paths",
-			Collector: &generate.Collector{
+			PathCollector: &collect.PathCollector{
 				ManualPaths: []string{"Dockerfile", "Dockerfile"},
 			},
 			AddTempDirToCollector: true,
@@ -118,15 +119,15 @@ func TestCollector(t *testing.T) {
 			var expected []string
 
 			if len(test.PathsToCreate) != 0 {
-				tempDir := makeTempDir(t, dockerfileParserTestDir)
+				tempDir := makeTempDir(t, collectTestDir)
 				defer os.RemoveAll(tempDir)
 
 				if test.BaseDirIsTempDir {
-					test.Collector.BaseDir = tempDir
+					test.PathCollector.BaseDir = tempDir
 				}
 
 				if test.AddTempDirToCollector {
-					addTempDirToStringSlices(t, test.Collector, tempDir)
+					addTempDirToStringSlices(t, test.PathCollector, tempDir)
 				}
 
 				makeParentDirsInTempDirFromFilePaths(
@@ -149,7 +150,7 @@ func TestCollector(t *testing.T) {
 			var err error
 
 			done := make(chan struct{})
-			for pathResult := range test.Collector.Paths(done) {
+			for pathResult := range test.PathCollector.CollectPaths(done) {
 				if pathResult.Err != nil {
 					close(done)
 					err = pathResult.Err
@@ -172,37 +173,5 @@ func TestCollector(t *testing.T) {
 
 			assertCollectedPathsEqual(t, expected, got)
 		})
-	}
-}
-
-func assertCollectedPathsEqual(t *testing.T, expected []string, got []string) {
-	t.Helper()
-
-	if !reflect.DeepEqual(expected, got) {
-		t.Fatalf("expected %v, got %v", expected, got)
-	}
-}
-
-func addTempDirToStringSlices(
-	t *testing.T,
-	collector *generate.Collector,
-	tempDir string,
-) {
-	t.Helper()
-
-	collectorValue := reflect.ValueOf(collector).Elem()
-
-	for i := 0; i < collectorValue.NumField(); i++ {
-		field := collectorValue.Field(i)
-
-		if field.Kind() == reflect.Slice {
-			concreteSliceField := field.Interface().([]string)
-
-			for i := 0; i < len(concreteSliceField); i++ {
-				concreteSliceField[i] = filepath.Join(
-					tempDir, concreteSliceField[i],
-				)
-			}
-		}
 	}
 }

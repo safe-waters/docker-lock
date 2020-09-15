@@ -1,34 +1,17 @@
-package generate
+// Package parse provides functionality to parse images from collected files.
+package parse
 
 import (
 	"bufio"
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/safe-waters/docker-lock/generate/collect"
 )
 
-// DockerfileParser extracts image values from Dockerfiles.
-type DockerfileParser struct{}
-
-// IDockerfileParser provides an interface for DockerfileParser's exported
-// methods, which are used by Generator.
-type IDockerfileParser interface {
-	ParseFiles(
-		pathResults <-chan *PathResult,
-		done <-chan struct{},
-	) <-chan *DockerfileImage
-}
-
-// Image contains information extracted from 'FROM' instructions in Dockerfiles
-// or 'image:' keys in docker-compose files. For instance,
-// FROM busybox:latest@sha256:dd97a3f...
-// could be represented as:
-// Image{Name: busybox, Tag: latest, Digest: dd97a3f...}.
-type Image struct {
-	Name   string `json:"name"`
-	Tag    string `json:"tag"`
-	Digest string `json:"digest"`
-}
+// DockerfileImageParser extracts image values from Dockerfiles.
+type DockerfileImageParser struct{}
 
 // DockerfileImage annotates an image with data about the Dockerfile
 // from which it was parsed.
@@ -40,8 +23,8 @@ type DockerfileImage struct {
 }
 
 // ParseFiles reads a Dockerfile to parse all images in FROM instructions.
-func (d *DockerfileParser) ParseFiles(
-	pathResults <-chan *PathResult,
+func (d *DockerfileImageParser) ParseFiles(
+	pathResults <-chan *collect.PathResult,
 	done <-chan struct{},
 ) <-chan *DockerfileImage {
 	dockerfileImages := make(chan *DockerfileImage)
@@ -83,7 +66,7 @@ func (d *DockerfileParser) ParseFiles(
 	return dockerfileImages
 }
 
-func (d *DockerfileParser) parseFile(
+func (d *DockerfileImageParser) parseFile(
 	path string,
 	buildArgs map[string]string,
 	dockerfileImages chan<- *DockerfileImage,
@@ -174,7 +157,7 @@ func (d *DockerfileParser) parseFile(
 	}
 }
 
-func (d *DockerfileParser) stripQuotes(s string) string {
+func (d *DockerfileImageParser) stripQuotes(s string) string {
 	// Valid in a Dockerfile - any number of quotes if quote is on either side.
 	// ARG "IMAGE"="busybox"
 	// ARG "IMAGE"""""="busybox"""""""""""""
