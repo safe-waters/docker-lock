@@ -144,7 +144,7 @@ From the root of the project, run:
 go build ./cmd/docker-lock
 ```
 
-If on a mac or linux, make the output binary executable:
+If on mac or linux, make the output binary executable:
 
 ```
 chmod +x docker-lock
@@ -186,7 +186,10 @@ on pull requests. Locally, you can run quality checks for everything except for 
 * To run unit tests: `./scripts/unittest.sh`
 * To generate a coverage report: `./scripts/coverage.sh`
 * To view the coverage report on your browser, open a console, but not in
-docker, run `go tool cover -html=coverage.out`
+docker, run:
+```
+go tool cover -html=coverage.out
+```
 
 # Tutorials
 * [Command Line Flags/Configuration File](./docs/tutorials/command-line-flags-configuration-file.md)
