@@ -87,10 +87,16 @@ At this point, the Dockerfile will contain all of the digest information
 from the Lockfile, so it will always maintain the same, known behavior 
 in the future.
 
-# Install
+# Install Pre-built Binary
 `docker-lock` can be installed as a
 [cli-plugin](https://github.com/docker/cli/issues/1534) for `docker` or as a
-standalone tool.
+standalone tool if you do not want to install the `docker` cli.
+Currently, `docker-lock` is offered as a precompiled binary in the
+[releases tab](https://github.com/safe-waters/docker-lock/releases) for
+the following operating systems and architectures:
+* `GOOS=windows`, `GOARCH=amd64`
+* `GOOS=darwin`, `GOARCH=amd64`
+* `GOOS=linux`, `GOARCH=amd64`
 
 ## Cli-plugin
 Ensure `docker` cli version >= 19.03 is installed by running `docker --version`.
@@ -99,6 +105,7 @@ Ensure `docker` cli version >= 19.03 is installed by running `docker --version`.
 * `mkdir -p ~/.docker/cli-plugins`
 * `curl -fsSL https://github.com/safe-waters/docker-lock/releases/download/{VERSION}/docker-lock-{OS} -o ~/.docker/cli-plugins/docker-lock`
 * `chmod +x ~/.docker/cli-plugins/docker-lock`
+
 ### Windows
 * Create the folder `%USERPROFILE%\.docker\cli-plugins`
 * Download `docker-lock-windows.exe` from the releases page.
@@ -112,14 +119,61 @@ your `PATH`.
 * To use `docker-lock`, replace any `docker` command such as `docker lock` with
 the name of the executable, `docker-lock`, as in `docker-lock lock`.
 
-# Documentation
-## Tutorials
+# Build From Source
+If you would like to install `docker-lock` from source, ensure `go` is
+installed or use the [supplied development container](#Development-Environment).
+From the root of the project, run:
+
+```
+go build ./cmd/docker-lock
+```
+
+If on a mac or linux, make the output binary executable:
+
+```
+chmod +x docker-lock
+```
+
+Finally, move the binary to the cli-plugins folder or add it to your PATH,
+as described in the [installation section](#Install-Pre-built-Binary).
+
+If you would like to cross-compile for another operating system
+or architecture, from the root of the project, run:
+
+```
+CGO_ENABLED=0 GOOS=<your os> GOARCH=<your arch> go build ./cmd/docker-lock
+```
+
+# Contributing
+
+## Development Environment
+A development container based on `ubuntu:bionic` has been provided,
+so ensure docker is installed and the docker daemon is running.
+
+* Open the project in [VSCode](https://code.visualstudio.com/).
+* Install VSCode's [Remote Development Extension - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack).
+* In the command palette (ctrl+shift+p on Windows/Linux,
+command+shift+p on Mac), type "Reopen in Container".
+* In the command palette type: "Go: Install/Update Tools" and select all.
+* When all tools are finished installing, in the command palette type:
+"Developer: Reload Window".
+* The docker daemon is mapped from the host into the dev container,
+so you can use docker and docker-compose commands from within the container
+as if they were run on the host.
+
+## Code Quality and Correctness
+Unit tests, integration tests, and linting run in the
+[CI pipeline](https://dev.azure.com/michaelsethperel/docker-lock/_build)
+on pull requests. Locally, you can run quality checks for everything except for integration tests.
+* To format your code: `./scripts/format.sh`
+* To lint your code: `./scripts/lint.sh`
+* To run unit tests: `./scripts/unittest.sh`
+* To generate a coverage report: `./scripts/coverage.sh`
+* To view the coverage report on your browser, open a console, but not in
+docker, run `go tool cover -html=coverage.out`
+
+# Tutorials
 * [Command Line Flags/Configuration File](./docs/tutorials/command-line-flags-configuration-file.md)
 * [Using Internal Registries](./docs/tutorials/internal-registry.md)
 * [Bring Your Own Registry](./docs/tutorials/bring-your-own-registry.md)
 * [Tags Vs. Digests](./docs/tutorials/tags-vs-digests.md)
-
-## Contributing
-* [Development Environment](./docs/contributing/development-environment.md)
-* [Code Quality](./docs/contributing/code-quality.md)
-* [Go.dev](https://pkg.go.dev/github.com/safe-waters/docker-lock)
