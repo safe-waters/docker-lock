@@ -105,7 +105,7 @@ jobs:
       chmod +x docker-lock.exe
       mkdir -p "${USERPROFILE}/.docker/cli-plugins/"
       mv docker-lock.exe "${USERPROFILE}/.docker/cli-plugins/"
-      ./tests/tests.sh windows
+      ./test/tests.sh windows
     displayName: Run Integration Tests
 
     env:
@@ -151,7 +151,7 @@ jobs:
       mkdir -p "${HOME}/.docker/cli-plugins/"
       mv docker-lock "${HOME}/.docker/cli-plugins/"
       export PATH="/usr/local/opt/gettext/bin:${PATH}"
-      ./tests/tests.sh mac
+      ./test/tests.sh mac
     displayName: Run Integration Tests
 
     env:
@@ -182,7 +182,7 @@ jobs:
       chmod +x docker-lock
       mkdir -p "${HOME}/.docker/cli-plugins/"
       mv docker-lock "${HOME}/.docker/cli-plugins/"
-      ./tests/tests.sh linux
+      ./test/tests.sh linux
     displayName: Run Integration Tests
 
     env:
