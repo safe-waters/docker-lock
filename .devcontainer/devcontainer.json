@@ -20,7 +20,7 @@
 		"go.lintFlags": [
 			"--fast"
 		],
-		// Go recommended settings with modules: https://github.com/golang/tools/blob/master/gopls/doc/vscode.md#vscode
+		// Go recommended settings with modules: https://github.com/golang/scripts/blob/master/gopls/doc/vscode.md#vscode
 		"go.useLanguageServer": true,
 		"[go]": {
 			"editor.formatOnSave": true,

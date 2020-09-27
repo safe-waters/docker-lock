@@ -1,13 +1,13 @@
 #! /usr/bin/env bash
 (
     cd "$(dirname "$0")" || exit
-    integration_tests_dir="$(pwd)"
+    tests_dir="$(pwd)"
 
     set -euo pipefail
     IFS=$'\n\t'
 
     cleanup () {
-        cd "${integration_tests_dir}"
+        cd "${tests_dir}"
         rm ./**/.envwithcreds
         rm ./**/.envwithoutcreds
     }

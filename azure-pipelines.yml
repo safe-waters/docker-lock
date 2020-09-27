@@ -22,7 +22,7 @@ jobs:
   - bash: docker build -t devcontainer ./.devcontainer
     displayName: Build Dev Container
 
-  - bash: docker run -v "${PWD}:/app" devcontainer /app/tools/lint.sh
+  - bash: docker run -v "${PWD}:/app" devcontainer /app/scripts/lint.sh
     displayName: Run linters
 
 - job: Build
@@ -105,7 +105,7 @@ jobs:
       chmod +x docker-lock.exe
       mkdir -p "${USERPROFILE}/.docker/cli-plugins/"
       mv docker-lock.exe "${USERPROFILE}/.docker/cli-plugins/"
-      ./integration_tests/integration_tests.sh windows
+      ./tests/tests.sh windows
     displayName: Run Integration Tests
 
     env:
@@ -137,7 +137,7 @@ jobs:
 
   - bash: |
       set -euo pipefail
-      ./tools/unittest.sh
+      ./scripts/unittest.sh
     displayName: Run unit tests
 
   - download: current
@@ -151,7 +151,7 @@ jobs:
       mkdir -p "${HOME}/.docker/cli-plugins/"
       mv docker-lock "${HOME}/.docker/cli-plugins/"
       export PATH="/usr/local/opt/gettext/bin:${PATH}"
-      ./integration_tests/integration_tests.sh mac
+      ./tests/tests.sh mac
     displayName: Run Integration Tests
 
     env:
@@ -169,7 +169,7 @@ jobs:
   steps:
   - bash: |
       set -euo pipefail
-      ./tools/unittest.sh
+      ./scripts/unittest.sh
     displayName: Run unit tests
 
   - download: current
@@ -182,7 +182,7 @@ jobs:
       chmod +x docker-lock
       mkdir -p "${HOME}/.docker/cli-plugins/"
       mv docker-lock "${HOME}/.docker/cli-plugins/"
-      ./integration_tests/integration_tests.sh linux
+      ./tests/tests.sh linux
     displayName: Run Integration Tests
 
     env:
