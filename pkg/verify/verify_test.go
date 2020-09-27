@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	cmd_verify "github.com/safe-waters/docker-lock/cmd/verify"
-	"github.com/safe-waters/docker-lock/pkg/registry"
+	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 )
 
 var dTestDir = filepath.Join("testdata", "docker")  // nolint: gochecknoglobals

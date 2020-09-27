@@ -3,7 +3,7 @@ package contrib
 import (
 	"testing"
 
-	"github.com/safe-waters/docker-lock/pkg/registry"
+	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 )
 
 // TestAllWrappers ensures that all wrappers maintained by the

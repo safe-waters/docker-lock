@@ -3,7 +3,7 @@ package firstparty
 import (
 	"testing"
 
-	"github.com/safe-waters/docker-lock/pkg/registry"
+	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 )
 
 // TestDefaultWrapper ensures that the default wrapper

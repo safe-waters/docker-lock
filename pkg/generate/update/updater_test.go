@@ -5,8 +5,8 @@ import (
 
 	cmd_generate "github.com/safe-waters/docker-lock/cmd/generate"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 	"github.com/safe-waters/docker-lock/pkg/generate/update"
-	"github.com/safe-waters/docker-lock/pkg/registry"
 )
 
 func TestImageDigestUpdater(t *testing.T) {

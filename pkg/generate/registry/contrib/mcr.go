@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/safe-waters/docker-lock/pkg/registry"
+	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 )
 
 // MCRWrapper is a registry wrapper for Microsoft Container Registry.

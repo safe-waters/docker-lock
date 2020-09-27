@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
-	"github.com/safe-waters/docker-lock/pkg/registry"
+	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 )
 
 // ImageDigestUpdater uses a WrapperManager to update Images with their most

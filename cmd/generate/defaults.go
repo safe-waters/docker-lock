@@ -9,10 +9,10 @@ import (
 	"github.com/safe-waters/docker-lock/pkg/generate"
 	"github.com/safe-waters/docker-lock/pkg/generate/collect"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/pkg/generate/registry"
+	"github.com/safe-waters/docker-lock/pkg/generate/registry/contrib"
+	"github.com/safe-waters/docker-lock/pkg/generate/registry/firstparty"
 	"github.com/safe-waters/docker-lock/pkg/generate/update"
-	"github.com/safe-waters/docker-lock/pkg/registry"
-	"github.com/safe-waters/docker-lock/pkg/registry/contrib"
-	"github.com/safe-waters/docker-lock/pkg/registry/firstparty"
 )
 
 // DefaultPathCollector creates a PathCollector for Generator.

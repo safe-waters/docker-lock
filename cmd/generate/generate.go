@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/safe-waters/docker-lock/pkg/generate"
-	"github.com/safe-waters/docker-lock/pkg/registry"
+	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

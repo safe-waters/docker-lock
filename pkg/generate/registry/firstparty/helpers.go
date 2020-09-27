@@ -3,7 +3,7 @@ package firstparty
 import (
 	"os"
 
-	"github.com/safe-waters/docker-lock/pkg/registry"
+	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 )
 
 // constructors holds all constructor functions for registries. It is
