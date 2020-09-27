@@ -35,21 +35,21 @@ jobs:
       set -euo pipefail
       latest_git_tag="$(git tag -l | tail -n 1)"
       latest_git_tag="${latest_git_tag:-v0.0.1}"
-      CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build ./cmd/docker-lock -ldflags "-w -s -X github.com/safe-waters/docker-lock/cmd/version.Version=${latest_git_tag}" -o docker-lock-linux
+      CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o docker-lock-linux -ldflags "-w -s -X github.com/safe-waters/docker-lock/cmd/version.Version=${latest_git_tag}" ./cmd/docker-lock
     displayName: Build linux
 
   - bash: |
       set -euo pipefail
       latest_git_tag="$(git tag -l | tail -n 1)"
       latest_git_tag="${latest_git_tag:-v0.0.1}"
-      CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build ./cmd/docker-lock -ldflags "-w -s -X github.com/safe-waters/docker-lock/cmd/version.Version=${latest_git_tag}" -o docker-lock-mac
+      CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o docker-lock-mac -ldflags "-w -s -X github.com/safe-waters/docker-lock/cmd/version.Version=${latest_git_tag}" ./cmd/docker-lock
     displayName: Build mac
 
   - bash: |
       set -euo pipefail
       latest_git_tag="$(git tag -l | tail -n 1)"
       latest_git_tag="${latest_git_tag:-v0.0.1}"
-      CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build ./cmd/docker-lock -ldflags "-w -s -X github.com/safe-waters/docker-lock/cmd/version.Version=${latest_git_tag}" -o docker-lock-windows.exe
+      CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o docker-lock-windows.exe -ldflags "-w -s -X github.com/safe-waters/docker-lock/cmd/version.Version=${latest_git_tag}" ./cmd/docker-lock
     displayName: Build windows
 
   - publish: "$(System.DefaultWorkingDirectory)/docker-lock-linux"
