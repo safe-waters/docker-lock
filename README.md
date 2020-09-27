@@ -1,4 +1,4 @@
-![Docker-Lock-Banner](./static/readme-banner.png)
+![Docker-Lock-Banner](./docs/assets/readme-banner.png)
 # About
 [![Go Report Card](https://goreportcard.com/badge/github.com/safe-waters/docker-lock)](https://goreportcard.com/report/github.com/safe-waters/docker-lock)
 [![Build Status](https://dev.azure.com/michaelsethperel/docker-lock/_apis/build/status/safe-waters.docker-lock?branchName=master)](https://dev.azure.com/michaelsethperel/docker-lock/_build/latest?definitionId=6&branchName=master)
@@ -54,7 +54,7 @@ FROM python:3.6
 Running `docker lock generate` from the root queries each images' 
 registry to produce a Lockfile, `docker-lock.json`.
 
-![Generate GIF](gifs/generate.gif)
+![Generate GIF](./docs/assets/generate.gif)
 
 Note that the Lockfile records image digests so you do not have to 
 manually specify them.
@@ -62,14 +62,14 @@ manually specify them.
 Running `docker lock verify` ensures that the image digests are the 
 same as those on the registry for the same tags.
 
-![Verify Success GIF](gifs/verify_success.gif)
+![Verify Success GIF](./docs/assets/verify_success.gif)
 
 Now, assume that a change to `mperel/log:v1` has been pushed to the registry.
 
 Running `docker lock verify` shows that the image digest in the Lockfile 
 is out-of-date because it differs from the newer image's digest on the registry.
 
-![Verify Fail GIF](gifs/verify_fail.gif)
+![Verify Fail GIF](./docs/assets/verify_fail.gif)
 
 While developing, it can be useful to generate a Lockfile, commit it to 
 source control, and verify it periodically (for instance on PR merges). In 
@@ -81,7 +81,7 @@ Finally, lets assume the Dockerfile is ready to be built and shared.
 Running `docker lock rewrite` will add digests from the Lockfile 
 to all of the images.
 
-![Rewrite GIF](gifs/rewrite.gif)
+![Rewrite GIF](./docs/assets/rewrite.gif)
 
 At this point, the Dockerfile will contain all of the digest information 
 from the Lockfile, so it will always maintain the same, known behavior 
