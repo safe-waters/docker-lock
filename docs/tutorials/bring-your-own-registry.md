@@ -18,7 +18,7 @@ be able to officially support them all.
 
 Fortunately, it is very easy to bring your own registry. To do so:
 * Create a struct in `contrib` or `firstparty` that implements the
-[registry.Wrapper interface](../../registry/wrapper.go).
+[registry.Wrapper interface](../../pkg/generate/registry/wrapper.go).
 * Register your Wrapper with `docker-lock` in an init function.
 
 The `registry.Wrapper` interface has 2 methods,
@@ -30,6 +30,7 @@ two arguments and return the digest (hash) as a string. `Prefix` would return
 `myregistry/`, which tells `docker-lock` to use that wrapper whenever it
 encounters an image with the prefix `myregistry/`.
 
-To register your wrapper, in an init function, append a `constructor` (a function
-that returns your wrapper) to the `constructors` slice. For a good example,
-checkout the [DockerWrapper init function](../../registry/firstparty/docker.go).
+To register your wrapper, in an init function, append a `constructor` (a
+function that returns your wrapper) to the `constructors` slice. For a good
+example, checkout the
+[DockerWrapper init function](../../pkg/generate/registry/firstparty/docker.go).
