@@ -4,8 +4,8 @@ package rewrite
 import (
 	"os"
 
-	"github.com/safe-waters/docker-lock/rewrite"
-	"github.com/safe-waters/docker-lock/rewrite/writers"
+	"github.com/safe-waters/docker-lock/pkg/rewrite"
+	"github.com/safe-waters/docker-lock/pkg/rewrite/writers"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

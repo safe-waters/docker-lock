@@ -4,8 +4,8 @@ package generate
 import (
 	"os"
 
-	"github.com/safe-waters/docker-lock/generate"
-	"github.com/safe-waters/docker-lock/registry"
+	"github.com/safe-waters/docker-lock/pkg/generate"
+	"github.com/safe-waters/docker-lock/pkg/registry"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

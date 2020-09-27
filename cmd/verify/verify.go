@@ -8,9 +8,9 @@ import (
 	"os"
 
 	cmd_generate "github.com/safe-waters/docker-lock/cmd/generate"
-	"github.com/safe-waters/docker-lock/generate"
-	"github.com/safe-waters/docker-lock/registry"
-	"github.com/safe-waters/docker-lock/verify"
+	"github.com/safe-waters/docker-lock/pkg/generate"
+	"github.com/safe-waters/docker-lock/pkg/registry"
+	"github.com/safe-waters/docker-lock/pkg/verify"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

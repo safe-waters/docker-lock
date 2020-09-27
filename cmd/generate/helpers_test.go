@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	cmd_generate "github.com/safe-waters/docker-lock/cmd/generate"
-	"github.com/safe-waters/docker-lock/generate"
+	"github.com/safe-waters/docker-lock/pkg/generate"
 )
 
 func assertPathCollector(
