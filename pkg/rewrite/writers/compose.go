@@ -238,7 +238,7 @@ func (c *ComposefileWriter) writeFile(
 			numServicesWritten++
 		}
 
-		outputBuffer.WriteString(outputLine + "\n")
+		outputBuffer.WriteString(fmt.Sprintf("%s\n", outputLine))
 	}
 
 	if numServicesWritten != len(serviceImageLines) {

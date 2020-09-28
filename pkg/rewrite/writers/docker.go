@@ -2,8 +2,11 @@
 package writers
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 	"sync"
 
@@ -95,17 +98,24 @@ func (d *DockerfileWriter) writeFile(
 	path string,
 	images []*parse.DockerfileImage,
 ) (string, error) {
-	pathByt, err := ioutil.ReadFile(path)
+	dockerfile, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
+	defer dockerfile.Close()
+
+	scanner := bufio.NewScanner(dockerfile)
 
 	stageNames := map[string]bool{}
-	lines := strings.Split(string(pathByt), "\n")
-	imageIndex := 0
 
-	for i, line := range lines {
-		fields := strings.Fields(line)
+	var imageIndex int
+
+	var outputBuffer bytes.Buffer
+
+	for scanner.Scan() {
+		inputLine := scanner.Text()
+		outputLine := inputLine
+		fields := strings.Fields(inputLine)
 
 		const instructionIndex = 0 // for instance, FROM is an instruction
 		if len(fields) > 0 &&
@@ -145,8 +155,10 @@ func (d *DockerfileWriter) writeFile(
 				stageNames[fields[stageIndex]] = true
 			}
 
-			lines[i] = strings.Join(fields, " ")
+			outputLine = strings.Join(fields, " ")
 		}
+
+		outputBuffer.WriteString(fmt.Sprintf("%s\n", outputLine))
 	}
 
 	if imageIndex < len(images) {
@@ -155,15 +167,13 @@ func (d *DockerfileWriter) writeFile(
 		)
 	}
 
-	writtenByt := []byte(strings.Join(lines, "\n"))
-
 	writtenFile, err := ioutil.TempFile(d.Directory, "")
 	if err != nil {
 		return "", err
 	}
 	defer writtenFile.Close()
 
-	if _, err = writtenFile.Write(writtenByt); err != nil {
+	if _, err = writtenFile.Write(outputBuffer.Bytes()); err != nil {
 		return "", err
 	}
 
