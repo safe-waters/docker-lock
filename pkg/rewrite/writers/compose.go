@@ -1,6 +1,8 @@
 package writers
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -209,21 +211,25 @@ func (c *ComposefileWriter) writeFile(
 
 	var numServicesWritten int
 
-	lines := strings.Split(string(pathByt), "\n")
+	inputBuffer := bytes.NewBuffer(pathByt)
 
-	for i, line := range lines {
-		possibleServiceName := strings.Trim(line, " :")
+	var outputBuffer bytes.Buffer
 
-		if serviceImageLines[possibleServiceName] != "" {
+	scanner := bufio.NewScanner(inputBuffer)
+	for scanner.Scan() {
+		inputLine := scanner.Text()
+		outputLine := inputLine
+		possibleServiceName := strings.Trim(inputLine, " :")
+
+		switch {
+		case serviceImageLines[possibleServiceName] != "":
 			serviceName = possibleServiceName
-			continue
-		}
+		case serviceName != "" &&
+			strings.HasPrefix(strings.TrimLeft(inputLine, " "), "image:"):
+			imageIndex := strings.Index(inputLine, "image:")
 
-		if serviceName != "" &&
-			strings.HasPrefix(strings.TrimLeft(line, " "), "image:") {
-			imageIndex := strings.Index(line, "image:")
-			lines[i] = fmt.Sprintf(
-				"%s %s", line[:imageIndex+len("image:")],
+			outputLine = fmt.Sprintf(
+				"%s %s", inputLine[:imageIndex+len("image:")],
 				serviceImageLines[serviceName],
 			)
 
@@ -231,6 +237,8 @@ func (c *ComposefileWriter) writeFile(
 
 			numServicesWritten++
 		}
+
+		outputBuffer.WriteString(outputLine + "\n")
 	}
 
 	if numServicesWritten != len(serviceImageLines) {
@@ -240,15 +248,13 @@ func (c *ComposefileWriter) writeFile(
 		)
 	}
 
-	writtenByt := []byte(strings.Join(lines, "\n"))
-
 	writtenFile, err := ioutil.TempFile(c.Directory, "")
 	if err != nil {
 		return "", err
 	}
 	defer writtenFile.Close()
 
-	if _, err = writtenFile.Write(writtenByt); err != nil {
+	if _, err = writtenFile.Write(outputBuffer.Bytes()); err != nil {
 		return "", err
 	}
 
