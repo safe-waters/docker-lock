@@ -112,12 +112,28 @@ Ensure `docker` cli version >= 19.03 is installed by running `docker --version`.
 * Rename the file `docker-lock.exe`
 * Move `docker-lock.exe` into `%USERPROFILE%\.docker\cli-plugins`
 
+To verify that `docker-lock` was installed as a cli-plugin, run
+```
+docker lock --help
+```
+
+You can also see that `docker` is aware of `docker-lock` by running:
+```
+docker
+```
+and ensuring `lock` is output as a management command, like so:
+![CLI Install](./docs/assets/docker-cli-install.png)
+
 ## Standalone tool
 * Follow the same instructions as in the
 [cli-plugin section](#cli-plugin) except place the `docker-lock` executable in
 your `PATH`.
 * To use `docker-lock`, replace any `docker` command such as `docker lock` with
 the name of the executable, `docker-lock`, as in `docker-lock lock`.
+* To verify that `docker-lock` was installed, run:
+```
+docker-lock lock --help
+```
 
 # Build From Source
 If you would like to install `docker-lock` from source, ensure `go` is
