@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -51,4 +52,43 @@ func generateUUID(t *testing.T) string {
 	)
 
 	return uuid
+}
+
+func assertWrittenPaths(t *testing.T, expected []byte, got []byte) {
+	t.Helper()
+
+	if !bytes.Equal(expected, got) {
+		t.Fatalf("expected:%s\ngot:%s", string(expected), string(got))
+	}
+}
+
+func writeFilesToTempDir(
+	t *testing.T,
+	tempDir string,
+	fileNames []string,
+	fileContents [][]byte,
+) []string {
+	t.Helper()
+
+	if len(fileNames) != len(fileContents) {
+		t.Fatalf(
+			"different number of names and contents: %d names, %d contents",
+			len(fileNames), len(fileContents))
+	}
+
+	fullPaths := make([]string, len(fileNames))
+
+	for i, name := range fileNames {
+		fullPath := filepath.Join(tempDir, name)
+
+		if err := ioutil.WriteFile(
+			fullPath, fileContents[i], 0777,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		fullPaths[i] = fullPath
+	}
+
+	return fullPaths
 }

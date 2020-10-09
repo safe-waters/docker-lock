@@ -1,4 +1,4 @@
-// package write provides functionality to write files with image digests.
+// Package write provides functionality to write files with image digests.
 package write
 
 import (
