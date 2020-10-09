@@ -6,13 +6,13 @@ import (
 	"sync"
 
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
-	"github.com/safe-waters/docker-lock/pkg/rewrite/writers"
+	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
 )
 
 // Writer is used to write files with their image digests.
 type Writer struct {
-	DockerfileWriter  writers.IDockerfileWriter
-	ComposefileWriter writers.IComposefileWriter
+	DockerfileWriter  write.IDockerfileWriter
+	ComposefileWriter write.IComposefileWriter
 }
 
 // AnyPathImages contains any possible type of path and associated images.
@@ -26,13 +26,13 @@ type IWriter interface {
 	WriteFiles(
 		anyPathImages *AnyPathImages,
 		done <-chan struct{},
-	) <-chan *writers.WrittenPath
+	) <-chan *write.WrittenPath
 }
 
 // NewWriter returns a Writer after validating its fields.
 func NewWriter(
-	dockerfileWriter writers.IDockerfileWriter,
-	composefileWriter writers.IComposefileWriter,
+	dockerfileWriter write.IDockerfileWriter,
+	composefileWriter write.IComposefileWriter,
 ) (*Writer, error) {
 	if (dockerfileWriter == nil ||
 		reflect.ValueOf(dockerfileWriter).IsNil()) &&
@@ -51,12 +51,12 @@ func NewWriter(
 func (w *Writer) WriteFiles(
 	anyPathImages *AnyPathImages,
 	done <-chan struct{},
-) <-chan *writers.WrittenPath {
+) <-chan *write.WrittenPath {
 	if anyPathImages == nil {
 		return nil
 	}
 
-	writtenPaths := make(chan *writers.WrittenPath)
+	writtenPaths := make(chan *write.WrittenPath)
 
 	var waitGroup sync.WaitGroup
 

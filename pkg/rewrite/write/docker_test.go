@@ -1,4 +1,4 @@
-package writers_test
+package write_test
 
 import (
 	"io/ioutil"
@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
-	"github.com/safe-waters/docker-lock/pkg/rewrite/writers"
+	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
 )
 
 func TestDockerfileWriter(t *testing.T) {
@@ -307,7 +307,7 @@ FROM redis
 				tempDirPathImages[tempDirPath] = images
 			}
 
-			writer := &writers.DockerfileWriter{
+			writer := &write.DockerfileWriter{
 				ExcludeTags: test.ExcludeTags, Directory: tempDir,
 			}
 

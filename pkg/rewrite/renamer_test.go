@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/safe-waters/docker-lock/pkg/rewrite"
-	"github.com/safe-waters/docker-lock/pkg/rewrite/writers"
+	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
 )
 
 func TestRenamer(t *testing.T) {
@@ -15,12 +15,12 @@ func TestRenamer(t *testing.T) {
 
 	tests := []struct {
 		Name           string
-		RewrittenPaths []*writers.WrittenPath
+		RewrittenPaths []*write.WrittenPath
 		Expected       [][]byte
 	}{
 		{
 			Name: "Rename Rewritten Path to Original",
-			RewrittenPaths: []*writers.WrittenPath{
+			RewrittenPaths: []*write.WrittenPath{
 				{
 					OriginalPath: "Dockerfile1",
 					Path:         "TempDockerfile1",
@@ -47,7 +47,7 @@ func TestRenamer(t *testing.T) {
 			renamer := &rewrite.Renamer{}
 
 			rewrittenPathsCh := make(
-				chan *writers.WrittenPath, len(test.RewrittenPaths),
+				chan *write.WrittenPath, len(test.RewrittenPaths),
 			)
 
 			for i, rewrittenPath := range test.RewrittenPaths {

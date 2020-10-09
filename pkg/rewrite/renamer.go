@@ -4,7 +4,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/safe-waters/docker-lock/pkg/rewrite/writers"
+	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
 )
 
 // Renamer renames written paths to their original file paths.
@@ -12,18 +12,18 @@ type Renamer struct{}
 
 // IRenamer provides an interface for Renamer's exported methods.
 type IRenamer interface {
-	RenameFiles(writtenPaths <-chan *writers.WrittenPath) error
+	RenameFiles(writtenPaths <-chan *write.WrittenPath) error
 }
 
 // RenameFiles renames written paths to their original file paths.
 func (r *Renamer) RenameFiles(
-	writtenPaths <-chan *writers.WrittenPath,
+	writtenPaths <-chan *write.WrittenPath,
 ) error {
 	if writtenPaths == nil {
 		return nil
 	}
 
-	var allWrittenPaths []*writers.WrittenPath // nolint: prealloc
+	var allWrittenPaths []*write.WrittenPath // nolint: prealloc
 
 	// Ensure all files can be rewritten before attempting to rename
 	for writtenPath := range writtenPaths {

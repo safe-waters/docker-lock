@@ -1,4 +1,4 @@
-package writers_test
+package write_test
 
 import (
 	"io/ioutil"
@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
-	"github.com/safe-waters/docker-lock/pkg/rewrite/writers"
+	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
 )
 
 func TestComposefileWriter(t *testing.T) {
@@ -771,10 +771,10 @@ services:
 				tempDirPathImages[tempDirPath] = images
 			}
 
-			dockerfileWriter := &writers.DockerfileWriter{
+			dockerfileWriter := &write.DockerfileWriter{
 				ExcludeTags: test.ExcludeTags, Directory: tempDir,
 			}
-			composefileWriter := &writers.ComposefileWriter{
+			composefileWriter := &write.ComposefileWriter{
 				DockerfileWriter: dockerfileWriter,
 				ExcludeTags:      test.ExcludeTags,
 				Directory:        tempDir,
@@ -785,7 +785,7 @@ services:
 				tempDirPathImages, done,
 			)
 
-			var writtenPaths []*writers.WrittenPath
+			var writtenPaths []*write.WrittenPath
 
 			var err error
 			for rewrittenPath := range writtenFiles {

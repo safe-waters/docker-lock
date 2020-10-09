@@ -1,4 +1,4 @@
-package writers
+package write
 
 // compose represents the services section of a docker-compose file.
 type compose struct {

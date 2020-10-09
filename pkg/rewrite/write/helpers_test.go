@@ -1,4 +1,4 @@
-package writers_test
+package write_test
 
 import (
 	"bytes"

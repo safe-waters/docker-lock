@@ -1,5 +1,5 @@
-// Package writers provides functionality to write files with image digests.
-package writers
+// package write provides functionality to write files with image digests.
+package write
 
 import (
 	"bufio"
