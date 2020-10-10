@@ -149,18 +149,82 @@ from golang:latest@sha256:golang
 				),
 			},
 		},
-		// {
-		// 	Name: "Duplicate Services Same Dockerfile Images",
-		// 	LockfilePath: filepath.Join(
-		// 		"testdata", "duplicate_svc_same_images", "docker-lock.json",
-		// 	),
-		// },
-		// {
-		// 	Name: "Different Composefiles Same Dockerfile Images",
-		// 	LockfilePath: filepath.Join(
-		// 		"testdata", "duplicate_files_same_images", "docker-lock.json",
-		// 	),
-		// },
+		{
+			Name: "Different Composefiles Same Dockerfile Images",
+			ComposefileContents: [][]byte{
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+			},
+			DockerfileContents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
+			},
+			LockfileContents: []byte(`
+{
+	"composefiles": {
+		"docker-compose-one.yml": [
+			{
+				"name": "golang",
+				"tag": "latest",
+				"digest": "golang",
+				"dockerfile": "Dockerfile",
+				"service": "svc"
+			}
+		],
+		"docker-compose-two.yml": [
+			{
+				"name": "golang",
+				"tag": "latest",
+				"digest": "golang",
+				"dockerfile": "Dockerfile",
+				"service": "svc"
+			}
+		]
+	}
+}
+`,
+			),
+			ExpectedComposefileContents: [][]byte{
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+			},
+			ExpectedDockerfileContents: [][]byte{
+				[]byte(`
+from golang:latest@sha256:golang
+`,
+				),
+			},
+		},
 		// {
 		// 	Name: "Duplicate Services Different Dockerfile Images",
 		// 	LockfilePath: filepath.Join(
