@@ -225,20 +225,104 @@ from golang:latest@sha256:golang
 				),
 			},
 		},
-		// {
-		// 	Name: "Duplicate Services Different Dockerfile Images",
-		// 	LockfilePath: filepath.Join(
-		// 		"testdata", "duplicate_svc_diff_images", "docker-lock.json",
-		// 	),
-		// 	ShouldFail: true,
-		// },
-		// {
-		// 	Name: "Different Composefiles Different Dockerfile Images",
-		// 	LockfilePath: filepath.Join(
-		// 		"testdata", "duplicate_files_diff_images", "docker-lock.json",
-		// 	),
-		// 	ShouldFail: true,
-		// },
+		{
+			Name: "Duplicate Services Different Dockerfile Images",
+			ComposefileContents: [][]byte{
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+  another-svc:
+    build: .
+`,
+				),
+			},
+			DockerfileContents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
+			},
+			LockfileContents: []byte(`
+{
+	"composefiles": {
+		"docker-compose.yml": [
+			{
+				"name": "golang",
+				"tag": "latest",
+				"digest": "golang",
+				"dockerfile": "Dockerfile",
+				"service": "another-svc"
+			},
+			{
+				"name": "notgolang",
+				"tag": "latest",
+				"digest": "notgolang",
+				"dockerfile": "Dockerfile",
+				"service": "svc"
+			}
+		]
+	}
+}
+`,
+			),
+			ShouldFail: true,
+		},
+		{
+			Name: "Different Composefiles Different Dockerfile Images",
+			ComposefileContents: [][]byte{
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+			},
+			DockerfileContents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
+			},
+			LockfileContents: []byte(`
+{
+	"composefiles": {
+		"docker-compose-one.yml": [
+			{
+				"name": "golang",
+				"tag": "latest",
+				"digest": "golang",
+				"dockerfile": "Dockerfile",
+				"service": "svc"
+			}
+		],
+		"docker-compose-two.yml": [
+			{
+				"name": "notgolang",
+				"tag": "latest",
+				"digest": "notgolang",
+				"dockerfile": "Dockerfile",
+				"service": "svc"
+			}
+		]
+	}
+}
+`,
+			),
+			ShouldFail: true,
+		},
 	}
 
 	for _, test := range tests {
@@ -251,7 +335,9 @@ from golang:latest@sha256:golang
 			defer os.RemoveAll(tempDir)
 
 			var lockfile generate.Lockfile
-			if err := json.Unmarshal(test.LockfileContents, &lockfile); err != nil {
+			if err := json.Unmarshal(
+				test.LockfileContents, &lockfile,
+			); err != nil {
 				t.Fatal(err)
 			}
 
@@ -259,13 +345,15 @@ from golang:latest@sha256:golang
 
 			var composefilePaths []string
 
-			composefileImagesWithTempDir := map[string][]*parse.ComposefileImage{}
+			composefileImagesWithTempDir := map[string][]*parse.ComposefileImage{} // nolint: lll
 
 			for composefilePath, images := range lockfile.ComposefileImages {
 				for _, image := range images {
 					if image.DockerfilePath != "" {
 						uniqueDockerfilePaths[image.DockerfilePath] = struct{}{}
-						image.DockerfilePath = filepath.Join(tempDir, image.DockerfilePath)
+						image.DockerfilePath = filepath.Join(
+							tempDir, image.DockerfilePath,
+						)
 					}
 
 					image.Path = filepath.Join(tempDir, image.Path)
@@ -340,7 +428,9 @@ from golang:latest@sha256:golang
 					t.Fatal(err)
 				}
 
-				if !bytes.Equal(test.ExpectedDockerfileContents[i], rewrittenBytes) {
+				if !bytes.Equal(
+					test.ExpectedDockerfileContents[i], rewrittenBytes,
+				) {
 					t.Fatalf(
 						"expected:\n%s\ngot:\n%s",
 						string(test.ExpectedDockerfileContents[i]),
@@ -355,7 +445,9 @@ from golang:latest@sha256:golang
 					t.Fatal(err)
 				}
 
-				if !bytes.Equal(test.ExpectedComposefileContents[i], rewrittenBytes) {
+				if !bytes.Equal(
+					test.ExpectedComposefileContents[i], rewrittenBytes,
+				) {
 					t.Fatalf(
 						"expected:\n%s\ngot:\n%s",
 						string(test.ExpectedComposefileContents[i]),
