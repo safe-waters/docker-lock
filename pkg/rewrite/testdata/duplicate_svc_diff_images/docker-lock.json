@@ -1,0 +1,20 @@
+{
+	"composefiles": {
+		"testdata/duplicate_svc_diff_images/docker-compose.yml": [
+			{
+				"name": "golang",
+				"tag": "latest",
+				"digest": "golang",
+				"dockerfile": "testdata/duplicate_svc_diff_images/Dockerfile",
+				"service": "another-svc"
+			},
+			{
+				"name": "notgolang",
+				"tag": "latest",
+				"digest": "notgolang",
+				"dockerfile": "testdata/duplicate_svc_diff_images/Dockerfile",
+				"service": "svc"
+			}
+		]
+	}
+}

@@ -15,6 +15,8 @@ func assertOriginalContentsEqualPathContents(
 	expected [][]byte,
 	got [][]byte,
 ) {
+	t.Helper()
+
 	for i := range expected {
 		if !bytes.Equal(expected[i], got[i]) {
 			t.Fatalf("expected %s, got %s", expected[i], got[i])
@@ -23,6 +25,8 @@ func assertOriginalContentsEqualPathContents(
 }
 
 func writeFile(t *testing.T, path string, contents []byte) {
+	t.Helper()
+
 	if err := ioutil.WriteFile(
 		path, contents, 0777,
 	); err != nil {
@@ -40,6 +44,8 @@ func makeDir(t *testing.T, dirPath string) {
 }
 
 func generateUUID(t *testing.T) string {
+	t.Helper()
+
 	b := make([]byte, 16)
 
 	_, err := rand.Read(b)

@@ -1,0 +1,22 @@
+{
+	"dockerfiles": {
+		"testdata/override_dockerfile/Dockerfile": [
+			{
+				"name": "not_used",
+				"tag": "latest",
+				"digest": "not_used"
+			}
+		]
+	},
+	"composefiles": {
+		"testdata/override_dockerfile/docker-compose.yml": [
+			{
+				"name": "golang",
+				"tag": "latest",
+				"digest": "golang",
+				"dockerfile": "testdata/override_dockerfile/Dockerfile",
+				"service": "svc"
+			}
+		]
+	}
+}
