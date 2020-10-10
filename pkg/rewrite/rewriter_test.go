@@ -78,6 +78,66 @@ from golang:latest@sha256:golang
 				),
 			},
 		},
+		{
+			Name: "Composefile Overrides Dockerfile",
+			ComposefileContents: [][]byte{
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+			},
+			DockerfileContents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
+			},
+			LockfileContents: []byte(`
+{
+	"dockerfiles": {
+		"Dockerfile": [
+			{
+				"name": "not_used",
+				"tag": "latest",
+				"digest": "not_used"
+			}
+		]
+	},
+	"composefiles": {
+		"docker-compose.yml": [
+			{
+				"name": "golang",
+				"tag": "latest",
+				"digest": "golang",
+				"dockerfile": "Dockerfile",
+				"service": "svc"
+			}
+		]
+	}
+}
+`,
+			),
+			ExpectedComposefileContents: [][]byte{
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+			},
+			ExpectedDockerfileContents: [][]byte{
+				[]byte(`
+from golang:latest@sha256:golang
+`,
+				),
+			},
+		},
 		// {
 		// 	Name: "Composefile Overrides Dockerfile",
 		// 	LockfilePath: filepath.Join(

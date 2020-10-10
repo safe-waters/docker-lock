@@ -119,14 +119,14 @@ func (r *Rewriter) deduplicateAnyPathImages(
 
 							return
 						}
+					}
 
-						select {
-						case <-done:
-							return
-						case deduplicatedDockerfilePaths <- &deduplicatedPath{
-							path: dockerfilePath,
-						}:
-						}
+					select {
+					case <-done:
+						return
+					case deduplicatedDockerfilePaths <- &deduplicatedPath{
+						path: dockerfilePath,
+					}:
 					}
 				}
 			}
