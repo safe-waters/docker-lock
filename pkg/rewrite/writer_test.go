@@ -96,7 +96,6 @@ services:
 			var dockerfilePaths []string
 			var composefilePaths []string
 
-			// TODO: include dockerfilepaths in composefileimages
 			for path := range test.AnyPathImages.DockerfilePathImages {
 				dockerfilePaths = append(dockerfilePaths, path)
 			}

@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/safe-waters/docker-lock/pkg/rewrite"
-	"github.com/safe-waters/docker-lock/pkg/rewrite/writers"
+	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -56,12 +56,12 @@ func NewRewriteCmd() (*cobra.Command, error) {
 
 // SetupRewriter creates a Rewriter configured for docker-lock's cli.
 func SetupRewriter(flags *Flags) (*rewrite.Rewriter, error) {
-	dockerfileWriter := &writers.DockerfileWriter{
+	dockerfileWriter := &write.DockerfileWriter{
 		ExcludeTags: flags.ExcludeTags,
 		Directory:   flags.TempDir,
 	}
 
-	composefileWriter := &writers.ComposefileWriter{
+	composefileWriter := &write.ComposefileWriter{
 		DockerfileWriter: dockerfileWriter,
 		ExcludeTags:      flags.ExcludeTags,
 		Directory:        flags.TempDir,
