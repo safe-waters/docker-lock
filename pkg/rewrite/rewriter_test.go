@@ -28,57 +28,6 @@ func TestRewriter(t *testing.T) {
 		ShouldFail                  bool
 	}{
 		{
-			Name: "In Memory",
-			ComposefileContents: [][]byte{
-				[]byte(`
-version: '3'
-
-services:
-  svc:
-    build: .
-`,
-				),
-			},
-			DockerfileContents: [][]byte{
-				[]byte(`
-from golang
-`,
-				),
-			},
-			LockfileContents: []byte(`
-{
-	"composefiles": {
-		"docker-compose.yml": [
-			{
-				"name": "golang",
-				"tag": "latest",
-				"digest": "golang",
-				"dockerfile": "Dockerfile",
-				"service": "svc"
-			}
-		]
-	}
-}
-`,
-			),
-			ExpectedComposefileContents: [][]byte{
-				[]byte(`
-version: '3'
-
-services:
-  svc:
-    build: .
-`,
-				),
-			},
-			ExpectedDockerfileContents: [][]byte{
-				[]byte(`
-from golang:latest@sha256:golang
-`,
-				),
-			},
-		},
-		{
 			Name: "Composefile Overrides Dockerfile",
 			ComposefileContents: [][]byte{
 				[]byte(`
@@ -138,12 +87,68 @@ from golang:latest@sha256:golang
 				),
 			},
 		},
-		// {
-		// 	Name: "Composefile Overrides Dockerfile",
-		// 	LockfilePath: filepath.Join(
-		// 		"testdata", "override_dockerfile", "docker-lock.json",
-		// 	),
-		// },
+		{
+			Name: "Duplicate Services Same Dockerfile Images",
+			ComposefileContents: [][]byte{
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+  another-svc:
+    build: .
+`,
+				),
+			},
+			DockerfileContents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
+			},
+			LockfileContents: []byte(`
+{
+	"composefiles": {
+		"docker-compose.yml": [
+			{
+				"name": "golang",
+				"tag": "latest",
+				"digest": "golang",
+				"dockerfile": "Dockerfile",
+				"service": "another-svc"
+			},
+			{
+				"name": "golang",
+				"tag": "latest",
+				"digest": "golang",
+				"dockerfile": "Dockerfile",
+				"service": "svc"
+			}
+		]
+	}
+}
+`,
+			),
+			ExpectedComposefileContents: [][]byte{
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+  another-svc:
+    build: .
+`,
+				),
+			},
+			ExpectedDockerfileContents: [][]byte{
+				[]byte(`
+from golang:latest@sha256:golang
+`,
+				),
+			},
+		},
 		// {
 		// 	Name: "Duplicate Services Same Dockerfile Images",
 		// 	LockfilePath: filepath.Join(
