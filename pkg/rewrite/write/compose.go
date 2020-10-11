@@ -248,7 +248,11 @@ func (c *ComposefileWriter) writeFile(
 		)
 	}
 
-	writtenFile, err := ioutil.TempFile(c.Directory, "")
+	tempPath := strings.ReplaceAll(
+		fmt.Sprintf("%s-*", path), fmt.Sprintf("%c", filepath.Separator), "-",
+	)
+
+	writtenFile, err := ioutil.TempFile(c.Directory, tempPath)
 	if err != nil {
 		return "", err
 	}

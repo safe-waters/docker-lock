@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -167,7 +168,11 @@ func (d *DockerfileWriter) writeFile(
 		)
 	}
 
-	writtenFile, err := ioutil.TempFile(d.Directory, "")
+	tempPath := strings.ReplaceAll(
+		fmt.Sprintf("%s-*", path), fmt.Sprintf("%c", filepath.Separator), "-",
+	)
+
+	writtenFile, err := ioutil.TempFile(d.Directory, tempPath)
 	if err != nil {
 		return "", err
 	}

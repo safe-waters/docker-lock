@@ -1,9 +1,9 @@
 package write_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
@@ -14,33 +14,26 @@ func TestComposefileWriter(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		Name                string
-		ComposefilePaths    []string
-		ComposefileContents [][]byte
-		DockerfilePaths     []string
-		DockerfileContents  [][]byte
-		Expected            [][]byte
-		PathImages          map[string][]*parse.ComposefileImage
-		ExcludeTags         bool
-		ShouldFail          bool
+		Name        string
+		Contents    [][]byte
+		Expected    [][]byte
+		PathImages  map[string][]*parse.ComposefileImage
+		ExcludeTags bool
+		ShouldFail  bool
 	}{
 		{
-			Name:             "Dockerfile",
-			ComposefilePaths: []string{"docker-compose.yml"},
-			ComposefileContents: [][]byte{
+			Name: "Dockerfile",
+			Contents: [][]byte{
+				[]byte(`
+from busybox
+`,
+				),
 				[]byte(`
 version: '3'
 
 services:
   svc:
     build: .
-`,
-				),
-			},
-			DockerfilePaths: []string{"Dockerfile"},
-			DockerfileContents: [][]byte{
-				[]byte(`
-from busybox
 `,
 				),
 			},
@@ -65,9 +58,8 @@ from busybox:latest@sha256:busybox
 			},
 		},
 		{
-			Name:             "Composefile",
-			ComposefilePaths: []string{"docker-compose.yml"},
-			ComposefileContents: [][]byte{
+			Name: "Composefile",
+			Contents: [][]byte{
 				[]byte(`
 version: '3'
 
@@ -85,7 +77,6 @@ services:
 							Tag:    "latest",
 							Digest: "busybox",
 						},
-						Path:        "docker-compose.yml",
 						ServiceName: "svc",
 					},
 				},
@@ -102,9 +93,8 @@ services:
 			},
 		},
 		{
-			Name:             "Exclude Tags",
-			ComposefilePaths: []string{"docker-compose.yml"},
-			ComposefileContents: [][]byte{
+			Name: "Exclude Tags",
+			Contents: [][]byte{
 				[]byte(`
 version: '3'
 
@@ -122,7 +112,6 @@ services:
 							Tag:    "latest",
 							Digest: "busybox",
 						},
-						Path:        "docker-compose.yml",
 						ServiceName: "svc",
 					},
 				},
@@ -140,9 +129,12 @@ services:
 			},
 		},
 		{
-			Name:             "Dockerfile And Composefile",
-			ComposefilePaths: []string{"docker-compose.yml"},
-			ComposefileContents: [][]byte{
+			Name: "Dockerfile And Composefile",
+			Contents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
 				[]byte(`
 version: '3'
 
@@ -154,13 +146,6 @@ services:
 `,
 				),
 			},
-			DockerfilePaths: []string{"Dockerfile"},
-			DockerfileContents: [][]byte{
-				[]byte(`
-from golang
-`,
-				),
-			},
 			PathImages: map[string][]*parse.ComposefileImage{
 				"docker-compose.yml": {
 					{
@@ -169,7 +154,6 @@ from golang
 							Tag:    "latest",
 							Digest: "busybox",
 						},
-						Path:        "docker-compose.yml",
 						ServiceName: "svc-compose",
 					},
 					{
@@ -201,9 +185,12 @@ services:
 			},
 		},
 		{
-			Name:             "More Services In Composefile",
-			ComposefilePaths: []string{"docker-compose.yml"},
-			ComposefileContents: [][]byte{
+			Name: "More Services In Composefile",
+			Contents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
 				[]byte(`
 version: '3'
 
@@ -212,13 +199,6 @@ services:
     image: busybox
   svc-docker:
     build: .
-`,
-				),
-			},
-			DockerfilePaths: []string{"Dockerfile"},
-			DockerfileContents: [][]byte{
-				[]byte(`
-from golang
 `,
 				),
 			},
@@ -238,9 +218,12 @@ from golang
 			ShouldFail: true,
 		},
 		{
-			Name:             "Fewer Services In Composefile",
-			ComposefilePaths: []string{"docker-compose.yml"},
-			ComposefileContents: [][]byte{
+			Name: "Fewer Services In Composefile",
+			Contents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
 				[]byte(`
 version: '3'
 
@@ -252,13 +235,6 @@ services:
 `,
 				),
 			},
-			DockerfilePaths: []string{"Dockerfile"},
-			DockerfileContents: [][]byte{
-				[]byte(`
-from golang
-`,
-				),
-			},
 			PathImages: map[string][]*parse.ComposefileImage{
 				"docker-compose.yml": {
 					{
@@ -267,7 +243,6 @@ from golang
 							Tag:    "latest",
 							Digest: "busybox",
 						},
-						Path:        "docker-compose.yml",
 						ServiceName: "svc-compose",
 					},
 					{
@@ -276,7 +251,6 @@ from golang
 							Tag:    "latest",
 							Digest: "busybox",
 						},
-						Path:        "docker-compose.yml",
 						ServiceName: "svc-unknown",
 					},
 					{
@@ -293,9 +267,12 @@ from golang
 			ShouldFail: true,
 		},
 		{
-			Name:             "Multiple Services Same Dockerfile Different Images", // nolint: lll
-			ComposefilePaths: []string{"docker-compose.yml"},
-			ComposefileContents: [][]byte{
+			Name: "Multiple Services Same Dockerfile Different Images",
+			Contents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
 				[]byte(`
 version: '3'
 
@@ -309,13 +286,6 @@ services:
 `,
 				),
 			},
-			DockerfilePaths: []string{"Dockerfile"},
-			DockerfileContents: [][]byte{
-				[]byte(`
-from golang
-`,
-				),
-			},
 			PathImages: map[string][]*parse.ComposefileImage{
 				"docker-compose.yml": {
 					{
@@ -324,7 +294,6 @@ from golang
 							Tag:    "latest",
 							Digest: "busybox",
 						},
-						Path:        "docker-compose.yml",
 						ServiceName: "svc-compose",
 					},
 					{
@@ -350,48 +319,41 @@ from golang
 			ShouldFail: true,
 		},
 		{
-			Name: "Multiple Composefiles Same Dockerfile Different Images", // nolint: lll
-			ComposefilePaths: []string{
-				"docker-compose-one.yml", "docker-compose-two.yml",
-			},
-			ComposefileContents: [][]byte{
-				[]byte(`
-version: '3'
-
-services:
-  svc-compose:
-    image: busybox
-  svc-docker:
-    build: .
-`,
-				),
-				[]byte(`
-version: '3'
-
-services:
-  svc-compose:
-    image: busybox
-  svc-docker:
-    build: .
-`,
-				),
-			},
-			DockerfilePaths: []string{"Dockerfile"},
-			DockerfileContents: [][]byte{
+			Name: "Multiple Composefiles Same Dockerfile Different Images",
+			Contents: [][]byte{
 				[]byte(`
 from golang
 `,
 				),
+				[]byte(`
+version: '3'
+
+services:
+  svc-compose:
+    image: busybox
+  svc-docker:
+    build: .
+`,
+				),
+				[]byte(`
+version: '3'
+
+services:
+  svc-compose:
+    image: busybox
+  svc-docker:
+    build: .
+`,
+				),
 			},
 			PathImages: map[string][]*parse.ComposefileImage{
-				"docker-compose-one.yml": {
+				"docker-compose-1.yml": {
 					{
 						Image: &parse.Image{
 							Name:   "busybox",
 							Tag:    "latest",
 							Digest: "busybox",
 						},
-						Path:        "docker-compose.yml",
 						ServiceName: "svc-compose",
 					},
 					{
@@ -404,14 +366,13 @@ from golang
 						ServiceName:    "svc-docker",
 					},
 				},
-				"docker-compose-two.yml": {
+				"docker-compose-2.yml": {
 					{
 						Image: &parse.Image{
 							Name:   "busybox",
 							Tag:    "latest",
 							Digest: "busybox",
 						},
-						Path:        "docker-compose.yml",
 						ServiceName: "svc-compose",
 					},
 					{
@@ -428,9 +389,12 @@ from golang
 			ShouldFail: true,
 		},
 		{
-			Name:             "Multiple Services Same Dockerfile Same Images", // nolint: lll
-			ComposefilePaths: []string{"docker-compose.yml"},
-			ComposefileContents: [][]byte{
+			Name: "Multiple Services Same Dockerfile Same Images",
+			Contents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
 				[]byte(`
 version: '3'
 
@@ -444,13 +408,6 @@ services:
 `,
 				),
 			},
-			DockerfilePaths: []string{"Dockerfile"},
-			DockerfileContents: [][]byte{
-				[]byte(`
-from golang
-`,
-				),
-			},
 			PathImages: map[string][]*parse.ComposefileImage{
 				"docker-compose.yml": {
 					{
@@ -459,7 +416,6 @@ from golang
 							Tag:    "latest",
 							Digest: "busybox",
 						},
-						Path:        "docker-compose.yml",
 						ServiceName: "svc-compose",
 					},
 					{
@@ -502,36 +458,30 @@ services:
 			},
 		},
 		{
-			Name: "Multiple Composefiles Same Dockerfile Same Images", // nolint: lll
-			ComposefilePaths: []string{
-				"docker-compose-one.yml", "docker-compose-two.yml",
-			}, // nolint: lll
-			ComposefileContents: [][]byte{
-				[]byte(`
-version: '3'
-
-services:
-  svc-compose:
-    image: busybox
-  svc-docker:
-    build: .
-`,
-				),
-				[]byte(`
-version: '3'
-
-services:
-  svc-compose:
-    image: busybox
-  svc-docker:
-    build: .
-`,
-				),
-			},
-			DockerfilePaths: []string{"Dockerfile"},
-			DockerfileContents: [][]byte{
+			Name: "Multiple Composefiles Same Dockerfile Same Images",
+			Contents: [][]byte{
 				[]byte(`
 from golang
+`,
+				),
+				[]byte(`
+version: '3'
+
+services:
+  svc-compose:
+    image: busybox
+  svc-docker:
+    build: .
+`,
+				),
+				[]byte(`
+version: '3'
+
+services:
+  svc-compose:
+    image: busybox
+  svc-docker:
+    build: .
 `,
 				),
 			},
@@ -543,7 +493,6 @@ from golang
 							Tag:    "latest",
 							Digest: "busybox",
 						},
-						Path:        "docker-compose.yml",
 						ServiceName: "svc-compose",
 					},
 					{
@@ -563,7 +512,6 @@ from golang
 							Tag:    "latest",
 							Digest: "busybox",
 						},
-						Path:        "docker-compose.yml",
 						ServiceName: "svc-compose",
 					},
 					{
@@ -606,10 +554,15 @@ services:
 		},
 		{
 			Name: "Multiple Composefiles Multiple Services",
-			ComposefilePaths: []string{
-				"docker-compose-one.yml", "docker-compose-two.yml",
-			},
-			ComposefileContents: [][]byte{
+			Contents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
+				[]byte(`
+from python
+`,
+				),
 				[]byte(`
 version: '3'
 
@@ -633,26 +586,14 @@ services:
 `,
 				),
 			},
-			DockerfilePaths: []string{"Dockerfile", "AnotherDockerfile"},
-			DockerfileContents: [][]byte{
-				[]byte(`
-from golang
-`,
-				),
-				[]byte(`
-from python
-`,
-				),
-			},
 			PathImages: map[string][]*parse.ComposefileImage{
-				"docker-compose-one.yml": {
+				"docker-compose-1.yml": {
 					{
 						Image: &parse.Image{
 							Name:   "busybox",
 							Tag:    "latest",
 							Digest: "busybox",
 						},
-						Path:        "docker-compose.yml",
 						ServiceName: "svc-compose",
 					},
 					{
@@ -661,18 +602,17 @@ from python
 							Tag:    "latest",
 							Digest: "golang",
 						},
-						DockerfilePath: "Dockerfile",
+						DockerfilePath: "Dockerfile-1",
 						ServiceName:    "svc-docker",
 					},
 				},
-				"docker-compose-two.yml": {
+				"docker-compose-2.yml": {
 					{
 						Image: &parse.Image{
 							Name:   "node",
 							Tag:    "latest",
 							Digest: "node",
 						},
-						Path:        "docker-compose-two.yml",
 						ServiceName: "svc-compose",
 					},
 					{
@@ -681,7 +621,7 @@ from python
 							Tag:    "latest",
 							Digest: "python",
 						},
-						DockerfilePath: "AnotherDockerfile",
+						DockerfilePath: "Dockerfile-2",
 						ServiceName:    "svc-another-docker",
 					},
 				},
@@ -726,73 +666,64 @@ services:
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := generateUUID(t)
-			makeDir(t, tempDir)
+			tempDir := makeTempDirInCurrentDir(t)
 			defer os.RemoveAll(tempDir)
 
-			tempDockerfilePaths := writeFilesToTempDir(
-				t, tempDir, test.DockerfilePaths, test.DockerfileContents,
-			)
-			tempComposefilePaths := writeFilesToTempDir(
-				t, tempDir, test.ComposefilePaths, test.ComposefileContents,
-			)
+			uniquePathsToWrite := map[string]struct{}{}
 
-			tempPaths := make(
-				[]string,
-				len(tempDockerfilePaths)+len(tempComposefilePaths),
-			)
+			tempPathImages := map[string][]*parse.ComposefileImage{}
 
-			var i int
-
-			for _, tempPath := range tempDockerfilePaths {
-				tempPaths[i] = tempPath
-				i++
-			}
-
-			for _, tempPath := range tempComposefilePaths {
-				tempPaths[i] = tempPath
-				i++
-			}
-
-			tempDirPathImages := map[string][]*parse.ComposefileImage{}
-
-			for path, images := range test.PathImages {
-				tempDirPath := filepath.Join(tempDir, path)
+			for composefilePath, images := range test.PathImages {
 				for _, image := range images {
 					if image.DockerfilePath != "" {
+						uniquePathsToWrite[image.DockerfilePath] = struct{}{}
 						image.DockerfilePath = filepath.Join(
 							tempDir, image.DockerfilePath,
 						)
 					}
-					if image.Path != "" {
-						image.Path = filepath.Join(tempDir, image.Path)
-					}
 				}
-				tempDirPathImages[tempDirPath] = images
+
+				uniquePathsToWrite[composefilePath] = struct{}{}
+
+				composefilePath = filepath.Join(tempDir, composefilePath)
+				tempPathImages[composefilePath] = images
 			}
 
+			var pathsToWrite []string
+			for path := range uniquePathsToWrite {
+				pathsToWrite = append(pathsToWrite, path)
+			}
+
+			sort.Strings(pathsToWrite)
+
+			writeFilesToTempDir(
+				t, tempDir, pathsToWrite, test.Contents,
+			)
+
 			dockerfileWriter := &write.DockerfileWriter{
-				ExcludeTags: test.ExcludeTags, Directory: tempDir,
+				Directory:   tempDir,
+				ExcludeTags: test.ExcludeTags,
 			}
 			composefileWriter := &write.ComposefileWriter{
 				DockerfileWriter: dockerfileWriter,
-				ExcludeTags:      test.ExcludeTags,
 				Directory:        tempDir,
+				ExcludeTags:      test.ExcludeTags,
 			}
 
 			done := make(chan struct{})
-			writtenFiles := composefileWriter.WriteFiles(
-				tempDirPathImages, done,
+			writtenPathResults := composefileWriter.WriteFiles(
+				tempPathImages, done,
 			)
 
-			var writtenPaths []*write.WrittenPath
+			var got []string
 
 			var err error
-			for rewrittenPath := range writtenFiles {
-				if rewrittenPath.Err != nil {
-					err = rewrittenPath.Err
+
+			for writtenPath := range writtenPathResults {
+				if writtenPath.Err != nil {
+					err = writtenPath.Err
 				}
-				writtenPaths = append(writtenPaths, rewrittenPath)
+				got = append(got, writtenPath.Path)
 			}
 
 			if test.ShouldFail {
@@ -807,33 +738,9 @@ services:
 				t.Fatal(err)
 			}
 
-			for _, rewrittenPath := range writtenPaths {
-				got, err := ioutil.ReadFile(rewrittenPath.Path)
-				if err != nil {
-					t.Fatal(err)
-				}
+			sort.Strings(got)
 
-				expectedIndex := -1
-
-				for i, path := range tempPaths {
-					if rewrittenPath.OriginalPath == path {
-						expectedIndex = i
-						break
-					}
-				}
-
-				if expectedIndex == -1 {
-					t.Fatalf(
-						"rewrittenPath %s not found in %v",
-						rewrittenPath.OriginalPath,
-						tempPaths,
-					)
-				}
-
-				assertWrittenPaths(
-					t, test.Expected[expectedIndex], got,
-				)
-			}
+			assertWrittenFiles(t, test.Expected, got)
 		})
 	}
 }
