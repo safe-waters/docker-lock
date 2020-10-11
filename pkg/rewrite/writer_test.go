@@ -146,13 +146,13 @@ services:
 			done := make(chan struct{})
 			writtenPathResults := writer.WriteFiles(tempAnyPaths, done)
 
-			var writtenPaths []string
+			var got []string
 
 			for writtenPath := range writtenPathResults {
 				if writtenPath.Err != nil {
 					err = writtenPath.Err
 				}
-				writtenPaths = append(writtenPaths, writtenPath.Path)
+				got = append(got, writtenPath.Path)
 			}
 
 			if test.ShouldFail {
@@ -167,9 +167,9 @@ services:
 				t.Fatal(err)
 			}
 
-			sort.Strings(writtenPaths)
+			sort.Strings(got)
 
-			assertWrittenFiles(t, test.Expected, writtenPaths)
+			assertWrittenFiles(t, test.Expected, got)
 		})
 	}
 }

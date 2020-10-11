@@ -10,22 +10,24 @@ import (
 	"testing"
 )
 
-func assertWrittenFiles(t *testing.T, expected [][]byte, paths []string) {
+func assertWrittenFiles(t *testing.T, expected [][]byte, got []string) {
 	t.Helper()
 
-	if len(expected) != len(paths) {
-		t.Fatalf("expected %d contents, got %d", len(expected), len(paths))
+	if len(expected) != len(got) {
+		t.Fatalf("expected %d contents, got %d", len(expected), len(got))
 	}
 
 	for i := range expected {
-		got, err := ioutil.ReadFile(paths[i])
+		gotContents, err := ioutil.ReadFile(got[i])
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if !bytes.Equal(expected[i], got) {
+		if !bytes.Equal(expected[i], gotContents) {
 			t.Fatalf(
-				"expected:\n%s\ngot:\n%s", string(expected[i]), string(got),
+				"expected:\n%s\ngot:\n%s",
+				string(expected[i]),
+				string(gotContents),
 			)
 		}
 	}
