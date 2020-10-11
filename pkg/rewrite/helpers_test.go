@@ -10,6 +10,27 @@ import (
 	"testing"
 )
 
+func assertRewrittenFiles(t *testing.T, expected [][]byte, paths []string) {
+	t.Helper()
+
+	if len(expected) != len(paths) {
+		t.Fatalf("expected %d contents, got %d", len(expected), len(paths))
+	}
+
+	for i := range expected {
+		got, err := ioutil.ReadFile(paths[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !bytes.Equal(expected[i], got) {
+			t.Fatalf(
+				"expected:\n%s\ngot:\n%s", string(expected[i]), string(got),
+			)
+		}
+	}
+}
+
 func assertOriginalContentsEqualPathContents(
 	t *testing.T,
 	expected [][]byte,
@@ -22,6 +43,15 @@ func assertOriginalContentsEqualPathContents(
 			t.Fatalf("expected %s, got %s", expected[i], got[i])
 		}
 	}
+}
+
+func makeTempDirInCurrentDir(t *testing.T) string {
+	t.Helper()
+
+	tempDir := generateUUID(t)
+	makeDir(t, tempDir)
+
+	return tempDir
 }
 
 func writeFile(t *testing.T, path string, contents []byte) {

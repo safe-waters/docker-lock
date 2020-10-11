@@ -3,7 +3,6 @@ package rewrite_test
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -330,8 +329,7 @@ from golang
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := generateUUID(t)
-			makeDir(t, tempDir)
+			tempDir := makeTempDirInCurrentDir(t)
 			defer os.RemoveAll(tempDir)
 
 			var lockfile generate.Lockfile
@@ -355,8 +353,6 @@ from golang
 							tempDir, image.DockerfilePath,
 						)
 					}
-
-					image.Path = filepath.Join(tempDir, image.Path)
 				}
 				composefilePaths = append(composefilePaths, composefilePath)
 
@@ -366,9 +362,6 @@ from golang
 
 			dockerfileImagesWithTempDir := map[string][]*parse.DockerfileImage{}
 			for dockerfilePath, images := range lockfile.DockerfileImages {
-				for _, image := range images {
-					image.Path = filepath.Join(tempDir, image.Path)
-				}
 				uniqueDockerfilePaths[dockerfilePath] = struct{}{}
 
 				dockerfilePath = filepath.Join(tempDir, dockerfilePath)
@@ -402,11 +395,11 @@ from golang
 				ComposefileImages: composefileImagesWithTempDir,
 			}
 
-			lockfileBytes, err := json.Marshal(lockfileWithTempDir)
+			lockfileByt, err := json.Marshal(lockfileWithTempDir)
 			if err != nil {
 				t.Fatal(err)
 			}
-			reader := bytes.NewReader(lockfileBytes)
+			reader := bytes.NewReader(lockfileByt)
 
 			err = rewriter.RewriteLockfile(reader)
 
@@ -422,39 +415,12 @@ from golang
 				t.Fatal(err)
 			}
 
-			for i, rewrittenDockerfilePath := range tempDockerfilePaths {
-				rewrittenBytes, err := ioutil.ReadFile(rewrittenDockerfilePath)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				if !bytes.Equal(
-					test.ExpectedDockerfileContents[i], rewrittenBytes,
-				) {
-					t.Fatalf(
-						"expected:\n%s\ngot:\n%s",
-						string(test.ExpectedDockerfileContents[i]),
-						string(rewrittenBytes),
-					)
-				}
-			}
-
-			for i, rewrittenComposefilePath := range tempComposefilePaths {
-				rewrittenBytes, err := ioutil.ReadFile(rewrittenComposefilePath)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				if !bytes.Equal(
-					test.ExpectedComposefileContents[i], rewrittenBytes,
-				) {
-					t.Fatalf(
-						"expected:\n%s\ngot:\n%s",
-						string(test.ExpectedComposefileContents[i]),
-						string(rewrittenBytes),
-					)
-				}
-			}
+			assertRewrittenFiles(
+				t, test.ExpectedDockerfileContents, tempDockerfilePaths,
+			)
+			assertRewrittenFiles(
+				t, test.ExpectedComposefileContents, tempComposefilePaths,
+			)
 		})
 	}
 }
