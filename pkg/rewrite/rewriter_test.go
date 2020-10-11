@@ -18,17 +18,18 @@ func TestRewriter(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		Name                        string
-		ComposefileContents         [][]byte
-		DockerfileContents          [][]byte
-		ExpectedDockerfileContents  [][]byte
-		ExpectedComposefileContents [][]byte
-		LockfileContents            []byte
-		ShouldFail                  bool
+		Name       string
+		Contents   [][]byte
+		Expected   [][]byte
+		ShouldFail bool
 	}{
 		{
 			Name: "Composefile Overrides Dockerfile",
-			ComposefileContents: [][]byte{
+			Contents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
 				[]byte(`
 version: '3'
 
@@ -37,14 +38,7 @@ services:
     build: .
 `,
 				),
-			},
-			DockerfileContents: [][]byte{
 				[]byte(`
-from golang
-`,
-				),
-			},
-			LockfileContents: []byte(`
 {
 	"dockerfiles": {
 		"Dockerfile": [
@@ -68,27 +62,30 @@ from golang
 	}
 }
 `,
-			),
-			ExpectedComposefileContents: [][]byte{
+				),
+			},
+			Expected: [][]byte{
+				[]byte(`
+from golang:latest@sha256:golang
+`,
+				),
 				[]byte(`
 version: '3'
 
 services:
   svc:
     build: .
-`,
-				),
-			},
-			ExpectedDockerfileContents: [][]byte{
-				[]byte(`
-from golang:latest@sha256:golang
 `,
 				),
 			},
 		},
 		{
 			Name: "Duplicate Services Same Dockerfile Images",
-			ComposefileContents: [][]byte{
+			Contents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
 				[]byte(`
 version: '3'
 
@@ -99,14 +96,7 @@ services:
     build: .
 `,
 				),
-			},
-			DockerfileContents: [][]byte{
 				[]byte(`
-from golang
-`,
-				),
-			},
-			LockfileContents: []byte(`
 {
 	"composefiles": {
 		"docker-compose.yml": [
@@ -128,8 +118,13 @@ from golang
 	}
 }
 `,
-			),
-			ExpectedComposefileContents: [][]byte{
+				),
+			},
+			Expected: [][]byte{
+				[]byte(`
+from golang:latest@sha256:golang
+`,
+				),
 				[]byte(`
 version: '3'
 
@@ -138,46 +133,37 @@ services:
     build: .
   another-svc:
     build: .
-`,
-				),
-			},
-			ExpectedDockerfileContents: [][]byte{
-				[]byte(`
-from golang:latest@sha256:golang
 `,
 				),
 			},
 		},
 		{
 			Name: "Different Composefiles Same Dockerfile Images",
-			ComposefileContents: [][]byte{
-				[]byte(`
-version: '3'
-
-services:
-  svc:
-    build: .
-`,
-				),
-				[]byte(`
-version: '3'
-
-services:
-  svc:
-    build: .
-`,
-				),
-			},
-			DockerfileContents: [][]byte{
+			Contents: [][]byte{
 				[]byte(`
 from golang
 `,
 				),
-			},
-			LockfileContents: []byte(`
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+				[]byte(`
 {
 	"composefiles": {
-		"docker-compose-one.yml": [
+		"docker-compose-1.yml": [
 			{
 				"name": "golang",
 				"tag": "latest",
@@ -186,7 +172,7 @@ from golang
 				"service": "svc"
 			}
 		],
-		"docker-compose-two.yml": [
+		"docker-compose-2.yml": [
 			{
 				"name": "golang",
 				"tag": "latest",
@@ -198,35 +184,38 @@ from golang
 	}
 }
 `,
-			),
-			ExpectedComposefileContents: [][]byte{
-				[]byte(`
-version: '3'
-
-services:
-  svc:
-    build: .
-`,
-				),
-				[]byte(`
-version: '3'
-
-services:
-  svc:
-    build: .
-`,
 				),
 			},
-			ExpectedDockerfileContents: [][]byte{
+			Expected: [][]byte{
 				[]byte(`
 from golang:latest@sha256:golang
+`,
+				),
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
 `,
 				),
 			},
 		},
 		{
 			Name: "Duplicate Services Different Dockerfile Images",
-			ComposefileContents: [][]byte{
+			Contents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
 				[]byte(`
 version: '3'
 
@@ -237,14 +226,7 @@ services:
     build: .
 `,
 				),
-			},
-			DockerfileContents: [][]byte{
 				[]byte(`
-from golang
-`,
-				),
-			},
-			LockfileContents: []byte(`
 {
 	"composefiles": {
 		"docker-compose.yml": [
@@ -266,36 +248,34 @@ from golang
 	}
 }
 `,
-			),
+				),
+			},
 			ShouldFail: true,
 		},
 		{
 			Name: "Different Composefiles Different Dockerfile Images",
-			ComposefileContents: [][]byte{
-				[]byte(`
-version: '3'
-
-services:
-  svc:
-    build: .
-`,
-				),
-				[]byte(`
-version: '3'
-
-services:
-  svc:
-    build: .
-`,
-				),
-			},
-			DockerfileContents: [][]byte{
+			Contents: [][]byte{
 				[]byte(`
 from golang
 `,
 				),
-			},
-			LockfileContents: []byte(`
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+				[]byte(`
 {
 	"composefiles": {
 		"docker-compose-one.yml": [
@@ -319,13 +299,15 @@ from golang
 	}
 }
 `,
-			),
+				),
+			},
 			ShouldFail: true,
 		},
 	}
 
 	for _, test := range tests {
 		test := test
+
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
@@ -334,53 +316,48 @@ from golang
 
 			var lockfile generate.Lockfile
 			if err := json.Unmarshal(
-				test.LockfileContents, &lockfile,
+				test.Contents[len(test.Contents)-1], &lockfile,
 			); err != nil {
 				t.Fatal(err)
 			}
 
-			uniqueDockerfilePaths := map[string]struct{}{}
-
-			var composefilePaths []string
+			uniquePathsToWrite := map[string]struct{}{}
 
 			composefileImagesWithTempDir := map[string][]*parse.ComposefileImage{} // nolint: lll
 
 			for composefilePath, images := range lockfile.ComposefileImages {
 				for _, image := range images {
 					if image.DockerfilePath != "" {
-						uniqueDockerfilePaths[image.DockerfilePath] = struct{}{}
+						uniquePathsToWrite[image.DockerfilePath] = struct{}{}
 						image.DockerfilePath = filepath.Join(
 							tempDir, image.DockerfilePath,
 						)
 					}
 				}
-				composefilePaths = append(composefilePaths, composefilePath)
+				uniquePathsToWrite[composefilePath] = struct{}{}
 
 				composefilePath = filepath.Join(tempDir, composefilePath)
 				composefileImagesWithTempDir[composefilePath] = images
 			}
 
 			dockerfileImagesWithTempDir := map[string][]*parse.DockerfileImage{}
+
 			for dockerfilePath, images := range lockfile.DockerfileImages {
-				uniqueDockerfilePaths[dockerfilePath] = struct{}{}
+				uniquePathsToWrite[dockerfilePath] = struct{}{}
 
 				dockerfilePath = filepath.Join(tempDir, dockerfilePath)
 				dockerfileImagesWithTempDir[dockerfilePath] = images
 			}
 
-			var dockerfilePaths []string
-			for dockerfilePath := range uniqueDockerfilePaths {
-				dockerfilePaths = append(dockerfilePaths, dockerfilePath)
+			var pathsToWrite []string
+			for path := range uniquePathsToWrite {
+				pathsToWrite = append(pathsToWrite, path)
 			}
 
-			sort.Strings(dockerfilePaths)
-			sort.Strings(composefilePaths)
+			sort.Strings(pathsToWrite)
 
-			tempDockerfilePaths := writeFilesToTempDir(
-				t, tempDir, dockerfilePaths, test.DockerfileContents,
-			)
-			tempComposefilePaths := writeFilesToTempDir(
-				t, tempDir, composefilePaths, test.ComposefileContents,
+			got := writeFilesToTempDir(
+				t, tempDir, pathsToWrite, test.Contents[:len(test.Contents)-1],
 			)
 
 			flags := &cmd_rewrite.Flags{TempDir: tempDir}
@@ -415,12 +392,7 @@ from golang
 				t.Fatal(err)
 			}
 
-			assertWrittenFiles(
-				t, test.ExpectedDockerfileContents, tempDockerfilePaths,
-			)
-			assertWrittenFiles(
-				t, test.ExpectedComposefileContents, tempComposefilePaths,
-			)
+			assertWrittenFiles(t, test.Expected, got)
 		})
 	}
 }
