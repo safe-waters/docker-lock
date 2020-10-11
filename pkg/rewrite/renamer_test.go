@@ -1,7 +1,6 @@
 package rewrite_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -40,48 +39,52 @@ func TestRenamer(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := generateUUID(t)
-			makeDir(t, tempDir)
+			tempDir := makeTempDirInCurrentDir(t)
 			defer os.RemoveAll(tempDir)
 
 			renamer := &rewrite.Renamer{}
 
+			var paths []string
+
+			var originalPaths []string
+
+			var originalContents [][]byte
+
 			rewrittenPathsCh := make(
 				chan *write.WrittenPath, len(test.RewrittenPaths),
 			)
+			for _, rewrittenPath := range test.RewrittenPaths {
+				originalPaths = append(
+					originalPaths, rewrittenPath.OriginalPath,
+				)
+				originalContents = append(originalContents, []byte("original"))
 
-			for i, rewrittenPath := range test.RewrittenPaths {
+				paths = append(paths, rewrittenPath.Path)
+
 				rewrittenPath.OriginalPath = filepath.Join(
 					tempDir, rewrittenPath.OriginalPath,
 				)
 				rewrittenPath.Path = filepath.Join(tempDir, rewrittenPath.Path)
-				writeFile(
-					t, rewrittenPath.OriginalPath, []byte("original"),
-				)
-				writeFile(
-					t, rewrittenPath.Path, test.Expected[i],
-				)
 
 				rewrittenPathsCh <- rewrittenPath
 			}
 
 			close(rewrittenPathsCh)
 
+			writeFilesToTempDir(t, tempDir, originalPaths, originalContents)
+			writeFilesToTempDir(t, tempDir, paths, test.Expected)
+
 			if err := renamer.RenameFiles(rewrittenPathsCh); err != nil {
 				t.Fatal(err)
 			}
 
-			got := make([][]byte, len(test.RewrittenPaths))
+			var got []string
 
-			for i, rewrittenPath := range test.RewrittenPaths {
-				origByt, err := ioutil.ReadFile(rewrittenPath.OriginalPath)
-				if err != nil {
-					t.Fatal(err)
-				}
-				got[i] = origByt
+			for _, rewrittenPath := range test.RewrittenPaths {
+				got = append(got, rewrittenPath.OriginalPath)
 			}
 
-			assertOriginalContentsEqualPathContents(t, test.Expected, got)
+			assertWrittenFiles(t, test.Expected, got)
 		})
 	}
 }
