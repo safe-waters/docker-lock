@@ -33,14 +33,6 @@ func assertWrittenFiles(t *testing.T, expected [][]byte, got []string) {
 	}
 }
 
-func assertWrittenPaths(t *testing.T, expected []byte, got []byte) {
-	t.Helper()
-
-	if !bytes.Equal(expected, got) {
-		t.Fatalf("expected:%s\ngot:%s", string(expected), string(got))
-	}
-}
-
 func makeTempDirInCurrentDir(t *testing.T) string {
 	t.Helper()
 
@@ -55,7 +47,7 @@ func writeFilesToTempDir(
 	tempDir string,
 	fileNames []string,
 	fileContents [][]byte,
-) []string {
+) []string { // nolint: unparam
 	t.Helper()
 
 	if len(fileNames) != len(fileContents) {

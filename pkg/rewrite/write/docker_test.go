@@ -1,9 +1,9 @@
 package write_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
@@ -15,7 +15,6 @@ func TestDockerfileWriter(t *testing.T) {
 
 	tests := []struct {
 		Name        string
-		Paths       []string
 		Contents    [][]byte
 		Expected    [][]byte
 		PathImages  map[string][]*parse.DockerfileImage
@@ -23,8 +22,7 @@ func TestDockerfileWriter(t *testing.T) {
 		ShouldFail  bool
 	}{
 		{
-			Name:  "Single Dockerfile",
-			Paths: []string{"Dockerfile"},
+			Name: "Single Dockerfile",
 			Contents: [][]byte{
 				[]byte(`
 from busybox
@@ -70,8 +68,7 @@ FROM golang:latest@sha256:golang
 			},
 		},
 		{
-			Name:  "Multiple Dockerfiles",
-			Paths: []string{"Dockerfile-one", "Dockerfile-two"},
+			Name: "Multiple Dockerfiles",
 			Contents: [][]byte{
 				[]byte(`
 FROM busybox
@@ -85,69 +82,68 @@ FROM redis
 `),
 			},
 			PathImages: map[string][]*parse.DockerfileImage{
-				"Dockerfile-one": {
+				"Dockerfile-1": {
 					{
 						Image: &parse.Image{
 							Name:   "busybox",
 							Tag:    "latest",
-							Digest: "busybox-one",
+							Digest: "busybox-1",
 						},
 					},
 					{
 						Image: &parse.Image{
 							Name:   "redis",
 							Tag:    "latest",
-							Digest: "redis-one",
+							Digest: "redis-1",
 						},
 					},
 					{
 						Image: &parse.Image{
 							Name:   "golang",
 							Tag:    "latest",
-							Digest: "golang-one",
+							Digest: "golang-1",
 						},
 					},
 				},
-				"Dockerfile-two": {
+				"Dockerfile-2": {
 					{
 						Image: &parse.Image{
 							Name:   "golang",
 							Tag:    "latest",
-							Digest: "golang-two",
+							Digest: "golang-2",
 						},
 					},
 					{
 						Image: &parse.Image{
 							Name:   "busybox",
 							Tag:    "latest",
-							Digest: "busybox-two",
+							Digest: "busybox-2",
 						},
 					},
 					{
 						Image: &parse.Image{
 							Name:   "redis",
 							Tag:    "latest",
-							Digest: "redis-two",
+							Digest: "redis-2",
 						},
 					},
 				},
 			},
 			Expected: [][]byte{
 				[]byte(`
-FROM busybox:latest@sha256:busybox-one
-FROM redis:latest@sha256:redis-one
-FROM golang:latest@sha256:golang-one
+FROM busybox:latest@sha256:busybox-1
+FROM redis:latest@sha256:redis-1
+FROM golang:latest@sha256:golang-1
 `),
 				[]byte(`
-FROM golang:latest@sha256:golang-two
-FROM busybox:latest@sha256:busybox-two
-FROM redis:latest@sha256:redis-two
+FROM golang:latest@sha256:golang-2
+FROM busybox:latest@sha256:busybox-2
+FROM redis:latest@sha256:redis-2
 `),
 			},
 		},
 		{
-			Name:  "Exclude Tags",
-			Paths: []string{"Dockerfile"},
+			Name: "Exclude Tags",
 			Contents: [][]byte{
 				[]byte(`
 FROM busybox
@@ -190,8 +186,7 @@ FROM golang@sha256:golang
 			},
 		},
 		{
-			Name:  "Stages",
-			Paths: []string{"Dockerfile"},
+			Name: "Stages",
 			Contents: [][]byte{
 				[]byte(`
 FROM busybox AS base
@@ -235,8 +230,7 @@ FROM golang:latest@sha256:golang
 			},
 		},
 		{
-			Name:  "Fewer Images In Dockerfile",
-			Paths: []string{"Dockerfile"},
+			Name: "Fewer Images In Dockerfile",
 			Contents: [][]byte{
 				[]byte(`
 FROM busybox
@@ -263,8 +257,7 @@ FROM busybox
 			ShouldFail: true,
 		},
 		{
-			Name:  "More Images In Dockerfile",
-			Paths: []string{"Dockerfile"},
+			Name: "More Images In Dockerfile",
 			Contents: [][]byte{
 				[]byte(`
 FROM busybox
@@ -292,67 +285,61 @@ FROM redis
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := generateUUID(t)
-			makeDir(t, tempDir)
+			tempDir := makeTempDirInCurrentDir(t)
 			defer os.RemoveAll(tempDir)
 
-			tempPaths := writeFilesToTempDir(
-				t, tempDir, test.Paths, test.Contents,
-			)
+			var pathsToWrite []string
 
-			tempDirPathImages := map[string][]*parse.DockerfileImage{}
+			tempPathImages := map[string][]*parse.DockerfileImage{}
 
 			for path, images := range test.PathImages {
-				tempDirPath := filepath.Join(tempDir, path)
-				tempDirPathImages[tempDirPath] = images
+				pathsToWrite = append(pathsToWrite, path)
+
+				path = filepath.Join(tempDir, path)
+				tempPathImages[path] = images
 			}
+
+			sort.Strings(pathsToWrite)
+
+			writeFilesToTempDir(
+				t, tempDir, pathsToWrite, test.Contents,
+			)
 
 			writer := &write.DockerfileWriter{
-				ExcludeTags: test.ExcludeTags, Directory: tempDir,
+				Directory:   tempDir,
+				ExcludeTags: test.ExcludeTags,
 			}
-
 			done := make(chan struct{})
-			writtenFiles := writer.WriteFiles(tempDirPathImages, done)
+			writtenPathResults := writer.WriteFiles(
+				tempPathImages, done,
+			)
 
-			for writtenPath := range writtenFiles {
-				if test.ShouldFail {
-					if writtenPath.Err == nil {
-						t.Fatal("expected error but did not get one")
-					}
+			var got []string
 
-					return
-				}
+			var err error
 
+			for writtenPath := range writtenPathResults {
 				if writtenPath.Err != nil {
-					t.Fatal(writtenPath.Err)
+					err = writtenPath.Err
 				}
-
-				got, err := ioutil.ReadFile(writtenPath.Path)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				var expectedIndex int
-
-				var writtenPathFound bool
-				for _, path := range tempPaths {
-					if writtenPath.OriginalPath == path {
-						writtenPathFound = true
-						break
-					}
-					expectedIndex++
-				}
-
-				if !writtenPathFound {
-					t.Fatalf(
-						"rewrittenPath %s not found in %v",
-						writtenPath.OriginalPath,
-						tempPaths,
-					)
-				}
-
-				assertWrittenPaths(t, test.Expected[expectedIndex], got)
+				got = append(got, writtenPath.Path)
 			}
+
+			if test.ShouldFail {
+				if err == nil {
+					t.Fatal("expected error but did not get one")
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			sort.Strings(got)
+
+			assertWrittenFiles(t, test.Expected, got)
 		})
 	}
 }
