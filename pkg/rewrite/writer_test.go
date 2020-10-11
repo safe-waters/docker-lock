@@ -1,9 +1,9 @@
 package rewrite_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
@@ -15,12 +15,11 @@ func TestWriter(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		Name                string
-		AnyPathImages       *rewrite.AnyPathImages
-		ComposefileContents [][]byte
-		DockerfileContents  [][]byte
-		Expected            [][]byte
-		ShouldFail          bool
+		Name          string
+		AnyPathImages *rewrite.AnyPathImages
+		Contents      [][]byte
+		Expected      [][]byte
+		ShouldFail    bool
 	}{
 		{
 			Name: "Dockerfile And Composefile",
@@ -33,7 +32,6 @@ func TestWriter(t *testing.T) {
 								Tag:    "latest",
 								Digest: "golang",
 							},
-							Path: "Dockerfile",
 						},
 					},
 				},
@@ -45,25 +43,22 @@ func TestWriter(t *testing.T) {
 								Tag:    "latest",
 								Digest: "busybox",
 							},
-							Path:        "docker-compose.yml",
 							ServiceName: "svc-compose",
 						},
 					},
 				},
 			},
-			ComposefileContents: [][]byte{
+			Contents: [][]byte{
+				[]byte(`
+from golang
+`,
+				),
 				[]byte(`
 version: '3'
 
 services:
   svc-compose:
     image: busybox
-`,
-				),
-			},
-			DockerfileContents: [][]byte{
-				[]byte(`
-from golang
 `,
 				),
 			},
@@ -89,70 +84,49 @@ services:
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := generateUUID(t)
-			makeDir(t, tempDir)
+			tempDir := makeTempDirInCurrentDir(t)
 			defer os.RemoveAll(tempDir)
 
-			var dockerfilePaths []string
-			var composefilePaths []string
-
-			for path := range test.AnyPathImages.DockerfilePathImages {
-				dockerfilePaths = append(dockerfilePaths, path)
-			}
-
-			for path := range test.AnyPathImages.ComposefilePathImages {
-				composefilePaths = append(composefilePaths, path)
-			}
-
-			tempDockerfilePaths := writeFilesToTempDir(
-				t, tempDir, dockerfilePaths, test.DockerfileContents,
-			)
-			tempComposefilePaths := writeFilesToTempDir(
-				t, tempDir, composefilePaths, test.ComposefileContents,
-			)
-
-			tempPaths := make(
-				[]string,
-				len(tempDockerfilePaths)+len(tempComposefilePaths),
-			)
-
-			var i int
-
-			for _, tempPath := range tempDockerfilePaths {
-				tempPaths[i] = tempPath
-				i++
-			}
-
-			for _, tempPath := range tempComposefilePaths {
-				tempPaths[i] = tempPath
-				i++
-			}
+			uniquePathsToWrite := map[string]struct{}{}
 
 			tempAnyPaths := &rewrite.AnyPathImages{
 				DockerfilePathImages:  map[string][]*parse.DockerfileImage{},
 				ComposefilePathImages: map[string][]*parse.ComposefileImage{},
 			}
 
-			for path, images := range test.AnyPathImages.ComposefilePathImages {
+			for composefilePath, images := range test.AnyPathImages.ComposefilePathImages { // nolint: lll
 				for _, image := range images {
 					if image.DockerfilePath != "" {
+						uniquePathsToWrite[image.DockerfilePath] = struct{}{}
 						image.DockerfilePath = filepath.Join(
 							tempDir, image.DockerfilePath,
 						)
 					}
-					image.Path = filepath.Join(tempDir, image.Path)
 				}
-				tempPath := filepath.Join(tempDir, path)
-				tempAnyPaths.ComposefilePathImages[tempPath] = images
+
+				uniquePathsToWrite[composefilePath] = struct{}{}
+
+				composefilePath = filepath.Join(tempDir, composefilePath)
+				tempAnyPaths.ComposefilePathImages[composefilePath] = images
 			}
 
-			for path, images := range test.AnyPathImages.DockerfilePathImages {
-				for _, image := range images {
-					image.Path = filepath.Join(tempDir, image.Path)
-				}
-				tempPath := filepath.Join(tempDir, path)
-				tempAnyPaths.DockerfilePathImages[tempPath] = images
+			for dockerfilePath, images := range test.AnyPathImages.DockerfilePathImages { // nolint: lll
+				uniquePathsToWrite[dockerfilePath] = struct{}{}
+
+				dockerfilePath = filepath.Join(tempDir, dockerfilePath)
+				tempAnyPaths.DockerfilePathImages[dockerfilePath] = images
 			}
+
+			var pathsToWrite []string
+			for path := range uniquePathsToWrite {
+				pathsToWrite = append(pathsToWrite, path)
+			}
+
+			sort.Strings(pathsToWrite)
+
+			writeFilesToTempDir(
+				t, tempDir, pathsToWrite, test.Contents,
+			)
 
 			dockerfileWriter := &write.DockerfileWriter{
 				Directory: tempDir,
@@ -170,15 +144,15 @@ services:
 			}
 
 			done := make(chan struct{})
-			resultPaths := writer.WriteFiles(tempAnyPaths, done)
+			writtenPathResults := writer.WriteFiles(tempAnyPaths, done)
 
-			var writtenPaths []*write.WrittenPath
+			var writtenPaths []string
 
-			for rewrittenPath := range resultPaths {
-				if rewrittenPath.Err != nil {
-					err = rewrittenPath.Err
+			for writtenPath := range writtenPathResults {
+				if writtenPath.Err != nil {
+					err = writtenPath.Err
 				}
-				writtenPaths = append(writtenPaths, rewrittenPath)
+				writtenPaths = append(writtenPaths, writtenPath.Path)
 			}
 
 			if test.ShouldFail {
@@ -193,33 +167,9 @@ services:
 				t.Fatal(err)
 			}
 
-			for _, rewrittenPath := range writtenPaths {
-				got, err := ioutil.ReadFile(rewrittenPath.Path)
-				if err != nil {
-					t.Fatal(err)
-				}
+			sort.Strings(writtenPaths)
 
-				expectedIndex := -1
-
-				for i, path := range tempPaths {
-					if rewrittenPath.OriginalPath == path {
-						expectedIndex = i
-						break
-					}
-				}
-
-				if expectedIndex == -1 {
-					t.Fatalf(
-						"rewrittenPath %s not found in %v",
-						rewrittenPath.OriginalPath,
-						tempPaths,
-					)
-				}
-
-				assertWrittenPaths(
-					t, test.Expected[expectedIndex], got,
-				)
-			}
+			assertWrittenFiles(t, test.Expected, writtenPaths)
 		})
 	}
 }

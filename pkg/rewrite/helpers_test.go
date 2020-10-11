@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func assertRewrittenFiles(t *testing.T, expected [][]byte, paths []string) {
+func assertWrittenFiles(t *testing.T, expected [][]byte, paths []string) {
 	t.Helper()
 
 	if len(expected) != len(paths) {
@@ -88,14 +88,6 @@ func generateUUID(t *testing.T) string {
 	)
 
 	return uuid
-}
-
-func assertWrittenPaths(t *testing.T, expected []byte, got []byte) {
-	t.Helper()
-
-	if !bytes.Equal(expected, got) {
-		t.Fatalf("expected:%s\ngot:%s", string(expected), string(got))
-	}
 }
 
 func writeFilesToTempDir(

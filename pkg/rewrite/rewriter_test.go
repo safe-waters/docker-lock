@@ -415,10 +415,10 @@ from golang
 				t.Fatal(err)
 			}
 
-			assertRewrittenFiles(
+			assertWrittenFiles(
 				t, test.ExpectedDockerfileContents, tempDockerfilePaths,
 			)
-			assertRewrittenFiles(
+			assertWrittenFiles(
 				t, test.ExpectedComposefileContents, tempComposefilePaths,
 			)
 		})
