@@ -360,7 +360,10 @@ services:
 				t, tempDir, pathsToWrite, test.Contents[:len(test.Contents)-1],
 			)
 
-			flags := &cmd_rewrite.Flags{TempDir: tempDir}
+			flags, err := cmd_rewrite.NewFlags("", tempDir, false)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			rewriter, err := cmd_rewrite.SetupRewriter(flags)
 			if err != nil {

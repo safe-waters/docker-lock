@@ -1,10 +1,10 @@
-package verify_test
+package rewrite_test
 
 import (
 	"path/filepath"
 	"testing"
 
-	"github.com/safe-waters/docker-lock/cmd/verify"
+	"github.com/safe-waters/docker-lock/cmd/rewrite"
 )
 
 func TestFlags(t *testing.T) {
@@ -12,22 +12,20 @@ func TestFlags(t *testing.T) {
 
 	tests := []struct {
 		Name       string
-		Expected   *verify.Flags
+		Expected   *rewrite.Flags
 		ShouldFail bool
 	}{
 		{
 			Name: "Lockfile Name With Slashes",
-			Expected: &verify.Flags{
+			Expected: &rewrite.Flags{
 				LockfileName: filepath.Join("lockfile", "path"),
-				EnvPath:      ".env",
 			},
 			ShouldFail: true,
 		},
 		{
 			Name: "Normal",
-			Expected: &verify.Flags{
+			Expected: &rewrite.Flags{
 				LockfileName: "docker-lock.json",
-				EnvPath:      ".env",
 			},
 		},
 	}
@@ -38,10 +36,10 @@ func TestFlags(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := verify.NewFlags(
+			got, err := rewrite.NewFlags(
 				test.Expected.LockfileName,
-				test.Expected.ConfigPath,
-				test.Expected.EnvPath,
+				test.Expected.TempDir,
+				test.Expected.ExcludeTags,
 			)
 			if test.ShouldFail {
 				if err == nil {

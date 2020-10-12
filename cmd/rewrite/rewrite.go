@@ -26,7 +26,7 @@ func NewRewriteCmd() (*cobra.Command, error) {
 				return err
 			}
 
-			reader, err := os.Open(flags.LockfilePath)
+			reader, err := os.Open(flags.LockfileName)
 			if err != nil {
 				return err
 			}
@@ -36,7 +36,7 @@ func NewRewriteCmd() (*cobra.Command, error) {
 		},
 	}
 	rewriteCmd.Flags().StringP(
-		"lockfile-path", "l", "docker-lock.json", "Path to Lockfile",
+		"lockfile-name", "l", "docker-lock.json", "Lockfile to read from",
 	)
 	rewriteCmd.Flags().StringP(
 		"tempdir", "t", "",
@@ -81,14 +81,14 @@ func SetupRewriter(flags *Flags) (*rewrite.Rewriter, error) {
 // create Flags.
 func parseFlags(cmd *cobra.Command) (*Flags, error) {
 	var (
-		lockfilePath, tempDir string
+		lockfileName, tempDir string
 		excludeTags           bool
 		err                   error
 	)
 
 	switch viper.ConfigFileUsed() {
 	case "":
-		lockfilePath, err = cmd.Flags().GetString("lockfile-path")
+		lockfileName, err = cmd.Flags().GetString("lockfile-name")
 		if err != nil {
 			return nil, err
 		}
@@ -103,13 +103,13 @@ func parseFlags(cmd *cobra.Command) (*Flags, error) {
 			return nil, err
 		}
 	default:
-		lockfilePath = viper.GetString("lockfile-path")
+		lockfileName = viper.GetString("lockfile-name")
 		tempDir = viper.GetString("tempdir")
 		excludeTags = viper.GetBool("exclude-tags")
 	}
 
 	return &Flags{
-		LockfilePath: lockfilePath,
+		LockfileName: lockfileName,
 		TempDir:      tempDir,
 		ExcludeTags:  excludeTags,
 	}, nil
