@@ -172,7 +172,9 @@ func validateBaseDirectory(baseDir string) error {
 }
 
 func validateLockfileName(lockfileName string) error {
-	if strings.Contains(lockfileName, string(filepath.Separator)) {
+	lockfileName = filepath.Join(".", lockfileName)
+
+	if strings.ContainsAny(lockfileName, `/\`) {
 		return fmt.Errorf(
 			"'%s' lockfile-name cannot contain slashes", lockfileName,
 		)
