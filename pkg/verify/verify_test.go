@@ -1,64 +1,158 @@
 package verify_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
 	cmd_verify "github.com/safe-waters/docker-lock/cmd/verify"
+	"github.com/safe-waters/docker-lock/pkg/generate"
+	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 )
-
-var dTestDir = filepath.Join("testdata", "docker")  // nolint: gochecknoglobals
-var cTestDir = filepath.Join("testdata", "compose") // nolint: gochecknoglobals
 
 func TestVerifier(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		Name       string
-		Flags      *cmd_verify.Flags
+		Contents   [][]byte
 		ShouldFail bool
 	}{
 		{
 			Name: "Different Number of Images in Dockerfile",
-			Flags: &cmd_verify.Flags{
-				LockfilePath: filepath.Join(
-					dTestDir, "diffnumimages", "docker-lock.json",
+			Contents: [][]byte{
+				[]byte(`
+FROM busybox
+FROM busybox
+`,
 				),
-				EnvPath: ".env",
+				[]byte(`
+{
+	"dockerfiles": {
+		"Dockerfile": [
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "busybox"
+			}
+		]
+	}
+}
+`),
 			},
 			ShouldFail: true,
 		},
 		{
 			Name: "Different Digests in Dockerfile",
-			Flags: &cmd_verify.Flags{
-				LockfilePath: filepath.Join(
-					dTestDir, "diffdigests", "docker-lock.json",
+			Contents: [][]byte{
+				[]byte(`
+FROM busybox
+`,
 				),
-				EnvPath: ".env",
+				[]byte(`
+{
+	"dockerfiles": {
+		"Dockerfile": [
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "notbusybox"
+			}
+		]
+	}
+}
+`,
+				),
 			},
 			ShouldFail: true,
 		},
 		{
 			Name: "Different Number of Images in Composefile",
-			Flags: &cmd_verify.Flags{
-				LockfilePath: filepath.Join(
-					cTestDir, "diffnumimages", "docker-lock.json",
+			Contents: [][]byte{
+				[]byte(`
+version: '3'
+services:
+  svc-one:
+    image: busybox
+  svc-two:
+    image: busybox
+`,
 				),
-				EnvPath: ".env",
+				[]byte(`
+{
+	"composefiles": {
+		"docker-compose.yml": [
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "busybox",
+				"service": "svc-two"
+			}
+		]
+	}
+}
+`,
+				),
 			},
 			ShouldFail: true,
 		},
 		{
 			Name: "Different Digests in Composefile",
-			Flags: &cmd_verify.Flags{
-				LockfilePath: filepath.Join(
-					cTestDir, "diffdigests", "docker-lock.json",
+			Contents: [][]byte{
+				[]byte(`
+version: '3'
+services:
+  svc:
+    image: busybox
+`,
 				),
-				EnvPath: ".env",
+				[]byte(`
+{
+	"composefiles": {
+		"docker-compose.yml": [
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "notbusybox",
+				"service": "svc"
+			}
+		]
+	}
+}
+`,
+				),
 			},
 			ShouldFail: true,
+		},
+		{
+			Name: "Normal",
+			Contents: [][]byte{
+				[]byte(`
+version: '3'
+services:
+  svc:
+    image: busybox
+`,
+				),
+				[]byte(`
+{
+	"composefiles": {
+		"docker-compose.yml": [
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "busybox",
+				"service": "svc"
+			}
+		]
+	}
+}
+`,
+				),
+			},
 		},
 	}
 
@@ -68,9 +162,70 @@ func TestVerifier(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			var numNetworkCalls uint64
+			tempDir := makeTempDirInCurrentDir(t)
+			defer os.RemoveAll(tempDir)
 
-			server := mockServer(t, &numNetworkCalls)
+			var lockfile generate.Lockfile
+			if err := json.Unmarshal(
+				test.Contents[len(test.Contents)-1], &lockfile,
+			); err != nil {
+				t.Fatal(err)
+			}
+
+			uniquePathsToWrite := map[string]struct{}{}
+
+			composefileImagesWithTempDir := map[string][]*parse.ComposefileImage{} // nolint: lll
+
+			for composefilePath, images := range lockfile.ComposefileImages {
+				for _, image := range images {
+					if image.DockerfilePath != "" {
+						uniquePathsToWrite[image.DockerfilePath] = struct{}{}
+						image.DockerfilePath = filepath.Join(
+							tempDir, image.DockerfilePath,
+						)
+					}
+				}
+				uniquePathsToWrite[composefilePath] = struct{}{}
+
+				composefilePath = filepath.Join(tempDir, composefilePath)
+				composefileImagesWithTempDir[composefilePath] = images
+			}
+
+			dockerfileImagesWithTempDir := map[string][]*parse.DockerfileImage{}
+
+			for dockerfilePath, images := range lockfile.DockerfileImages {
+				uniquePathsToWrite[dockerfilePath] = struct{}{}
+
+				dockerfilePath = filepath.Join(tempDir, dockerfilePath)
+				dockerfileImagesWithTempDir[dockerfilePath] = images
+			}
+
+			var pathsToWrite []string
+			for path := range uniquePathsToWrite {
+				pathsToWrite = append(pathsToWrite, path)
+			}
+
+			pathsToWrite = append(pathsToWrite, "docker-lock.json")
+
+			lockfileWithTempDir := &generate.Lockfile{
+				DockerfileImages:  dockerfileImagesWithTempDir,
+				ComposefileImages: composefileImagesWithTempDir,
+			}
+
+			lockfileWithTempDirByt, err := json.Marshal(lockfileWithTempDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			test.Contents[len(test.Contents)-1] = lockfileWithTempDirByt
+
+			tempPaths := writeFilesToTempDir(
+				t, tempDir, pathsToWrite, test.Contents,
+			)
+
+			reader := bytes.NewReader(lockfileWithTempDirByt)
+
+			server := mockServer(t)
 			defer server.Close()
 
 			client := &registry.HTTPClient{
@@ -79,19 +234,27 @@ func TestVerifier(t *testing.T) {
 				TokenURL:    server.URL + "?scope=repository%s",
 			}
 
-			verifier, err := cmd_verify.SetupVerifier(client, test.Flags)
+			flags := &cmd_verify.Flags{
+				LockfilePath: tempPaths[len(tempPaths)-1],
+				EnvPath:      ".env",
+			}
+
+			verifier, err := cmd_verify.SetupVerifier(client, flags)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			reader, err := os.Open(test.Flags.LockfilePath)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer reader.Close()
+			err = verifier.VerifyLockfile(reader)
 
-			if err := verifier.VerifyLockfile(reader); err != nil &&
-				!test.ShouldFail {
+			if test.ShouldFail {
+				if err == nil {
+					t.Fatal("expected error but did not get one")
+				}
+
+				return
+			}
+
+			if err != nil {
 				t.Fatal(err)
 			}
 		})
