@@ -172,6 +172,12 @@ func validateBaseDirectory(baseDir string) error {
 }
 
 func validateLockfileName(lockfileName string) error {
+	if filepath.IsAbs(lockfileName) {
+		return fmt.Errorf(
+			"'%s' lockfile-name does not support absolute paths", lockfileName,
+		)
+	}
+
 	lockfileName = filepath.Join(".", lockfileName)
 
 	if strings.ContainsAny(lockfileName, `/\`) {
