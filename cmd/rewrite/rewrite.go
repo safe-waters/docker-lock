@@ -108,9 +108,5 @@ func parseFlags(cmd *cobra.Command) (*Flags, error) {
 		excludeTags = viper.GetBool("exclude-tags")
 	}
 
-	return &Flags{
-		LockfileName: lockfileName,
-		TempDir:      tempDir,
-		ExcludeTags:  excludeTags,
-	}, nil
+	return NewFlags(lockfileName, tempDir, excludeTags)
 }

@@ -19,6 +19,7 @@ func NewFlags(
 	tempDir string,
 	excludeTags bool,
 ) (*Flags, error) {
+	lockfileName = filepath.Join(".", lockfileName)
 	if err := validateLockfileName(lockfileName); err != nil {
 		return nil, err
 	}
