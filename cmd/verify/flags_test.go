@@ -1,0 +1,63 @@
+package verify_test
+
+import (
+	"path/filepath"
+	"testing"
+
+	"github.com/safe-waters/docker-lock/cmd/verify"
+)
+
+func TestFlags(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		Name       string
+		Expected   *verify.Flags
+		ShouldFail bool
+	}{
+		{
+			Name: "Lockfile Name With Slashes",
+			Expected: &verify.Flags{
+				LockfileName: filepath.Join("lockfile", "path"),
+				ConfigPath:   "",
+				EnvPath:      ".env",
+			},
+			ShouldFail: true,
+		},
+		{
+			Name: "Normal",
+			Expected: &verify.Flags{
+				LockfileName: "docker-lock.json",
+				ConfigPath:   "",
+				EnvPath:      ".env",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.Name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := verify.NewFlags(
+				test.Expected.LockfileName,
+				test.Expected.ConfigPath,
+				test.Expected.EnvPath,
+			)
+			if test.ShouldFail {
+				if err == nil {
+					t.Fatal("expected error but did not get one")
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			assertFlagsEqual(t, test.Expected, got)
+		})
+	}
+}

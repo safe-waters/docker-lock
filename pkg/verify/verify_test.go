@@ -235,7 +235,7 @@ services:
 			}
 
 			flags := &cmd_verify.Flags{
-				LockfilePath: tempPaths[len(tempPaths)-1],
+				LockfileName: tempPaths[len(tempPaths)-1],
 				EnvPath:      ".env",
 			}
 
