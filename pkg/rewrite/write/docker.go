@@ -167,7 +167,8 @@ func (d *DockerfileWriter) writeFile(
 		)
 	}
 
-	tempPath := strings.ReplaceAll(fmt.Sprintf("%s-*", path), "/", "-")
+	replacer := strings.NewReplacer("/", "-", "\\", "-")
+	tempPath := replacer.Replace(fmt.Sprintf("%s-*", path))
 
 	writtenFile, err := ioutil.TempFile(d.Directory, tempPath)
 	if err != nil {

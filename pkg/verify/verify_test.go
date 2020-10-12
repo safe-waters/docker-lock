@@ -180,14 +180,16 @@ services:
 				for _, image := range images {
 					if image.DockerfilePath != "" {
 						uniquePathsToWrite[image.DockerfilePath] = struct{}{}
-						image.DockerfilePath = filepath.Join(
-							tempDir, image.DockerfilePath,
+						image.DockerfilePath = filepath.ToSlash(
+							filepath.Join(tempDir, image.DockerfilePath),
 						)
 					}
 				}
 				uniquePathsToWrite[composefilePath] = struct{}{}
 
-				composefilePath = filepath.Join(tempDir, composefilePath)
+				composefilePath = filepath.ToSlash(
+					filepath.Join(tempDir, composefilePath),
+				)
 				composefileImagesWithTempDir[composefilePath] = images
 			}
 
@@ -196,7 +198,9 @@ services:
 			for dockerfilePath, images := range lockfile.DockerfileImages {
 				uniquePathsToWrite[dockerfilePath] = struct{}{}
 
-				dockerfilePath = filepath.Join(tempDir, dockerfilePath)
+				dockerfilePath = filepath.ToSlash(
+					filepath.Join(tempDir, dockerfilePath),
+				)
 				dockerfileImagesWithTempDir[dockerfilePath] = images
 			}
 
