@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  scripts:
+    image: dockerlocktestaccount/python@sha256:8c86ff78615ca1cd9468ebea06e0cfc2c487f05e588346b14e37b2fa183552b8
+  web:
+    build:
+      context: .
+      dockerfile: ./web/Dockerfile
+
+  database:
+    build: ./database

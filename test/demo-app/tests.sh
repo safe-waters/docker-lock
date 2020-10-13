@@ -18,9 +18,7 @@ function diff_files() {
     fi
 }
 
-function main() {
-    trap cleanup EXIT
-
+function run_generate_verify_tests() {
     echo "------ RUNNING GENERATE/VERIFY TESTS ------"
 
     echo "default"
@@ -74,14 +72,32 @@ function main() {
     diff_files docker-lock-composefile-globs.json docker-lock-composefile-globs-test.json
 
     echo "------ PASSED GENERATE/VERIFY TESTS ------"
+}
 
-    echo "------ RUNNING REWRITE TESTS ------"
+function run_rewrite_verify_tests() {
+    echo "------ RUNNING REWRITE/VERIFY TESTS ------"
 
     echo "default"
-    docker lock rewrite
-    diff_files docker-compose.yml docker-compose-rewrite.yml
+    docker lock rewrite --tempdir .
+    docker lock verify
+    diff_files docker-compose.yml docker-compose-rewrite.yaml
     diff_files web/Dockerfile web/Dockerfile-rewrite
     diff_files database/Dockerfile database/Dockerfile-rewrite
 
-    echo "------ PASSED REWRITE TESTS ------"
+    echo "--exclude-tags"
+    docker lock rewrite --tempdir . --exclude-tags
+    diff_files docker-compose.yml docker-compose-rewrite-exclude-tags.yaml
+    diff_files web/Dockerfile web/Dockerfile-rewrite-exclude-tags
+    diff_files database/Dockerfile database/Dockerfile-rewrite-exclude-tags
+
+    echo "------ PASSED REWRITE/VERIFY TESTS ------"
 }
+
+function main() {
+    trap cleanup EXIT
+
+    run_generate_verify_tests
+    run_rewrite_verify_tests
+}
+
+main
