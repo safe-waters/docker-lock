@@ -11,9 +11,9 @@ function diff_files() {
     local test_lockfile
 
     lockfile="${1}"
-    test_lockfie="${2}"
+    test_lockfile="${2}"
 
-    if ! diff docker-lock.json docker-lock-test.json; then
+    if ! diff "${lockfile}" "${test_lockfile}"; then
         exit 1
     fi
 }
@@ -37,7 +37,7 @@ function run_generate_verify_tests() {
     diff_files docker-lock-exclude-all-composefiles.json docker-lock-exclude-all-composefiles-test.json
 
     echo "--base-dir"
-    docker lock generate --lockfile-name docker-lock-base-dir-test.json
+    docker lock generate --base-dir web --lockfile-name docker-lock-base-dir-test.json
     docker lock verify --lockfile-name docker-lock-base-dir-test.json
     diff_files docker-lock-base-dir.json docker-lock-base-dir-test.json
 
@@ -80,13 +80,13 @@ function run_rewrite_verify_tests() {
     echo "default"
     docker lock rewrite --tempdir .
     docker lock verify
-    diff_files docker-compose.yml docker-compose-rewrite.yaml
+    diff_files docker-compose.yml docker-compose-rewrite.yml
     diff_files web/Dockerfile web/Dockerfile-rewrite
     diff_files database/Dockerfile database/Dockerfile-rewrite
 
     echo "--exclude-tags"
     docker lock rewrite --tempdir . --exclude-tags
-    diff_files docker-compose.yml docker-compose-rewrite-exclude-tags.yaml
+    diff_files docker-compose.yml docker-compose-rewrite-exclude-tags.yml
     diff_files web/Dockerfile web/Dockerfile-rewrite-exclude-tags
     diff_files database/Dockerfile database/Dockerfile-rewrite-exclude-tags
 
