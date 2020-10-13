@@ -1,5 +1,7 @@
 #! /usr/bin/env bash
 
+cd "$(dirname "$0")" || exit
+
 set -euo pipefail
 
 function cleanup() {
