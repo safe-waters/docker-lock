@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  scripts:
+    image: dockerlocktestaccount/python
+  web:
+    build:
+      context: .
+      dockerfile: ./web/Dockerfile
+
+  database:
+    build: ./database
