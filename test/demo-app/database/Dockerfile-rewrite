@@ -1,0 +1,5 @@
+FROM dockerlocktestaccount/golang:latest@sha256:0978cc067eb3f53901c00b70a024f182baa371bdfe7f35f3d64e56cab2471c4d AS base
+COPY . .
+FROM base AS final
+ADD . .
+FROM dockerlocktestaccount/ubuntu:focal@sha256:2e70e9c81838224b5311970dbf7ed16802fbfe19e7a70b3cbfa3d7522aa285b4
