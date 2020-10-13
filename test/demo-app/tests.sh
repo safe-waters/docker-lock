@@ -96,6 +96,8 @@ function run_rewrite_verify_tests() {
 function main() {
     trap cleanup EXIT
 
+    docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}" > /dev/null 2>&1
+
     run_generate_verify_tests
     run_rewrite_verify_tests
 }
