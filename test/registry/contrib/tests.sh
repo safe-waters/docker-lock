@@ -6,6 +6,6 @@ set -euo pipefail
 
 docker lock generate
 docker lock verify
-docker lock rewrite
+docker lock rewrite --tempdir .
 
 echo "------ PASSED CONTRIB TESTS ------"
