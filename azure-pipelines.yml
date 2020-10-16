@@ -19,6 +19,9 @@ jobs:
   pool:
     vmImage: ubuntu-18.04
   steps:
+  - bash: |
+      echo $(Build.Repository.Name)
+      exit 1
   - bash: docker build -t devcontainer ./.devcontainer
     displayName: Build Dev Container
 
