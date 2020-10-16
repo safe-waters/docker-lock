@@ -179,7 +179,6 @@ jobs:
       ./test/registry/contrib/tests.sh
       ./test/demo-app/tests.sh
     displayName: Run Integration Tests
-
     env:
       DOCKER_USERNAME: "$(DOCKER_USERNAME)"
       DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
@@ -209,4 +208,5 @@ jobs:
         echo "Skipping release because latest tag: ${latest_tag} already exists."
       fi
     displayName: Release if tag does not exist
-    env: "$(GITHUB_TOKEN)"
+    env:
+      GITHUB_TOKEN: "$(GITHUB_TOKEN)"
