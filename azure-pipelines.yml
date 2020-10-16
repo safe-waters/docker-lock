@@ -138,6 +138,7 @@ jobs:
   - bash: |
       set -euo pipefail
       mv "$(Pipeline.Workspace)/docker-lock_darwin_amd64/docker-lock" docker-lock
+      chmod +x docker-lock
       mkdir -p "${HOME}/.docker/cli-plugins/"
       mv docker-lock "${HOME}/.docker/cli-plugins/"
       export PATH="/usr/local/opt/gettext/bin:${PATH}"
@@ -171,6 +172,7 @@ jobs:
   - bash: |
       set -euo pipefail
       mv "$(Pipeline.Workspace)/docker-lock_linux_amd64/docker-lock" docker-lock
+      chmod +x docker-lock
       mkdir -p "${HOME}/.docker/cli-plugins/"
       mv docker-lock "${HOME}/.docker/cli-plugins/"
       ./test/registry/firstparty/tests.sh linux
