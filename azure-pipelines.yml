@@ -34,7 +34,7 @@ schedules:
   - bash: |
       set -euo pipefail
       curl -fsSL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | bash
-      mv ./bin/goreleaser /usr/local/bin
+      sudo mv ./bin/goreleaser /usr/local/bin
   - bash: |
       set -euo pipefail
       goreleaser build --snapshot
