@@ -92,7 +92,7 @@ in the future.
 [cli-plugin](https://github.com/docker/cli/issues/1534) for `docker` or as a
 standalone tool if you do not want to install the `docker` cli.
 Currently, `docker-lock` is offered as a precompiled binary in the
-[releases tab](https://github.com/safe-waters/docker-lock/releases) for
+[releases tab](https://github.com/safe-waters/docker-lock/releases)
 for a variety of operating systems and architectures.
 
 ## Cli-plugin
