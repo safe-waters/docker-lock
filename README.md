@@ -93,10 +93,7 @@ in the future.
 standalone tool if you do not want to install the `docker` cli.
 Currently, `docker-lock` is offered as a precompiled binary in the
 [releases tab](https://github.com/safe-waters/docker-lock/releases) for
-the following operating systems and architectures:
-* `GOOS=windows`, `GOARCH=amd64`
-* `GOOS=darwin`, `GOARCH=amd64`
-* `GOOS=linux`, `GOARCH=amd64`
+for a variety of operating systems and architectures.
 
 ## Cli-plugin
 Ensure `docker` cli version >= 19.03 is installed by running `docker --version`.
