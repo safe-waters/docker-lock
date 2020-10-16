@@ -14,17 +14,17 @@ schedules:
     - master
   always: true
 
-jobs:
-- job: Lint
-  pool:
-    vmImage: ubuntu-18.04
-  steps:
-  - bash: docker build -t devcontainer ./.devcontainer
-    displayName: Build Dev Container
-
-  - bash: docker run -v "${PWD}:/app" devcontainer /app/scripts/lint.sh
-    displayName: Run linters
-
+  # jobs:
+  # - job: Lint
+  #   pool:
+  #     vmImage: ubuntu-18.04
+  #   steps:
+  #   - bash: docker build -t devcontainer ./.devcontainer
+  #     displayName: Build Dev Container
+  # 
+  #   - bash: docker run -v "${PWD}:/app" devcontainer /app/scripts/lint.sh
+  #     displayName: Run linters
+  # 
 - job: Build
   dependsOn: Lint
   condition: succeeded()
