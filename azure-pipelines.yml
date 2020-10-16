@@ -203,15 +203,32 @@ jobs:
   steps:
   - bash: |
       set -euo pipefail
+      mkdir -p ~/.docker/cli-plugins
+      curl -fsSL https://github.com/docker/buildx/releases/download/v0.4.2/buildx-v0.4.2.linux-amd64 -o ~/.docker/cli-plugins/docker-buildx
+      chmod +x ~/.docker/cli-plugins/docker-buildx
+    displayName: Install docker buildx
+  - bash: |
+      set -euo pipefail
+      export DOCKER_CLI_EXPERIMENTAL=enabled
+      export DOCKER_BUILDKIT=1
+      sudo service docker restart
+      docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+      docker buildx create --use
+      go_version="$(go version | cut -d " " -f 3 | grep -oE "[0-9]+\.[0-9]+\.[0-9]+$")"
       latest_tag="$(git tag -l | tail -n 1)"
       latest_tag="${latest_tag/v}"
       if ! curl -fsSL "https://github.com/safe-waters/docker-lock/releases/download/v${latest_tag}/docker-lock_${latest_tag}_Linux_x86_64.tar.gz" -o /dev/null; then
         curl -fsSL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | bash
         sudo mv ./bin/goreleaser /usr/local/bin
+        echo "releasing version ${latest_tag} to github"
         goreleaser
+        echo "releasing version ${latest_tag} to dockerhub"
+        docker buildx build --build-arg GO_VERSION="${go_version}" --DOCKER_LOCK_IMAGE_TAG="${latest_tag}" --platform linux/amd64,linux/arm64 -t "safe-waters/docker-lock:${latest_tag}" .
       else
-        echo "Skipping release because latest tag: ${latest_tag} already exists."
+        echo "no new tag, skipping release to github"
+        echo "releasing version latest to dockerhub"
+        docker buildx build --build-arg GO_VERSION="${go_version}" --platform linux/amd64,linux/arm64 -t safe-waters/docker-lock .
       fi
-    displayName: Release if tag does not exist
+    displayName: Release to github and dockerhub
     env:
       GITHUB_TOKEN: "$(GITHUB_TOKEN)"

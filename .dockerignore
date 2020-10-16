@@ -1,1 +1,10 @@
-.vscode/
+# Ignore everything
+**
+
+# Allow files and directories
+!/pkg
+!/cmd
+!.git
+!.goreleaser.yml
+!go.mod
+!go.sum
