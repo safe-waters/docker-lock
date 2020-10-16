@@ -19,9 +19,6 @@ jobs:
   pool:
     vmImage: ubuntu-18.04
   steps:
-  - bash: |
-      echo $(Build.Repository.Name)
-      exit 1
   - bash: docker build -t devcontainer ./.devcontainer
     displayName: Build Dev Container
 
@@ -86,11 +83,13 @@ jobs:
   - download: current
     artifact: docker-lock_windows_amd64
     displayName: Download docker-lock_windows_amd64
+    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
 
   - script: |
       # $(Pipeline.Workspace) git bash bug, using cmd as workaround
       move "$(Pipeline.Workspace)\docker-lock_windows_amd64\docker-lock.exe" docker-lock.exe
     displayName: Move artifact to current directory
+    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
 
   - bash: |
       set -euo pipefail
@@ -101,7 +100,7 @@ jobs:
       ./test/registry/contrib/tests.sh
       ./test/demo-app/tests.sh
     displayName: Run Integration Tests
-
+    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
     env:
       DOCKER_USERNAME: "$(DOCKER_USERNAME)"
       DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
@@ -137,6 +136,7 @@ jobs:
   - download: current
     artifact: docker-lock_darwin_amd64
     displayName: Download docker-lock_darwin_amd64
+    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
 
   - bash: |
       set -euo pipefail
@@ -149,7 +149,7 @@ jobs:
       ./test/registry/contrib/tests.sh
       ./test/demo-app/tests.sh
     displayName: Run Integration Tests
-
+    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
     env:
       DOCKER_USERNAME: "$(DOCKER_USERNAME)"
       DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
@@ -171,6 +171,7 @@ jobs:
   - download: current
     artifact: docker-lock_linux_amd64
     displayName: Download docker-lock_linux_amd64
+    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
 
   - bash: |
       set -euo pipefail
@@ -182,6 +183,7 @@ jobs:
       ./test/registry/contrib/tests.sh
       ./test/demo-app/tests.sh
     displayName: Run Integration Tests
+    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
     env:
       DOCKER_USERNAME: "$(DOCKER_USERNAME)"
       DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
@@ -195,7 +197,7 @@ jobs:
   - TestWindows
   - TestMacOS
   - TestLinux
-  condition: and(succeeded('TestWindows'), succeeded('TestMacOS'), succeeded('TestLinux'))
+  condition: and(succeeded('TestWindows'), succeeded('TestMacOS'), succeeded('TestLinux'), eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock'))
   pool:
     vmImage: ubuntu-18.04
   steps:
