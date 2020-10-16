@@ -100,7 +100,7 @@ Ensure `docker` cli version >= 19.03 is installed by running `docker --version`.
 
 ### Linux / Mac
 * `mkdir -p ~/.docker/cli-plugins`
-* `curl -fsSL https://github.com/safe-waters/docker-lock/releases/download/v${VERSION}/docker-lock_${VERSION}_${OS}_${ARCH}.tar.gz" | tar -xz -C ~/.docker/cli-plugins`
+* `curl -fsSL "https://github.com/safe-waters/docker-lock/releases/download/v${VERSION}/docker-lock_${VERSION}_${OS}_${ARCH}.tar.gz" | tar -xz -C ~/.docker/cli-plugins`
 * `chmod +x ~/.docker/cli-plugins/docker-lock`
 
 ### Windows
