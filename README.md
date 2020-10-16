@@ -103,13 +103,13 @@ Ensure `docker` cli version >= 19.03 is installed by running `docker --version`.
 
 ### Linux / Mac
 * `mkdir -p ~/.docker/cli-plugins`
-* `curl -fsSL https://github.com/safe-waters/docker-lock/releases/download/{VERSION}/docker-lock-{OS} -o ~/.docker/cli-plugins/docker-lock`
+* `curl -fsSL https://github.com/safe-waters/docker-lock/releases/download/v${VERSION}/docker-lock_${VERSION}_${OS}_${ARCH}.tar.gz" | tar -xz -C ~/.docker/cli-plugins`
 * `chmod +x ~/.docker/cli-plugins/docker-lock`
 
 ### Windows
 * Create the folder `%USERPROFILE%\.docker\cli-plugins`
-* Download `docker-lock-windows.exe` from the releases page.
-* Rename the file `docker-lock.exe`
+* Download the Windows release from the releases page.
+* Unzip the release.
 * Move `docker-lock.exe` into `%USERPROFILE%\.docker\cli-plugins`
 
 To verify that `docker-lock` was installed as a cli-plugin, run

@@ -193,39 +193,20 @@ jobs:
   - TestWindows
   - TestMacOS
   - TestLinux
-  condition: and(succeeded('TestWindows'), succeeded('TestMacOS'), succeeded('TestLinux'))
+  condition: and(succeeded('TestWindows'), succeeded('TestMacOS'), succeeded('TestLinux'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
   pool:
     vmImage: ubuntu-18.04
   steps:
-  - download: current
-    artifact: docker-lock_linux_amd64
-    displayName: Download docker-lock_linux_amd64
-
-  - download: current
-    artifact: docker-lock_darwin_amd64
-    displayName: Download docker-lock_darwin_amd64
-
-  - download: current
-    artifact: docker-lock_windows_amd64
-    displayName: Download docker-lock_windows_amd64
-
-    # - bash: |
-    #     set -euo pipefail
-    #     latest_tag="$(git tag -l | tail -n 1)"
-    #     if ! curl -fsSL "https://github.com/safe-waters/docker-lock/releases/download/${latest_tag}/docker-lock_linux_amd64" -o /dev/null; then
-    #       echo "##vso[task.setVariable variable=release]true"
-    #     else
-    #       echo "Skipping release because latest tag: ${latest_tag} already exists."
-    #     fi
-    #   displayName: Check if should create github release
-
-    # - task: GithubRelease@0 
-    #   displayName: Create github release
-    #   condition: eq(variables.release, 'true')
-    #   inputs:
-    #     gitHubConnection: docker-lock-release
-    #     repositoryName: safe-waters/docker-lock
-    #     assets: |
-    #       $(Pipeline.Workspace)/docker-lock_linux_amd64/docker-lock_linux_amd64
-    #       $(Pipeline.Workspace)/docker-lock_darwin_amd64/docker-lock_darwin_amd64
-    #       $(Pipeline.Workspace)/docker-lock_windows_amd64/docker-lock_windows_amd64.exe
+  - bash: |
+      set -euo pipefail
+      latest_tag="$(git tag -l | tail -n 1)"
+      latest_tag="${latest_tag/v}"
+      if ! curl -fsSL "https://github.com/safe-waters/docker-lock/releases/download/v${latest_tag}/docker-lock_${latest_tag}_Linux_x86_64.tar.gz" -o /dev/null; then
+        curl -fsSL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | bash
+        sudo mv ./bin/goreleaser /usr/local/bin
+        goreleaser
+      else
+        echo "Skipping release because latest tag: ${latest_tag} already exists."
+      fi
+    displayName: Release if tag does not exist
+    env: "$(GITHUB_TOKEN)"
