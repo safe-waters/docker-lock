@@ -14,7 +14,7 @@ schedules:
     - master
   always: true
 
-  # jobs:
+jobs:
   # - job: Lint
   #   pool:
   #     vmImage: ubuntu-18.04
