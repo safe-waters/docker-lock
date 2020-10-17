@@ -125,18 +125,23 @@ docker-lock lock --help
 
 ## Docker Image
 * To run `docker-lock` as a Docker container, so you do not need to install
-anything (other than Docker):
+anything (other than Docker).
+* If you would like to use the container on Linux/Mac:
 ```
 docker run -v "${PWD}":/run safewaters/docker-lock:${VERSION} [commands]
 ```
-* If you leave off the `${VERSION}` tag, you will use the latest, nightly build.
-* If you would like the container to use your docker config on Linux:
+* If you would like to use the container on Windows:
 ```
-docker run -v "${HOME}/.docker/config.json":/.docker/config.json:ro -v "${PWD}":/run safewaters/docker-lock lock generate
+docker run -v "%cd%":/run safewaters/docker-lock:${VERSION} [commands]
+```
+* If you leave off the `${VERSION}` tag, you will use the latest, nightly build.
+* If you would like the container to use your docker config on Linux/Mac:
+```
+docker run -v "${HOME}/.docker/config.json":/.docker/config.json:ro -v "${PWD}":/run safewaters/docker-lock:${VERSION} [commands]
 ```
 * If you would like the container to use your docker config on Windows:
 ```
-docker run -v "%USERPROFILE%\.docker\config.json":/.docker/config.json:ro -v "${PWD}":/run safewaters/docker-lock lock generate
+docker run -v "%USERPROFILE%\.docker\config.json":/.docker/config.json:ro -v "${PWD}":/run safewaters/docker-lock:${VERSION} [commands]
 ```
 > Note: If your host machine uses a credential helper such as osxkeychain,
 > wincred, or pass, the credentials will not be available to the container
