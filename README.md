@@ -87,13 +87,11 @@ At this point, the Dockerfile will contain all of the digest information
 from the Lockfile, so it will always maintain the same, known behavior 
 in the future.
 
-# Install Pre-built Binary
+# Install
 `docker-lock` can be installed as a
-[cli-plugin](https://github.com/docker/cli/issues/1534) for `docker` or as a
-standalone tool if you do not want to install the `docker` cli.
-Currently, `docker-lock` is offered as a precompiled binary in the
-[releases tab](https://github.com/safe-waters/docker-lock/releases)
-for a variety of operating systems and architectures.
+[cli-plugin](https://github.com/docker/cli/issues/1534) for `docker`, as a
+standalone tool if you do not want to install the `docker` cli, or as a
+docker image.
 
 ## Cli-plugin
 Ensure `docker` cli version >= 19.03 is installed by running `docker --version`.
@@ -114,13 +112,6 @@ To verify that `docker-lock` was installed as a cli-plugin, run
 docker lock --help
 ```
 
-You can also see that `docker` is aware of `docker-lock` by running:
-```
-docker
-```
-and ensuring `lock` is output as a management command, like so:
-![CLI Install](./docs/assets/docker-cli-install.png)
-
 ## Standalone tool
 * Follow the same instructions as in the
 [cli-plugin section](#cli-plugin) except place the `docker-lock` executable in
@@ -130,6 +121,18 @@ the name of the executable, `docker-lock`, as in `docker-lock lock`.
 * To verify that `docker-lock` was installed, run:
 ```
 docker-lock lock --help
+```
+
+## Docker Image
+* To run `docker-lock` as a Docker container, so you do not need to install
+anything (other than Docker):
+```
+docker run -v "${PWD}":/run safe-waters/docker-lock:${VERSION} [commands]
+```
+* If you leave off the `${VERSION}` tag, you will use the nightly build.
+* If you would like the container to use your docker config:
+```
+docker run -v ~/.docker/config.json:/root/.docker/config.json:ro -v "${PWD}":/run safe-waters/docker-lock:${VERSION} [commands]
 ```
 
 # Build From Source
