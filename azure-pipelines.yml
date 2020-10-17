@@ -233,10 +233,10 @@ jobs:
         docker buildx build --build-arg GO_VERSION="${go_version}" --DOCKER_LOCK_IMAGE_TAG="${latest_tag}" --platform linux/amd64,linux/arm64 -t "safe-waters/docker-lock:${latest_tag}" .
       fi
       echo "no new tag, skipping release to github"
-      if [[ "$(Build.SourceBranch)" == 'refs/heads/master' ]]; then
-        echo "releasing version latest to dockerhub"
-        docker buildx build --build-arg GO_VERSION="${go_version}" --platform linux/amd64,linux/arm64 -t safe-waters/docker-lock .
-      fi
+      # if [[ "$(Build.SourceBranch)" == 'refs/heads/master' ]]; then
+      echo "releasing version latest to dockerhub"
+      docker buildx build --build-arg GO_VERSION="${go_version}" --platform linux/amd64,linux/arm64 -t safe-waters/docker-lock .
+      # fi
     displayName: Release to github and dockerhub
     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
     env:
