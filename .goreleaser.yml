@@ -17,6 +17,7 @@ builds:
       - amd64
       - arm
       - arm64
+      - 386
     goarm:
       - 6
       - 7
@@ -29,6 +30,7 @@ archives:
       linux: Linux
       windows: Windows
       amd64: x86_64
+      386: x86_32
     format: tar.gz
     format_overrides:
       - goos: windows

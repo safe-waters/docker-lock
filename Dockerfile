@@ -2,7 +2,8 @@ FROM alpine AS build
 ARG TARGETPLATFORM
 WORKDIR build
 COPY dist/ dist/
-RUN TARGETPLATFORM="${TARGETPLATFORM/\//_}" && \
+RUN TARGETPLATFORM="${TARGETPLATFORM//\//_}" && \
+    TARGETPLATFORM="${TARGETPLATFORM//v/}" && \
     mkdir prod && \
     mv "dist/docker-lock_${TARGETPLATFORM}/docker-lock" prod/
 

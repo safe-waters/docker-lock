@@ -229,13 +229,13 @@ jobs:
         echo "releasing version ${latest_tag} to github"
         goreleaser
         echo "releasing version ${latest_tag} to dockerhub"
-        docker buildx build --platform linux/amd64,linux/arm64 -t "safe-waters/docker-lock:${latest_tag}" .
+        docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/386 -t "safe-waters/docker-lock:${latest_tag}" .
       fi
       echo "no new tag, skipping release to github"
       # if [[ "$(Build.SourceBranch)" == 'refs/heads/master' ]]; then
       echo "releasing version latest to dockerhub"
       goreleaser build --snapshot
-      docker buildx build --platform linux/amd64,linux/arm64 -t safe-waters/docker-lock .
+      docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/386 -t safe-waters/docker-lock .
       # fi
     displayName: Release to github and dockerhub
     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
