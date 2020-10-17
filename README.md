@@ -124,7 +124,7 @@ docker-lock lock --help
 ```
 
 ## Docker Image
-* Instead of installing docker-lock on your machine, you can use a container
+* Instead of installing `docker-lock` on your machine, you can use a container
 hosted on Dockerhub
 * If you would like to use the container on Linux/Mac:
 ```
