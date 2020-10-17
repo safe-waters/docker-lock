@@ -1,14 +1,8 @@
-ARG GO_VERSION=1.15.0
-FROM golang:${GO_VERSION} AS build
-SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
-WORKDIR /build
-ARG DOCKER_LOCK_IMAGE_TAG=latest
+FROM alpine AS build
 ARG TARGETPLATFORM
-COPY . .
-RUN curl -fsSL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | bash && \
-    mv ./bin/goreleaser /usr/local/bin && \
-    if [[ "${DOCKER_LOCK_IMAGE_TAG}" == "latest" ]]; then goreleaser build --snapshot; else goreleaser build; fi && \
-    TARGETPLATFORM="${TARGETPLATFORM/\//_}" && \
+WORKDIR build
+COPY dist/ dist/
+RUN TARGETPLATFORM="${TARGETPLATFORM/\//_}" && \
     mkdir prod && \
     mv "dist/docker-lock_${TARGETPLATFORM}/docker-lock" prod/
 
