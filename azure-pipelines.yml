@@ -232,11 +232,11 @@ jobs:
         docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/386 -t "safewaters/docker-lock:${latest_tag}" .
       fi
       echo "no new tag, skipping release to github"
-      # if [[ "$(Build.SourceBranch)" == 'refs/heads/master' ]]; then
-      echo "releasing version latest to dockerhub"
-      goreleaser build --snapshot
-      docker buildx build --push --platform linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/386 -t safewaters/docker-lock .
-      # fi
+      if [[ "$(Build.SourceBranch)" == 'refs/heads/master' ]]; then
+        echo "releasing version latest to dockerhub"
+        goreleaser build --snapshot
+        docker buildx build --push --platform linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/386 -t safewaters/docker-lock .
+      fi
     displayName: Release to github and dockerhub
     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
     env:
