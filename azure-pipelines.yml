@@ -223,9 +223,9 @@ jobs:
       docker buildx create --use
       latest_tag="$(git tag -l | tail -n 1)"
       latest_tag="${latest_tag/v}"
+      curl -fsSL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | bash
+      sudo mv ./bin/goreleaser /usr/local/bin
       if ! curl -fsSL "https://github.com/safe-waters/docker-lock/releases/download/v${latest_tag}/docker-lock_${latest_tag}_Linux_x86_64.tar.gz" -o /dev/null; then
-        curl -fsSL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | bash
-        sudo mv ./bin/goreleaser /usr/local/bin
         echo "releasing version ${latest_tag} to github"
         goreleaser
         echo "releasing version ${latest_tag} to dockerhub"
