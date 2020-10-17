@@ -6,10 +6,11 @@ ARG DOCKER_LOCK_IMAGE_TAG=latest
 ARG TARGETPLATFORM
 COPY . .
 RUN curl -fsSL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | bash && \
-     mv ./bin/goreleaser /usr/local/bin && \
-     if [[ "${DOCKER_LOCK_IMAGE_TAG}" == "latest" ]]; then goreleaser build --snapshot; else goreleaser build; fi
-RUN TARGETPLATFORM="${TARGETPLATFORM/\//_}" && \
-    mv "dist/docker-lock_${TARGETPLATFORM}/docker-lock" prod
+    mv ./bin/goreleaser /usr/local/bin && \
+    if [[ "${DOCKER_LOCK_IMAGE_TAG}" == "latest" ]]; then goreleaser build --snapshot; else goreleaser build; fi && \
+    TARGETPLATFORM="${TARGETPLATFORM/\//_}" && \
+    mkdir prod && \
+    mv "dist/docker-lock_${TARGETPLATFORM}/docker-lock" prod/
 
 FROM scratch AS prod
 ARG TARGETPLATFORM
