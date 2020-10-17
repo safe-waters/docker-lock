@@ -141,7 +141,7 @@ docker run -v "${HOME}/.docker/config.json":/.docker/config.json:ro -v "${PWD}":
 ```
 * If you would like the container to use your docker config on Windows:
 ```
-docker run -v "%USERPROFILE%\.docker\config.json":/.docker/config.json:ro -v "${PWD}":/run safewaters/docker-lock:${VERSION} [commands]
+docker run -v "%USERPROFILE%\.docker\config.json":/.docker/config.json:ro -v "%cd%":/run safewaters/docker-lock:${VERSION} [commands]
 ```
 > Note: If your host machine uses a credential helper such as osxkeychain,
 > wincred, or pass, the credentials will not be available to the container
