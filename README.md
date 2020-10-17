@@ -127,17 +127,19 @@ docker-lock lock --help
 * To run `docker-lock` as a Docker container, so you do not need to install
 anything (other than Docker):
 ```
-docker run -v "${PWD}":/run safe-waters/docker-lock:${VERSION} [commands]
+docker run -v "${PWD}":/run safewaters/docker-lock:${VERSION} [commands]
 ```
 * If you leave off the `${VERSION}` tag, you will use the latest, nightly build.
 * If you would like the container to use your docker config on Linux:
 ```
-docker run -v "${HOME}/.docker/config.json":/.docker/config.json:ro -v "${PWD}":/run safe-waters/docker-lock lock generate
+docker run -v "${HOME}/.docker/config.json":/.docker/config.json:ro -v "${PWD}":/run safewaters/docker-lock lock generate
 ```
 * If you would like the container to use your docker config on Windows:
 ```
-docker run -v "%USERPROFILE%\.docker\config.json":/.docker/config.json:ro -v "${PWD}":/run safe-waters/docker-lock lock generate
+docker run -v "%USERPROFILE%\.docker\config.json":/.docker/config.json:ro -v "${PWD}":/run safewaters/docker-lock lock generate
 ```
+> Note: If your host machine uses a credential helper such as osxkeychain,
+> wincred, or pass, the credentials will not be available to the container
 
 # Build From Source
 If you would like to install `docker-lock` from source, ensure `go` is
