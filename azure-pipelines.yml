@@ -227,14 +227,14 @@ jobs:
       sudo mv ./bin/goreleaser /usr/local/bin
       if ! curl -fsSL "https://github.com/safe-waters/docker-lock/releases/download/v${latest_tag}/docker-lock_${latest_tag}_Linux_x86_64.tar.gz" -o /dev/null; then
         echo "releasing version ${latest_tag} to github"
-        goreleaser
+        goreleaser --rm-dist
         echo "releasing version ${latest_tag} to dockerhub"
-        docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/386 -t "safewaters/docker-lock:${latest_tag}" .
+        docker buildx build --push --platform linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/386 -t "safewaters/docker-lock:${latest_tag}" .
       fi
       echo "no new tag, skipping release to github"
       if [[ "$(Build.SourceBranch)" == 'refs/heads/master' ]]; then
         echo "releasing version latest to dockerhub"
-        goreleaser build --snapshot
+        goreleaser build --rm-dist --snapshot
         docker buildx build --push --platform linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/386 -t safewaters/docker-lock .
       fi
     displayName: Release to github and dockerhub
