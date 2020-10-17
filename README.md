@@ -98,8 +98,8 @@ Ensure `docker` cli version >= 19.03 is installed by running `docker --version`.
 
 ### Linux / Mac
 * `mkdir -p ~/.docker/cli-plugins`
-* `curl -fsSL "https://github.com/safe-waters/docker-lock/releases/download/v${VERSION}/docker-lock_${VERSION}_${OS}_${ARCH}.tar.gz" | tar -xz -C ~/.docker/cli-plugins`
-* `chmod +x ~/.docker/cli-plugins/docker-lock`
+* `curl -fsSL "https://github.com/safe-waters/docker-lock/releases/download/v${VERSION}/docker-lock_${VERSION}_${OS}_${ARCH}.tar.gz" | tar -xz -C "${HOME}/.docker/cli-plugins"`
+* `chmod +x "${HOME}/.docker/cli-plugins/docker-lock"`
 
 ### Windows
 * Create the folder `%USERPROFILE%\.docker\cli-plugins`
@@ -129,10 +129,14 @@ anything (other than Docker):
 ```
 docker run -v "${PWD}":/run safe-waters/docker-lock:${VERSION} [commands]
 ```
-* If you leave off the `${VERSION}` tag, you will use the nightly build.
-* If you would like the container to use your docker config:
+* If you leave off the `${VERSION}` tag, you will use the latest, nightly build.
+* If you would like the container to use your docker config on Linux:
 ```
-docker run -v ~/.docker/config.json:/root/.docker/config.json:ro -v "${PWD}":/run safe-waters/docker-lock:${VERSION} [commands]
+docker run -v "${HOME}/.docker/config.json":/.docker/config.json:ro -v "${PWD}":/run safe-waters/docker-lock lock generate
+```
+* If you would like the container to use your docker config on Windows:
+```
+docker run -v "%USERPROFILE%\.docker\config.json":/.docker/config.json:ro -v "${PWD}":/run safe-waters/docker-lock lock generate
 ```
 
 # Build From Source
@@ -144,7 +148,7 @@ From the root of the project, run:
 go build ./cmd/docker-lock
 ```
 
-If on mac or linux, make the output binary executable:
+If on Mac or Linux, make the output binary executable:
 
 ```
 chmod +x docker-lock
