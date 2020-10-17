@@ -124,8 +124,8 @@ docker-lock lock --help
 ```
 
 ## Docker Image
-* To run `docker-lock` as a Docker container, so you do not need to install
-anything (other than Docker).
+* Instead of installing docker-lock on your machine, you can use a container
+hosted on Dockerhub
 * If you would like to use the container on Linux/Mac:
 ```
 docker run -v "${PWD}":/run safewaters/docker-lock:${VERSION} [commands]
