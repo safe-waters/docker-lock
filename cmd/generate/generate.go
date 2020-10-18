@@ -126,95 +126,18 @@ func SetupGenerator(
 }
 
 func parseFlags(cmd *cobra.Command) (*Flags, error) {
-	var (
-		baseDir, lockfileName, configPath, envPath  string
-		dockerfilePaths, composefilePaths           []string
-		dockerfileGlobs, composefileGlobs           []string
-		dockerfileRecursive, composefileRecursive   bool
-		dockerfileExcludeAll, composefileExcludeAll bool
-		err                                         error
-	)
-
-	switch viper.ConfigFileUsed() {
-	case "":
-		baseDir, err = cmd.Flags().GetString("base-dir")
-		if err != nil {
-			return nil, err
-		}
-
-		lockfileName, err = cmd.Flags().GetString("lockfile-name")
-		if err != nil {
-			return nil, err
-		}
-
-		configPath, err = cmd.Flags().GetString("config-file")
-		if err != nil {
-			return nil, err
-		}
-
-		envPath, err = cmd.Flags().GetString("env-file")
-		if err != nil {
-			return nil, err
-		}
-
-		dockerfilePaths, err = cmd.Flags().GetStringSlice("dockerfiles")
-		if err != nil {
-			return nil, err
-		}
-
-		composefilePaths, err = cmd.Flags().GetStringSlice("composefiles")
-		if err != nil {
-			return nil, err
-		}
-
-		dockerfileGlobs, err = cmd.Flags().GetStringSlice("dockerfile-globs")
-		if err != nil {
-			return nil, err
-		}
-
-		composefileGlobs, err = cmd.Flags().GetStringSlice("composefile-globs")
-		if err != nil {
-			return nil, err
-		}
-
-		dockerfileRecursive, err = cmd.Flags().GetBool("dockerfile-recursive")
-		if err != nil {
-			return nil, err
-		}
-
-		composefileRecursive, err = cmd.Flags().GetBool("composefile-recursive")
-		if err != nil {
-			return nil, err
-		}
-
-		dockerfileExcludeAll, err = cmd.Flags().GetBool(
-			"exclude-all-dockerfiles",
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		composefileExcludeAll, err = cmd.Flags().GetBool(
-			"exclude-all-composefiles",
-		)
-		if err != nil {
-			return nil, err
-		}
-
-	default:
-		baseDir = viper.GetString("base-dir")
-		lockfileName = viper.GetString("lockfile-name")
-		configPath = viper.GetString("config-file")
-		envPath = viper.GetString("env-file")
-		dockerfilePaths = viper.GetStringSlice("dockerfiles")
-		composefilePaths = viper.GetStringSlice("composefiles")
-		dockerfileGlobs = viper.GetStringSlice("dockerfile-globs")
-		composefileGlobs = viper.GetStringSlice("composefile-globs")
-		dockerfileRecursive = viper.GetBool("dockerfile-recursive")
-		composefileRecursive = viper.GetBool("composefile-recursive")
-		dockerfileExcludeAll = viper.GetBool("exclude-all-dockerfiles")
-		composefileExcludeAll = viper.GetBool("exclude-all-composefiles")
-	}
+	baseDir := viper.GetString("base-dir")
+	lockfileName := viper.GetString("lockfile-name")
+	configPath := viper.GetString("config-file")
+	envPath := viper.GetString("env-file")
+	dockerfilePaths := viper.GetStringSlice("dockerfiles")
+	composefilePaths := viper.GetStringSlice("composefiles")
+	dockerfileGlobs := viper.GetStringSlice("dockerfile-globs")
+	composefileGlobs := viper.GetStringSlice("composefile-globs")
+	dockerfileRecursive := viper.GetBool("dockerfile-recursive")
+	composefileRecursive := viper.GetBool("composefile-recursive")
+	dockerfileExcludeAll := viper.GetBool("exclude-all-dockerfiles")
+	composefileExcludeAll := viper.GetBool("exclude-all-composefiles")
 
 	return NewFlags(
 		baseDir, lockfileName, configPath, envPath,

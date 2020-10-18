@@ -114,32 +114,9 @@ func SetupVerifier(
 }
 
 func parseFlags(cmd *cobra.Command) (*Flags, error) {
-	var (
-		lockfileName, configPath, envPath string
-		err                               error
-	)
-
-	switch viper.ConfigFileUsed() {
-	case "":
-		lockfileName, err = cmd.Flags().GetString("lockfile-name")
-		if err != nil {
-			return nil, err
-		}
-
-		configPath, err = cmd.Flags().GetString("config-file")
-		if err != nil {
-			return nil, err
-		}
-
-		envPath, err = cmd.Flags().GetString("env-file")
-		if err != nil {
-			return nil, err
-		}
-	default:
-		lockfileName = viper.GetString("lockfile-name")
-		configPath = viper.GetString("config-file")
-		envPath = viper.GetString("env-file")
-	}
+	lockfileName := viper.GetString("lockfile-name")
+	configPath := viper.GetString("config-file")
+	envPath := viper.GetString("env-file")
 
 	return NewFlags(lockfileName, configPath, envPath)
 }

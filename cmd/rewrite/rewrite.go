@@ -80,33 +80,9 @@ func SetupRewriter(flags *Flags) (*rewrite.Rewriter, error) {
 // parseFlags gets values from the command and uses them to
 // create Flags.
 func parseFlags(cmd *cobra.Command) (*Flags, error) {
-	var (
-		lockfileName, tempDir string
-		excludeTags           bool
-		err                   error
-	)
-
-	switch viper.ConfigFileUsed() {
-	case "":
-		lockfileName, err = cmd.Flags().GetString("lockfile-name")
-		if err != nil {
-			return nil, err
-		}
-
-		tempDir, err = cmd.Flags().GetString("tempdir")
-		if err != nil {
-			return nil, err
-		}
-
-		excludeTags, err = cmd.Flags().GetBool("exclude-tags")
-		if err != nil {
-			return nil, err
-		}
-	default:
-		lockfileName = viper.GetString("lockfile-name")
-		tempDir = viper.GetString("tempdir")
-		excludeTags = viper.GetBool("exclude-tags")
-	}
+	lockfileName := viper.GetString("lockfile-name")
+	tempDir := viper.GetString("tempdir")
+	excludeTags := viper.GetBool("exclude-tags")
 
 	return NewFlags(lockfileName, tempDir, excludeTags)
 }
