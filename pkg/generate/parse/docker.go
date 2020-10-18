@@ -204,7 +204,9 @@ loop:
 	default:
 		// ubuntu
 		name = imageLine
-		tag = "latest"
+		if name != "scratch" {
+			tag = "latest"
+		}
 	}
 
 	return &Image{Name: name, Tag: tag, Digest: digest}

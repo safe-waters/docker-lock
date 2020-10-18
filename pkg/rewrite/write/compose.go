@@ -292,8 +292,8 @@ func (c *ComposefileWriter) filterComposefileServices(
 				)
 			}
 
-			serviceImageLines[image.ServiceName] = c.convertImageToImageLine(
-				image.Image,
+			serviceImageLines[image.ServiceName] = convertImageToImageLine(
+				image.Image, c.ExcludeTags,
 			)
 		}
 
@@ -440,17 +440,4 @@ func (c *ComposefileWriter) convertAbsToRelPath(
 	}
 
 	return filepath.ToSlash(relativePath), nil
-}
-
-func (c *ComposefileWriter) convertImageToImageLine(image *parse.Image) string {
-	switch {
-	case image.Tag == "" || c.ExcludeTags:
-		return fmt.Sprintf(
-			"%s@sha256:%s", image.Name, image.Digest,
-		)
-	default:
-		return fmt.Sprintf(
-			"%s:%s@sha256:%s", image.Name, image.Tag, image.Digest,
-		)
-	}
 }

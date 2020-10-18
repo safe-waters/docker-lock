@@ -100,6 +100,10 @@ func NewDockerWrapper(
 func (d *DockerWrapper) Digest(repo string, ref string) (string, error) {
 	// Docker-Content-Digest is the root of the hash chain
 	// https://github.com/docker/distribution/issues/1662
+	if repo == "scratch" {
+		return "", nil
+	}
+
 	var repos []string
 
 	if strings.Contains(repo, "/") {

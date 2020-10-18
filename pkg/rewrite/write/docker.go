@@ -137,8 +137,8 @@ func (d *DockerfileWriter) writeFile(
 					)
 				}
 
-				replacementImageLine := d.convertImageToImageLine(
-					images[imageIndex].Image,
+				replacementImageLine := convertImageToImageLine(
+					images[imageIndex].Image, d.ExcludeTags,
 				)
 				fields[imageLineIndex] = replacementImageLine
 				imageIndex++
@@ -183,9 +183,11 @@ func (d *DockerfileWriter) writeFile(
 	return writtenFile.Name(), err
 }
 
-func (d *DockerfileWriter) convertImageToImageLine(image *parse.Image) string {
+func convertImageToImageLine(image *parse.Image, excludeTags bool) string {
 	switch {
-	case image.Tag == "" || d.ExcludeTags:
+	case image.Name == "scratch":
+		return image.Name
+	case image.Tag == "" || excludeTags:
 		return fmt.Sprintf(
 			"%s@sha256:%s", image.Name, image.Digest,
 		)
