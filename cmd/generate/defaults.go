@@ -74,15 +74,9 @@ func DefaultImageParser(flags *Flags) (generate.IImageParser, error) {
 	if !flags.ComposefileFlags.ExcludePaths {
 		var err error
 
-		if dockerfileImageParser == nil {
-			composefileImageParser, err = parse.NewComposefileImageParser(
-				&parse.DockerfileImageParser{},
-			)
-		} else {
-			composefileImageParser, err = parse.NewComposefileImageParser(
-				dockerfileImageParser,
-			)
-		}
+		composefileImageParser, err = parse.NewComposefileImageParser(
+			dockerfileImageParser,
+		)
 
 		if err != nil {
 			return nil, err
