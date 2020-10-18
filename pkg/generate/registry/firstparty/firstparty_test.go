@@ -9,6 +9,8 @@ import (
 // TestDefaultWrapper ensures that the default wrapper
 // is one that can handle images without a prefix.
 func TestDefaultWrapper(t *testing.T) {
+	t.Parallel()
+
 	client := &registry.HTTPClient{}
 
 	wrapper, err := DefaultWrapper(client, "")

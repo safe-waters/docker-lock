@@ -9,6 +9,8 @@ import (
 // TestAllWrappers ensures that all wrappers maintained by the
 // community are returned.
 func TestAllWrappers(t *testing.T) {
+	t.Parallel()
+
 	client := &registry.HTTPClient{}
 
 	wrappers := AllWrappers(client, "")
