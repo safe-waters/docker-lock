@@ -40,17 +40,17 @@ func NewGenerateCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 			return generator.GenerateLockfile(writer)
 		},
 	}
-	generateCmd.Flags().StringP(
-		"base-dir", "b", ".", "Top level directory to collect files from",
+	generateCmd.Flags().String(
+		"base-dir", ".", "Top level directory to collect files from",
 	)
-	generateCmd.Flags().StringSliceP(
-		"dockerfiles", "d", []string{}, "Path to Dockerfiles",
+	generateCmd.Flags().StringSlice(
+		"dockerfiles", []string{}, "Path to Dockerfiles",
 	)
-	generateCmd.Flags().StringSliceP(
-		"composefiles", "c", []string{}, "Path to docker-compose files",
+	generateCmd.Flags().StringSlice(
+		"composefiles", []string{}, "Path to docker-compose files",
 	)
-	generateCmd.Flags().StringP(
-		"lockfile-name", "l", "docker-lock.json",
+	generateCmd.Flags().String(
+		"lockfile-name", "docker-lock.json",
 		"Lockfile name to be output in the current working directory",
 	)
 	generateCmd.Flags().StringSlice(
@@ -71,8 +71,8 @@ func NewGenerateCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 		"config-file", DefaultConfigPath(),
 		"Path to config file for auth credentials",
 	)
-	generateCmd.Flags().StringP(
-		"env-file", "e", ".env", "Path to .env file",
+	generateCmd.Flags().String(
+		"env-file", ".env", "Path to .env file",
 	)
 	generateCmd.Flags().Bool(
 		"exclude-all-dockerfiles", false,
