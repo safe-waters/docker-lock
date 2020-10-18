@@ -20,6 +20,9 @@ func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 	verifyCmd := &cobra.Command{
 		Use:   "verify",
 		Short: "Verify that a Lockfile is up-to-date",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return viper.BindPFlags(cmd.Flags())
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags, err := parseFlags()
 			if err != nil {
@@ -40,20 +43,16 @@ func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 			return verifier.VerifyLockfile(reader)
 		},
 	}
-	verifyCmd.Flags().StringP(
-		"lockfile-name", "l", "docker-lock.json", "Lockfile to read from",
+	verifyCmd.Flags().String(
+		"lockfile-name", "docker-lock.json", "Lockfile to read from",
 	)
 	verifyCmd.Flags().String(
 		"config-file", cmd_generate.DefaultConfigPath(),
 		"Path to config file for auth credentials",
 	)
-	verifyCmd.Flags().StringP(
-		"env-file", "e", ".env", "Path to .env file",
+	verifyCmd.Flags().String(
+		"env-file", ".env", "Path to .env file",
 	)
-
-	if err := viper.BindPFlags(verifyCmd.Flags()); err != nil {
-		return nil, err
-	}
 
 	return verifyCmd, nil
 }

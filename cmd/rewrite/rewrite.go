@@ -15,6 +15,9 @@ func NewRewriteCmd() (*cobra.Command, error) {
 	rewriteCmd := &cobra.Command{
 		Use:   "rewrite",
 		Short: "Rewrite files referenced by a Lockfile to use image digests",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return viper.BindPFlags(cmd.Flags())
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags, err := parseFlags()
 			if err != nil {
@@ -35,21 +38,17 @@ func NewRewriteCmd() (*cobra.Command, error) {
 			return rewriter.RewriteLockfile(reader)
 		},
 	}
-	rewriteCmd.Flags().StringP(
-		"lockfile-name", "l", "docker-lock.json", "Lockfile to read from",
+	rewriteCmd.Flags().String(
+		"lockfile-name", "docker-lock.json", "Lockfile to read from",
 	)
-	rewriteCmd.Flags().StringP(
-		"tempdir", "t", "",
+	rewriteCmd.Flags().String(
+		"tempdir", "",
 		"Directory where a temporary directory will be created/deleted "+
 			"during a rewrite transaction",
 	)
-	rewriteCmd.Flags().BoolP(
-		"exclude-tags", "e", false, "Exclude image tags from rewritten files",
+	rewriteCmd.Flags().Bool(
+		"exclude-tags", false, "Exclude image tags from rewritten files",
 	)
-
-	if err := viper.BindPFlags(rewriteCmd.Flags()); err != nil {
-		return nil, err
-	}
 
 	return rewriteCmd, nil
 }

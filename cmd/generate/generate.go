@@ -15,6 +15,9 @@ func NewGenerateCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 	generateCmd := &cobra.Command{
 		Use:   "generate",
 		Short: "Generate a Lockfile to track image digests",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return viper.BindPFlags(cmd.Flags())
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags, err := parseFlags()
 			if err != nil {
@@ -79,10 +82,6 @@ func NewGenerateCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 		"exclude-all-composefiles", false,
 		"Do not collect docker-compose files",
 	)
-
-	if err := viper.BindPFlags(generateCmd.Flags()); err != nil {
-		return nil, err
-	}
 
 	return generateCmd, nil
 }
