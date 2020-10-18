@@ -2,6 +2,7 @@
 package generate
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/safe-waters/docker-lock/pkg/generate"
@@ -10,13 +11,28 @@ import (
 	"github.com/spf13/viper"
 )
 
+const namespace = "generate"
+
 // NewGenerateCmd creates the command 'generate' used in 'docker lock generate'.
 func NewGenerateCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 	generateCmd := &cobra.Command{
 		Use:   "generate",
 		Short: "Generate a Lockfile to track image digests",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return viper.BindPFlags(cmd.Flags())
+			return bindPFlags(cmd, []string{
+				"base-dir",
+				"dockerfiles",
+				"composefiles",
+				"lockfile-name",
+				"dockerfile-globs",
+				"composefile-globs",
+				"dockerfile-recursive",
+				"composefile-recursive",
+				"config-file",
+				"env-file",
+				"exclude-all-dockerfiles",
+				"exclude-all-composefiles",
+			})
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags, err := parseFlags()
@@ -124,19 +140,55 @@ func SetupGenerator(
 	return generator, nil
 }
 
+func bindPFlags(cmd *cobra.Command, flagNames []string) error {
+	for _, name := range flagNames {
+		if err := viper.BindPFlag(
+			fmt.Sprintf("%s.%s", namespace, name), cmd.Flags().Lookup(name),
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func parseFlags() (*Flags, error) {
-	baseDir := viper.GetString("base-dir")
-	lockfileName := viper.GetString("lockfile-name")
-	configPath := viper.GetString("config-file")
-	envPath := viper.GetString("env-file")
-	dockerfilePaths := viper.GetStringSlice("dockerfiles")
-	composefilePaths := viper.GetStringSlice("composefiles")
-	dockerfileGlobs := viper.GetStringSlice("dockerfile-globs")
-	composefileGlobs := viper.GetStringSlice("composefile-globs")
-	dockerfileRecursive := viper.GetBool("dockerfile-recursive")
-	composefileRecursive := viper.GetBool("composefile-recursive")
-	dockerfileExcludeAll := viper.GetBool("exclude-all-dockerfiles")
-	composefileExcludeAll := viper.GetBool("exclude-all-composefiles")
+	baseDir := viper.GetString(
+		fmt.Sprintf("%s.%s", namespace, "base-dir"),
+	)
+	lockfileName := viper.GetString(
+		fmt.Sprintf("%s.%s", namespace, "lockfile-name"),
+	)
+	configPath := viper.GetString(
+		fmt.Sprintf("%s.%s", namespace, "config-file"),
+	)
+	envPath := viper.GetString(
+		fmt.Sprintf("%s.%s", namespace, "env-file"),
+	)
+	dockerfilePaths := viper.GetStringSlice(
+		fmt.Sprintf("%s.%s", namespace, "dockerfiles"),
+	)
+	composefilePaths := viper.GetStringSlice(
+		fmt.Sprintf("%s.%s", namespace, "composefiles"),
+	)
+	dockerfileGlobs := viper.GetStringSlice(
+		fmt.Sprintf("%s.%s", namespace, "dockerfile-globs"),
+	)
+	composefileGlobs := viper.GetStringSlice(
+		fmt.Sprintf("%s.%s", namespace, "composefile-globs"),
+	)
+	dockerfileRecursive := viper.GetBool(
+		fmt.Sprintf("%s.%s", namespace, "dockerfile-recursive"),
+	)
+	composefileRecursive := viper.GetBool(
+		fmt.Sprintf("%s.%s", namespace, "composefile-recursive"),
+	)
+	dockerfileExcludeAll := viper.GetBool(
+		fmt.Sprintf("%s.%s", namespace, "exclude-all-dockerfiles"),
+	)
+	composefileExcludeAll := viper.GetBool(
+		fmt.Sprintf("%s.%s", namespace, "exclude-all-composefiles"),
+	)
 
 	return NewFlags(
 		baseDir, lockfileName, configPath, envPath,
