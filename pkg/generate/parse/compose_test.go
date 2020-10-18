@@ -45,6 +45,28 @@ services:
 			},
 		},
 		{
+			Name:             "Scratch",
+			ComposefilePaths: []string{"docker-compose.yml"},
+			ComposefileContents: [][]byte{
+				[]byte(`
+version: '3'
+services:
+  svc:
+    image: scratch
+`),
+			},
+			Expected: []*parse.ComposefileImage{
+				{
+					Image: &parse.Image{
+						Name: "scratch",
+						Tag:  "",
+					},
+					Path:        "docker-compose.yml",
+					ServiceName: "svc",
+				},
+			},
+		},
+		{
 			Name:             "Build",
 			ComposefilePaths: []string{"docker-compose.yml"},
 			ComposefileContents: [][]byte{

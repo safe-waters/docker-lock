@@ -68,6 +68,30 @@ FROM golang:latest@sha256:golang
 			},
 		},
 		{
+			Name: "Scratch",
+			Contents: [][]byte{
+				[]byte(`
+FROM scratch
+`),
+			},
+			PathImages: map[string][]*parse.DockerfileImage{
+				"Dockerfile": {
+					{
+						Image: &parse.Image{
+							Name:   "scratch",
+							Tag:    "",
+							Digest: "",
+						},
+					},
+				},
+			},
+			Expected: [][]byte{
+				[]byte(`
+FROM scratch
+`),
+			},
+		},
+		{
 			Name: "Multiple Dockerfiles",
 			Contents: [][]byte{
 				[]byte(`

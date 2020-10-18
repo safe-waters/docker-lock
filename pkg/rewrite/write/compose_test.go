@@ -93,6 +93,41 @@ services:
 			},
 		},
 		{
+			Name: "Scratch",
+			Contents: [][]byte{
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    image: scratch
+`,
+				),
+			},
+			PathImages: map[string][]*parse.ComposefileImage{
+				"docker-compose.yml": {
+					{
+						Image: &parse.Image{
+							Name:   "scratch",
+							Tag:    "",
+							Digest: "",
+						},
+						ServiceName: "svc",
+					},
+				},
+			},
+			Expected: [][]byte{
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    image: scratch
+`,
+				),
+			},
+		},
+		{
 			Name: "Exclude Tags",
 			Contents: [][]byte{
 				[]byte(`

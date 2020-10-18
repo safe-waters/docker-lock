@@ -48,6 +48,22 @@ FROM node
 			},
 		},
 		{
+			Name:            "Scratch",
+			DockerfilePaths: []string{"Dockerfile"},
+			DockerfileContents: [][]byte{
+				[]byte(`
+FROM scratch
+`),
+			},
+			Expected: []*parse.DockerfileImage{
+				{
+					Image:    &parse.Image{Name: "scratch"},
+					Position: 0,
+					Path:     "Dockerfile",
+				},
+			},
+		},
+		{
 			Name:            "Digest",
 			DockerfilePaths: []string{"Dockerfile"},
 			DockerfileContents: [][]byte{
