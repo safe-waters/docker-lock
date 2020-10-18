@@ -21,7 +21,7 @@ func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 		Use:   "verify",
 		Short: "Verify that a Lockfile is up-to-date",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			flags, err := parseFlags(cmd)
+			flags, err := parseFlags()
 			if err != nil {
 				return err
 			}
@@ -113,7 +113,7 @@ func SetupVerifier(
 	return verify.NewVerifier(generator)
 }
 
-func parseFlags(cmd *cobra.Command) (*Flags, error) {
+func parseFlags() (*Flags, error) {
 	lockfileName := viper.GetString("lockfile-name")
 	configPath := viper.GetString("config-file")
 	envPath := viper.GetString("env-file")

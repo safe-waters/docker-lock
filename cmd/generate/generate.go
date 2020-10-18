@@ -16,7 +16,7 @@ func NewGenerateCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 		Use:   "generate",
 		Short: "Generate a Lockfile to track image digests",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			flags, err := parseFlags(cmd)
+			flags, err := parseFlags()
 			if err != nil {
 				return err
 			}
@@ -125,7 +125,7 @@ func SetupGenerator(
 	return generator, nil
 }
 
-func parseFlags(cmd *cobra.Command) (*Flags, error) {
+func parseFlags() (*Flags, error) {
 	baseDir := viper.GetString("base-dir")
 	lockfileName := viper.GetString("lockfile-name")
 	configPath := viper.GetString("config-file")
