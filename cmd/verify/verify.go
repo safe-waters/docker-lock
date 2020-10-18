@@ -4,6 +4,7 @@ package verify
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -15,13 +16,19 @@ import (
 	"github.com/spf13/viper"
 )
 
+const namespace = "verify"
+
 // NewVerifyCmd creates the command 'verify' used in 'docker lock verify'.
 func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 	verifyCmd := &cobra.Command{
 		Use:   "verify",
 		Short: "Verify that a Lockfile is up-to-date",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return viper.BindPFlags(cmd.Flags())
+			return bindPFlags(cmd, []string{
+				"lockfile-name",
+				"config-file",
+				"env-file",
+			})
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags, err := parseFlags()
@@ -112,10 +119,28 @@ func SetupVerifier(
 	return verify.NewVerifier(generator)
 }
 
+func bindPFlags(cmd *cobra.Command, flagNames []string) error {
+	for _, name := range flagNames {
+		if err := viper.BindPFlag(
+			fmt.Sprintf("%s.%s", namespace, name), cmd.Flags().Lookup(name),
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func parseFlags() (*Flags, error) {
-	lockfileName := viper.GetString("lockfile-name")
-	configPath := viper.GetString("config-file")
-	envPath := viper.GetString("env-file")
+	lockfileName := viper.GetString(
+		fmt.Sprintf("%s.%s", namespace, "lockfile-name"),
+	)
+	configPath := viper.GetString(
+		fmt.Sprintf("%s.%s", namespace, "config-file"),
+	)
+	envPath := viper.GetString(
+		fmt.Sprintf("%s.%s", namespace, "env-file"),
+	)
 
 	return NewFlags(lockfileName, configPath, envPath)
 }
