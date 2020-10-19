@@ -29,6 +29,7 @@ func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 				"config-file",
 				"env-file",
 				"ignore-missing-digests",
+				"exclude-tags",
 			})
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -64,6 +65,9 @@ func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 	verifyCmd.Flags().Bool(
 		"ignore-missing-digests", false,
 		"Do not fail if unable to find digests",
+	)
+	verifyCmd.Flags().Bool(
+		"exclude-tags", false, "Exclude image tags from verification",
 	)
 
 	return verifyCmd, nil
@@ -149,6 +153,11 @@ func parseFlags() (*Flags, error) {
 	ignoreMissingDigests := viper.GetBool(
 		fmt.Sprintf("%s.%s", namespace, "ignore-missing-digests"),
 	)
+	excludeTags := viper.GetBool(
+		fmt.Sprintf("%s.%s", namespace, "exclude-tags"),
+	)
 
-	return NewFlags(lockfileName, configPath, envPath, ignoreMissingDigests)
+	return NewFlags(
+		lockfileName, configPath, envPath, ignoreMissingDigests, excludeTags,
+	)
 }

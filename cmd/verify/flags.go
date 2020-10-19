@@ -12,6 +12,7 @@ type Flags struct {
 	ConfigPath           string
 	EnvPath              string
 	IgnoreMissingDigests bool
+	ExcludeTags          bool
 }
 
 // NewFlags returns Flags after validating its fields.
@@ -20,6 +21,7 @@ func NewFlags(
 	configPath string,
 	envPath string,
 	ignoreMissingDigests bool,
+	excludeTags bool,
 ) (*Flags, error) {
 	if err := validateLockfileName(lockfileName); err != nil {
 		return nil, err
@@ -30,6 +32,7 @@ func NewFlags(
 		ConfigPath:           configPath,
 		EnvPath:              envPath,
 		IgnoreMissingDigests: ignoreMissingDigests,
+		ExcludeTags:          excludeTags,
 	}, nil
 }
 

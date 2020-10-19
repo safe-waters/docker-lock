@@ -27,6 +27,7 @@ verify:
   env-file: .env
   lockfile-name: docker-lock.json
   ignore-missing-digests: false
+  exclude-tags: false
 
 # To learn more about each flag, run `docker lock rewrite --help`
 rewrite:

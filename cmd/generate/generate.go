@@ -1,4 +1,4 @@
-// Package lock provides the "generate" command.
+// Package generate provides the "generate" command.
 package generate
 
 import (
