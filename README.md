@@ -247,10 +247,10 @@ Elastic Search registry. These will just work -- no extra
 configuration is required.
 
 If you would like to add support for your own registry, see
-[Bring Your Own Registry](./docs/tutorials/bring-your-own-registry.md)
+[Bring Your Own Registry](./docs/tutorials/bring-your-own-registry.md).
 
 If you would like to use an internal registry, see
-[Using Internal Registries](./docs/tutorials/internal-registry.md)
+[Using Internal Registries](./docs/tutorials/internal-registry.md).
 
 # Contributing
 ## Development Environment
