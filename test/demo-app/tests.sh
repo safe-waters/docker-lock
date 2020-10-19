@@ -56,7 +56,7 @@ function run_generate_verify_tests() {
     echo "--dockerfile-recursive"
     docker lock generate --dockerfile-recursive --lockfile-name docker-lock-dockerfile-recursive-test.json
     docker lock verify --lockfile-name docker-lock-dockerfile-recursive-test.json
-    diff_files docker-lock-dockerfile-recursive.json docker-lock-dockerfile-recursive-test.json 
+    diff_files docker-lock-dockerfile-recursive.json docker-lock-dockerfile-recursive-test.json
 
     echo "--composefile-recursive"
     docker lock generate --composefile-recursive --lockfile-name docker-lock-composefile-recursive-test.json
@@ -64,15 +64,19 @@ function run_generate_verify_tests() {
     diff_files docker-lock-composefile-recursive.json docker-lock-composefile-recursive-test.json
 
     echo "--dockerfile-globs"
-    docker lock generate --dockerfile-globs 'web/*','database/*' --lockfile-name docker-lock-dockerfile-globs-test.json 
+    docker lock generate --dockerfile-globs 'web/*','database/*' --lockfile-name docker-lock-dockerfile-globs-test.json
     docker lock verify --lockfile-name docker-lock-dockerfile-globs-test.json
     diff_files docker-lock-dockerfile-globs.json docker-lock-dockerfile-globs-test.json
 
     echo "--composefile-globs"
-    docker lock generate --composefile-globs 'docker-compose*.yml' --lockfile-name docker-lock-composefile-globs-test.json 
+    docker lock generate --composefile-globs 'docker-compose*.yml' --lockfile-name docker-lock-composefile-globs-test.json
     docker lock verify --lockfile-name docker-lock-composefile-globs-test.json
     diff_files docker-lock-composefile-globs.json docker-lock-composefile-globs-test.json
 
+    echo "--ignore-missing-digests"
+    docker lock generate --ignore-missing-digests --dockerfiles "private/Dockerfile-errors" --lockfile-name docker-lock-ignore-missing-digests.json
+    docker lock verify --ignore-missing-digests --lockfile-name docker-lock-ignore-missing-digests-test.json
+    diff_files docker-lock-ignore-missing-digests.json docker-lock-ignore-missing-digests-test.json
     echo "------ PASSED GENERATE/VERIFY TESTS ------"
 }
 

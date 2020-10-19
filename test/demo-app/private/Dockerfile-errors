@@ -1,0 +1,2 @@
+FROM thisdoesnotexist
+FROM dockerlocktestaccount/busybox
