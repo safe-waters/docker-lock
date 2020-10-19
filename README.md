@@ -9,7 +9,7 @@
 `docker-lock` is a cli tool that automates managing image digests by tracking
 them in a separate Lockfile (think package-lock.json or Pipfile.lock). With
 `docker-lock`, you can refer to images in Dockerfiles or 
-docker-compose files by mutable tags (as in `python:3.6`) yet receive the same 
+`docker-compose` files by mutable tags (as in `python:3.6`) yet receive the same 
 benefits as if you had specified immutable digests (as in `python:3.6@sha256:25a189a536ae4d7c77dd5d0929da73057b85555d6b6f8a66bfbcc1a7a7de094b`).
 
 > Note: If you are unsure about the differences between tags and digests,
@@ -18,11 +18,11 @@ refer to this [quick summary](./docs/tutorials/tags-vs-digests.md).
 `docker-lock` ships with 3 commands that take you from development 
 to production:
 
-* `docker lock generate` finds base images in your Dockerfiles and docker-compose
+* `docker lock generate` finds base images in your Dockerfiles and `docker-compose`
 files and generates a Lockfile containing digests that correspond to their tags.
 * `docker lock verify` lets you know if there are more recent digests 
 than those last recorded in the Lockfile.
-* `docker lock rewrite` rewrites Dockerfiles and docker-compose files 
+* `docker lock rewrite` rewrites Dockerfiles and `docker-compose` files 
 to include digests.
 
 `docker-lock` ships with support for [Docker Hub](https://hub.docker.com/),
@@ -43,7 +43,7 @@ container technology such as [podman](https://podman.io/).
 
 # Demo
 Consider a project with a multi-stage build Dockerfile at its root:
-```
+```Dockerfile
 FROM ubuntu AS base
 # ...
 FROM mperel/log:v1
@@ -88,29 +88,26 @@ from the Lockfile, so it will always maintain the same, known behavior
 in the future.
 
 # Install
-`docker-lock` can be installed as a
-[cli-plugin](https://github.com/docker/cli/issues/1534) for `docker`, as a
-standalone tool if you do not want to install the `docker` cli, or as a
-docker image.
+`docker-lock` can be run as a
+* [cli-plugin](https://github.com/docker/cli/issues/1534) for `docker`
+* standalone executable without `docker`
+* prebuilt [container from Dockerhub](https://hub.docker.com/repository/docker/safewaters/docker-lock)
 
 ## Cli-plugin
 Ensure `docker` cli version >= 19.03 is installed by running `docker --version`.
 
 ### Linux / Mac
-* `mkdir -p ~/.docker/cli-plugins`
-* `curl -fsSL "https://github.com/safe-waters/docker-lock/releases/download/v${VERSION}/docker-lock_${VERSION}_${OS}_${ARCH}.tar.gz" | tar -xz -C "${HOME}/.docker/cli-plugins"`
-* `chmod +x "${HOME}/.docker/cli-plugins/docker-lock"`
+```bash
+$ mkdir -p ~/.docker/cli-plugins
+$ curl -fsSL "https://github.com/safe-waters/docker-lock/releases/download/v${VERSION}/docker-lock_${VERSION}_${OS}_${ARCH}.tar.gz" | tar -xz -C "${HOME}/.docker/cli-plugins"
+$ chmod +x "${HOME}/.docker/cli-plugins/docker-lock"
+```
 
 ### Windows
 * Create the folder `%USERPROFILE%\.docker\cli-plugins`
 * Download the Windows release from the releases page.
 * Unzip the release.
 * Move `docker-lock.exe` into `%USERPROFILE%\.docker\cli-plugins`
-
-To verify that `docker-lock` was installed as a cli-plugin, run
-```
-docker lock --help
-```
 
 ## Standalone tool
 * Follow the same instructions as in the
@@ -119,63 +116,72 @@ your `PATH`.
 * To use `docker-lock`, replace any `docker` command such as `docker lock` with
 the name of the executable, `docker-lock`, as in `docker-lock lock`.
 * To verify that `docker-lock` was installed, run:
-```
-docker-lock lock --help
-```
-
-## Docker Image
-* Instead of installing `docker-lock` on your machine, you can use a container
-hosted on Dockerhub
-* If you would like to use the container on Linux/Mac:
-```
-docker run -v "${PWD}":/run safewaters/docker-lock:${VERSION} [commands]
-```
-* If you would like to use the container on Windows:
-```
-docker run -v "%cd%":/run safewaters/docker-lock:${VERSION} [commands]
-```
-* If you leave off the `${VERSION}` tag, you will use the latest, nightly build.
-* If you would like the container to use your docker config on Linux/Mac:
-```
-docker run -v "${HOME}/.docker/config.json":/.docker/config.json:ro -v "${PWD}":/run safewaters/docker-lock:${VERSION} [commands]
-```
-* If you would like the container to use your docker config on Windows:
-```
-docker run -v "%USERPROFILE%\.docker\config.json":/.docker/config.json:ro -v "%cd%":/run safewaters/docker-lock:${VERSION} [commands]
-```
-> Note: If your host machine uses a credential helper such as osxkeychain,
-> wincred, or pass, the credentials will not be available to the container
-
-# Build From Source
-If you would like to install `docker-lock` from source, ensure `go` is
-installed or use the [supplied development container](#Development-Environment).
-From the root of the project, run:
-
-```
-go build ./cmd/docker-lock
+```bash
+$ docker-lock lock --help
 ```
 
-If on Mac or Linux, make the output binary executable:
+## Docker image
+* `docker-lock` can be run in a `docker` container, as below. If you leave off
+the `${VERSION}` tag, you will use the latest, nightly build from the master branch.
+> Note: If your host machine uses a credential helper such as `osxkeychain`,
+> `wincred`, or `pass`, the credentials will not be available to the container even
+> if you pass in your `docker` config.
+
+### Linux / Mac
+* Without your `docker` config:
+```bash
+$ docker run -v "${PWD}":/run safewaters/docker-lock:${VERSION} [commands]
+```
+* With your `docker` config:
+```bash
+$ docker run -v "${HOME}/.docker/config.json":/.docker/config.json:ro -v "${PWD}":/run safewaters/docker-lock:${VERSION} [commands]
+```
+### Windows
+* Without your `docker` config:
+```bash
+$ docker run -v "%cd%":/run safewaters/docker-lock:${VERSION} [commands]
+```
+* With your `docker` config:
+```bash
+$ docker run -v "%USERPROFILE%\.docker\config.json":/.docker/config.json:ro -v "%cd%":/run safewaters/docker-lock:${VERSION} [commands]
+```
+
+# Use
+## Command line flags
+`docker-lock` supports a variety of command line flags to customize behavior.
+
+For instance, by default, `docker-lock` looks for files named `Dockerfile`,
+`docker-compose.yaml`, and `docker-compose.yml` in the directory from which
+the command is run. However, you may want `docker-lock` to find all
+`Dockerfile`s in your project.
+
+To do so, you could specify the command line flag, `--dockerfile-recursive`,
+to the `generate` command as in:
 
 ```
-chmod +x docker-lock
+docker lock generate --dockerfile-recursive
 ```
 
-Finally, move the binary to the cli-plugins folder or add it to your PATH,
-as described in the [installation section](#Install-Pre-built-Binary).
-
-If you would like to cross-compile for another operating system
-or architecture, from the root of the project, run:
+To see available command line flags, run commands with `--help`. For instance:
 
 ```
-CGO_ENABLED=0 GOOS=<your os> GOARCH=<your arch> go build ./cmd/docker-lock
+docker lock --help
+docker lock generate --help
+docker lock verify --help
+docker lock rewrite --help
+docker lock version --help
 ```
+
+# Configuration File
+Instead of specifying command line flags, you can specify options in a
+configuration file, `.docker-lock.yml`, in the directory from which the
+command will be run. The root of this repo has an example,
+[.docker-lock.yml.example](./.docker-lock.yml.example).
 
 # Contributing
-
 ## Development Environment
 A development container based on `ubuntu:bionic` has been provided,
-so ensure docker is installed and the docker daemon is running.
+so ensure `docker` is installed and the `docker` daemon is running.
 
 * Open the project in [VSCode](https://code.visualstudio.com/).
 * Install VSCode's [Remote Development Extension - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack).
@@ -184,9 +190,32 @@ command+shift+p on Mac), type "Reopen in Container".
 * In the command palette type: "Go: Install/Update Tools" and select all.
 * When all tools are finished installing, in the command palette type:
 "Developer: Reload Window".
-* The docker daemon is mapped from the host into the dev container,
-so you can use docker and docker-compose commands from within the container
+* The `docker` daemon is mapped from the host into the dev container,
+so you can use `docker` and `docker-compose` commands from within the container
 as if they were run on the host.
+
+## Build From Source
+From the root of the project:
+
+```bash
+$ go build ./cmd/docker-lock
+```
+
+If on Mac or Linux, make the output binary executable:
+
+```bash
+$ chmod +x docker-lock
+```
+
+Finally, move the binary to the cli-plugins folder or add it to your PATH,
+as described in the [installation section](#Install-Pre-built-Binary).
+
+If you would like to cross-compile for another operating system
+or architecture, from the root of the project, run:
+
+```bash
+$ CGO_ENABLED=0 GOOS=<your os> GOARCH=<your arch> go build ./cmd/docker-lock
+```
 
 ## Code Quality and Correctness
 Unit tests, integration tests, and linting run in the
@@ -197,13 +226,12 @@ on pull requests. Locally, you can run quality checks for everything except for 
 * To run unit tests: `./scripts/unittest.sh`
 * To generate a coverage report: `./scripts/coverage.sh`
 * To view the coverage report on your browser, open a console, but not in
-docker, run:
-```
-go tool cover -html=coverage.out
+`docker`, run:
+```bash
+$ go tool cover -html=coverage.out
 ```
 
 # Tutorials
-* [Command Line Flags/Configuration File](./docs/tutorials/command-line-flags-configuration-file.md)
 * [Using Internal Registries](./docs/tutorials/internal-registry.md)
 * [Bring Your Own Registry](./docs/tutorials/bring-your-own-registry.md)
 * [Tags Vs. Digests](./docs/tutorials/tags-vs-digests.md)

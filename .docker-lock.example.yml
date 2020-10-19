@@ -1,0 +1,33 @@
+# The subcommands generate, verify, and rewrite have flags. They can be
+# specified on the command line or in a configuration file, as below.
+
+# To learn more about each flag, run `docker lock generate --help`
+generate:
+  base-dir: .
+  composefile-globs:
+    - '**/*docker-compose.yml'
+  composefile-recursive: true
+  composefiles:
+    - docker-compose.yml
+  config-file: ~/.docker/config.json
+  dockerfile-globs:
+    - '**/Dockerfile'
+  dockerfile-recursive: false
+  dockerfiles:
+    - Dockerfile
+  env-file: .env
+  exclude-all-composefiles: false
+  exclude-all-dockerfiles: true
+  lockfile-name: docker-lock.json
+
+# To learn more about each flag, run `docker lock verify --help`
+verify:
+  config-file: ~/.docker/config.json
+  env-file: .env
+  lockfile-name: docker-lock.json
+
+# To learn more about each flag, run `docker lock rewrite --help`
+rewrite:
+  exclude-tags: true
+  lockfile-name: docker-lock.json
+  tempdir: .
