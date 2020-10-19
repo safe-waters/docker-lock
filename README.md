@@ -91,7 +91,7 @@ in the future.
 `docker-lock` can be run as a
 * [cli-plugin](https://github.com/docker/cli/issues/1534) for `docker`
 * standalone executable without `docker`
-* prebuilt [container from Dockerhub](https://hub.docker.com/repository/docker/safewaters/docker-lock)
+* prebuilt [image from Dockerhub](https://hub.docker.com/repository/docker/safewaters/docker-lock)
 
 ## Cli-plugin
 Ensure `docker` cli version >= 19.03 is installed by running `docker --version`.
@@ -153,7 +153,7 @@ $ docker run -v "%USERPROFILE%\.docker\config.json":/.docker/config.json:ro -v "
 For instance, by default, `docker-lock` looks for files named `Dockerfile`,
 `docker-compose.yaml`, and `docker-compose.yml` in the directory from which
 the command is run. However, you may want `docker-lock` to find all
-`Dockerfile`s in your project.
+Dockerfiles in your project.
 
 To do so, you could specify the command line flag, `--dockerfile-recursive`,
 to the `generate` command as in:
@@ -172,8 +172,8 @@ docker lock rewrite --help
 docker lock version --help
 ```
 
-# Configuration File
-Instead of specifying command line flags, you can specify options in a
+## Configuration File
+Instead of specifying command line flags, you can specify flags in a
 configuration file, `.docker-lock.yml`, in the directory from which the
 command will be run. The root of this repo has an example,
 [.docker-lock.yml.example](./.docker-lock.yml.example).
