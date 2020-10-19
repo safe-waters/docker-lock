@@ -17,9 +17,10 @@ func TestVerifier(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		Name       string
-		Contents   [][]byte
-		ShouldFail bool
+		Name        string
+		Contents    [][]byte
+		ExcludeTags bool
+		ShouldFail  bool
 	}{
 		{
 			Name: "Different Number of Images in Dockerfile",
@@ -154,6 +155,34 @@ services:
 				),
 			},
 		},
+		{
+			Name: "Exclude Tags",
+			Contents: [][]byte{
+				[]byte(`
+version: '3'
+services:
+  svc:
+    image: busybox
+`,
+				),
+				[]byte(`
+{
+	"composefiles": {
+		"docker-compose.yml": [
+			{
+				"name": "busybox",
+				"tag": "",
+				"digest": "busybox",
+				"service": "svc"
+			}
+		]
+	}
+}
+`,
+				),
+			},
+			ExcludeTags: true,
+		},
 	}
 
 	for _, test := range tests {
@@ -241,6 +270,7 @@ services:
 			flags := &cmd_verify.Flags{
 				LockfileName: tempPaths[len(tempPaths)-1],
 				EnvPath:      ".env",
+				ExcludeTags:  test.ExcludeTags,
 			}
 
 			verifier, err := cmd_verify.SetupVerifier(client, flags)
