@@ -1,3 +1,4 @@
-dockerfiles:
-- ./.devcontainer/Dockerfile
-- Dockerfile
+generate:
+  dockerfiles:
+  - ./.devcontainer/Dockerfile
+  - Dockerfile
