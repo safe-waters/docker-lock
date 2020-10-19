@@ -32,6 +32,7 @@ func NewGenerateCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 				"env-file",
 				"exclude-all-dockerfiles",
 				"exclude-all-composefiles",
+				"ignore-missing-digests",
 			})
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -97,6 +98,10 @@ func NewGenerateCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 	generateCmd.Flags().Bool(
 		"exclude-all-composefiles", false,
 		"Do not collect docker-compose files",
+	)
+	generateCmd.Flags().Bool(
+		"ignore-missing-digests", false,
+		"Do not fail if unable to find digests",
 	)
 
 	return generateCmd, nil
@@ -189,9 +194,12 @@ func parseFlags() (*Flags, error) {
 	composefileExcludeAll := viper.GetBool(
 		fmt.Sprintf("%s.%s", namespace, "exclude-all-composefiles"),
 	)
+	ignoreMissingDigests := viper.GetBool(
+		fmt.Sprintf("%s.%s", namespace, "ignore-missing-digests"),
+	)
 
 	return NewFlags(
-		baseDir, lockfileName, configPath, envPath,
+		baseDir, lockfileName, configPath, envPath, ignoreMissingDigests,
 		dockerfilePaths, composefilePaths, dockerfileGlobs, composefileGlobs,
 		dockerfileRecursive, composefileRecursive,
 		dockerfileExcludeAll, composefileExcludeAll,

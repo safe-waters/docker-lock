@@ -28,6 +28,7 @@ func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 				"lockfile-name",
 				"config-file",
 				"env-file",
+				"ignore-missing-digests",
 			})
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -59,6 +60,10 @@ func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 	)
 	verifyCmd.Flags().String(
 		"env-file", ".env", "Path to .env file",
+	)
+	verifyCmd.Flags().Bool(
+		"ignore-missing-digests", false,
+		"Do not fail if unable to find digests",
 	)
 
 	return verifyCmd, nil
@@ -103,7 +108,7 @@ func SetupVerifier(
 	}
 
 	generatorFlags, err := cmd_generate.NewFlags(
-		".", "", flags.ConfigPath, flags.EnvPath,
+		".", "", flags.ConfigPath, flags.EnvPath, flags.IgnoreMissingDigests,
 		dockerfilePaths, composefilePaths, nil, nil, false, false,
 		len(dockerfilePaths) == 0, len(composefilePaths) == 0,
 	)
@@ -141,6 +146,9 @@ func parseFlags() (*Flags, error) {
 	envPath := viper.GetString(
 		fmt.Sprintf("%s.%s", namespace, "env-file"),
 	)
+	ignoreMissingDigests := viper.GetBool(
+		fmt.Sprintf("%s.%s", namespace, "ignore-missing-digests"),
+	)
 
-	return NewFlags(lockfileName, configPath, envPath)
+	return NewFlags(lockfileName, configPath, envPath, ignoreMissingDigests)
 }

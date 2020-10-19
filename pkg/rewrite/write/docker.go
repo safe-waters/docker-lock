@@ -184,16 +184,15 @@ func (d *DockerfileWriter) writeFile(
 }
 
 func convertImageToImageLine(image *parse.Image, excludeTags bool) string {
-	switch {
-	case image.Name == "scratch":
-		return image.Name
-	case image.Tag == "" || excludeTags:
-		return fmt.Sprintf(
-			"%s@sha256:%s", image.Name, image.Digest,
-		)
-	default:
-		return fmt.Sprintf(
-			"%s:%s@sha256:%s", image.Name, image.Tag, image.Digest,
-		)
+	imageLine := image.Name
+
+	if image.Tag != "" && !excludeTags {
+		imageLine = fmt.Sprintf("%s:%s", imageLine, image.Tag)
 	}
+
+	if image.Digest != "" {
+		imageLine = fmt.Sprintf("%s@sha256:%s", imageLine, image.Digest)
+	}
+
+	return imageLine
 }

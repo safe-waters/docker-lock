@@ -10,10 +10,11 @@ import (
 // FlagsWithSharedValues represents flags whose values
 // are the same for DockerfileParser and ComposefileParser.
 type FlagsWithSharedValues struct {
-	BaseDir      string
-	LockfileName string
-	ConfigPath   string
-	EnvPath      string
+	BaseDir              string
+	LockfileName         string
+	ConfigPath           string
+	EnvPath              string
+	IgnoreMissingDigests bool
 }
 
 // FlagsWithSharedNames represents flags whose values
@@ -40,6 +41,7 @@ func NewFlagsWithSharedValues(
 	lockfileName string,
 	configPath string,
 	envPath string,
+	ignoreMissingDigests bool,
 ) (*FlagsWithSharedValues, error) {
 	if baseDir != "" {
 		if err := validateBaseDirectory(baseDir); err != nil {
@@ -54,10 +56,11 @@ func NewFlagsWithSharedValues(
 	}
 
 	return &FlagsWithSharedValues{
-		BaseDir:      baseDir,
-		LockfileName: lockfileName,
-		ConfigPath:   configPath,
-		EnvPath:      envPath,
+		BaseDir:              baseDir,
+		LockfileName:         lockfileName,
+		ConfigPath:           configPath,
+		EnvPath:              envPath,
+		IgnoreMissingDigests: ignoreMissingDigests,
 	}, nil
 }
 
@@ -103,6 +106,7 @@ func NewFlags(
 	lockfileName string,
 	configPath string,
 	envPath string,
+	ignoreMissingDigests bool,
 	dockerfilePaths []string,
 	composefilePaths []string,
 	dockerfileGlobs []string,
@@ -113,7 +117,7 @@ func NewFlags(
 	composefileExcludeAll bool,
 ) (*Flags, error) {
 	sharedFlags, err := NewFlagsWithSharedValues(
-		baseDir, lockfileName, configPath, envPath,
+		baseDir, lockfileName, configPath, envPath, ignoreMissingDigests,
 	)
 	if err != nil {
 		return nil, err

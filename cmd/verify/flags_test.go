@@ -42,6 +42,7 @@ func TestFlags(t *testing.T) {
 				test.Expected.LockfileName,
 				test.Expected.ConfigPath,
 				test.Expected.EnvPath,
+				test.Expected.IgnoreMissingDigests,
 			)
 			if test.ShouldFail {
 				if err == nil {

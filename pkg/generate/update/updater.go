@@ -85,7 +85,7 @@ func (i *ImageDigestUpdater) UpdateDigests(
 				if err != nil {
 					select {
 					case <-done:
-					case updatedImages <- &UpdatedImage{Err: err}:
+					case updatedImages <- &UpdatedImage{Image: image, Err: err}:
 					}
 
 					return

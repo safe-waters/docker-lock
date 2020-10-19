@@ -192,7 +192,7 @@ func TestImageDigestUpdater(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			updater, err := generate.NewImageDigestUpdater(innerUpdater)
+			updater, err := generate.NewImageDigestUpdater(innerUpdater, false)
 			if err != nil {
 				t.Fatal(err)
 			}

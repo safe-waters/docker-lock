@@ -366,6 +366,7 @@ func makeFlags(
 	lockfileName string,
 	configPath string,
 	envPath string,
+	ignoreMissingDigests bool,
 	dockerfilePaths []string,
 	composefilePaths []string,
 	dockerfileGlobs []string,
@@ -378,8 +379,8 @@ func makeFlags(
 	t.Helper()
 
 	flags, err := cmd_generate.NewFlags(
-		baseDir, lockfileName, configPath, envPath, dockerfilePaths,
-		composefilePaths, dockerfileGlobs, composefileGlobs,
+		baseDir, lockfileName, configPath, envPath, ignoreMissingDigests,
+		dockerfilePaths, composefilePaths, dockerfileGlobs, composefileGlobs,
 		dockerfileRecursive, composefileRecursive,
 		dockerfileExcludeAll, composefileExcludeAll,
 	)

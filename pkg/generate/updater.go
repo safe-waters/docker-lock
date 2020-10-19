@@ -11,7 +11,8 @@ import (
 
 // ImageDigestUpdater contains an ImageDigestUpdater for all Images.
 type ImageDigestUpdater struct {
-	ImageDigestUpdater update.IImageDigestUpdater
+	ImageDigestUpdater   update.IImageDigestUpdater
+	IgnoreMissingDigests bool
 }
 
 // IImageDigestUpdater provides an interface for ImageDigestUpdater's exported
@@ -26,13 +27,17 @@ type IImageDigestUpdater interface {
 // fields.
 func NewImageDigestUpdater(
 	imageDigestUpdater update.IImageDigestUpdater,
+	ignoreMissingDigests bool,
 ) (*ImageDigestUpdater, error) {
 	if imageDigestUpdater == nil ||
 		reflect.ValueOf(imageDigestUpdater).IsNil() {
 		return nil, errors.New("imageDigestUpdater cannot be nil")
 	}
 
-	return &ImageDigestUpdater{ImageDigestUpdater: imageDigestUpdater}, nil
+	return &ImageDigestUpdater{
+		ImageDigestUpdater:   imageDigestUpdater,
+		IgnoreMissingDigests: ignoreMissingDigests,
+	}, nil
 }
 
 // UpdateDigests updates digests for DockerfileImages and ComposefileImages.
@@ -136,7 +141,7 @@ func (i *ImageDigestUpdater) UpdateDigests(
 		)
 
 		for updatedImage := range updatedImages {
-			if updatedImage.Err != nil {
+			if updatedImage.Err != nil && !i.IgnoreMissingDigests {
 				select {
 				case <-done:
 				case updatedAnyImages <- &AnyImage{Err: updatedImage.Err}:

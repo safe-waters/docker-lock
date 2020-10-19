@@ -8,9 +8,10 @@ import (
 
 // Flags are all possible flags to initialize a Verifier.
 type Flags struct {
-	LockfileName string
-	ConfigPath   string
-	EnvPath      string
+	LockfileName         string
+	ConfigPath           string
+	EnvPath              string
+	IgnoreMissingDigests bool
 }
 
 // NewFlags returns Flags after validating its fields.
@@ -18,15 +19,17 @@ func NewFlags(
 	lockfileName string,
 	configPath string,
 	envPath string,
+	ignoreMissingDigests bool,
 ) (*Flags, error) {
 	if err := validateLockfileName(lockfileName); err != nil {
 		return nil, err
 	}
 
 	return &Flags{
-		LockfileName: lockfileName,
-		ConfigPath:   configPath,
-		EnvPath:      envPath,
+		LockfileName:         lockfileName,
+		ConfigPath:           configPath,
+		EnvPath:              envPath,
+		IgnoreMissingDigests: ignoreMissingDigests,
 	}, nil
 }
 

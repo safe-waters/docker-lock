@@ -110,7 +110,9 @@ func DefaultImageDigestUpdater(
 		return nil, err
 	}
 
-	return generate.NewImageDigestUpdater(imageDigestUpdater)
+	return generate.NewImageDigestUpdater(
+		imageDigestUpdater, flags.FlagsWithSharedValues.IgnoreMissingDigests,
+	)
 }
 
 // DefaultConfigPath returns the default location of docker's config.json
