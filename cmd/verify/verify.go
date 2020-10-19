@@ -125,7 +125,7 @@ func SetupVerifier(
 		return nil, err
 	}
 
-	return verify.NewVerifier(generator)
+	return verify.NewVerifier(generator, flags.ExcludeTags)
 }
 
 func bindPFlags(cmd *cobra.Command, flagNames []string) error {
