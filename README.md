@@ -208,7 +208,7 @@ $ chmod +x docker-lock
 ```
 
 Finally, move the binary to the cli-plugins folder or add it to your PATH,
-as described in the [installation section](#Install-Pre-built-Binary).
+as described in the [installation section](#Install).
 
 If you would like to cross-compile for another operating system
 or architecture, from the root of the project, run:
