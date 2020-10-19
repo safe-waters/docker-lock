@@ -2,3 +2,5 @@ generate:
   dockerfiles:
   - ./.devcontainer/Dockerfile
   - Dockerfile
+rewrite:
+  tempdir: .
