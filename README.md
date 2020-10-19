@@ -158,18 +158,18 @@ Dockerfiles in your project.
 To do so, you could specify the command line flag, `--dockerfile-recursive`,
 to the `generate` command as in:
 
-```
-docker lock generate --dockerfile-recursive
+```bash
+$ docker lock generate --dockerfile-recursive
 ```
 
 To see available command line flags, run commands with `--help`. For instance:
 
-```
-docker lock --help
-docker lock generate --help
-docker lock verify --help
-docker lock rewrite --help
-docker lock version --help
+```bash
+$ docker lock --help
+$ docker lock generate --help
+$ docker lock verify --help
+$ docker lock rewrite --help
+$ docker lock version --help
 ```
 
 ## Configuration File
