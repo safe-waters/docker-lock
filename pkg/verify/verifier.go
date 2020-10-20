@@ -143,18 +143,17 @@ func (v *Verifier) verifyDockerfileImages(
 				return
 			}
 
-			for i, existingImage := range existingImages {
+			for i := range existingImages {
 				i := i
-				existingImage := existingImage
 
 				waitGroup.Add(1)
 
 				go func() {
 					defer waitGroup.Done()
 
-					if existingImage == nil ||
+					if existingImages[i] == nil ||
 						newImages[i] == nil ||
-						existingImage.Image == nil ||
+						existingImages[i].Image == nil ||
 						newImages[i].Image == nil {
 						select {
 						case errSignal <- struct{}{}:
@@ -164,9 +163,25 @@ func (v *Verifier) verifyDockerfileImages(
 						return
 					}
 
+					existingImage := parse.DockerfileImage{
+						Image: &parse.Image{
+							Name:   existingImages[i].Name,
+							Tag:    existingImages[i].Tag,
+							Digest: existingImages[i].Digest,
+						},
+					}
+
+					newImage := parse.DockerfileImage{
+						Image: &parse.Image{
+							Name:   newImages[i].Name,
+							Tag:    newImages[i].Tag,
+							Digest: newImages[i].Digest,
+						},
+					}
+
 					if v.ExcludeTags {
-						existingImage.Image.Tag = ""
-						newImages[i].Image.Tag = ""
+						existingImage.Tag = ""
+						newImage.Tag = ""
 					}
 
 					if *existingImage.Image != *newImages[i].Image {
@@ -229,18 +244,17 @@ func (v *Verifier) verifyComposefileImages(
 				return
 			}
 
-			for i, existingImage := range existingImages {
+			for i := range existingImages {
 				i := i
-				existingImage := existingImage
 
 				waitGroup.Add(1)
 
 				go func() {
 					defer waitGroup.Done()
 
-					if existingImage == nil ||
+					if existingImages[i] == nil ||
 						newImages[i] == nil ||
-						existingImage.Image == nil ||
+						existingImages[i].Image == nil ||
 						newImages[i].Image == nil {
 						select {
 						case errSignal <- struct{}{}:
@@ -250,9 +264,29 @@ func (v *Verifier) verifyComposefileImages(
 						return
 					}
 
+					existingImage := parse.ComposefileImage{
+						Image: &parse.Image{
+							Name:   existingImages[i].Name,
+							Tag:    existingImages[i].Tag,
+							Digest: existingImages[i].Digest,
+						},
+						DockerfilePath: existingImages[i].DockerfilePath,
+						ServiceName:    existingImages[i].ServiceName,
+					}
+
+					newImage := parse.ComposefileImage{
+						Image: &parse.Image{
+							Name:   newImages[i].Name,
+							Tag:    newImages[i].Tag,
+							Digest: newImages[i].Digest,
+						},
+						DockerfilePath: newImages[i].DockerfilePath,
+						ServiceName:    newImages[i].ServiceName,
+					}
+
 					if v.ExcludeTags {
-						existingImage.Image.Tag = ""
-						newImages[i].Image.Tag = ""
+						existingImage.Tag = ""
+						newImage.Tag = ""
 					}
 
 					if *existingImage.Image != *newImages[i].Image ||
