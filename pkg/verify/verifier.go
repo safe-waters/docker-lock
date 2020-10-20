@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"reflect"
+	"sync"
 
 	"github.com/safe-waters/docker-lock/pkg/generate"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
@@ -60,33 +61,33 @@ func (v *Verifier) VerifyLockfile(reader io.Reader) error {
 		return err
 	}
 
-	if v.ExcludeTags {
-		if len(existingLockfile.DockerfileImages) != 0 {
-			existingLockfile.DockerfileImages = v.filterDockerfileImageTags(
-				existingLockfile.DockerfileImages,
-			)
-		}
+	var waitGroup sync.WaitGroup
 
-		if len(existingLockfile.ComposefileImages) != 0 {
-			existingLockfile.ComposefileImages = v.filterComposefileImageTags(
-				existingLockfile.ComposefileImages,
-			)
-		}
+	errSignal := make(chan struct{})
+	done := make(chan struct{})
 
-		if len(newLockfile.DockerfileImages) != 0 {
-			newLockfile.DockerfileImages = v.filterDockerfileImageTags(
-				newLockfile.DockerfileImages,
-			)
-		}
+	defer close(done)
 
-		if len(newLockfile.ComposefileImages) != 0 {
-			newLockfile.ComposefileImages = v.filterComposefileImageTags(
-				newLockfile.ComposefileImages,
-			)
-		}
-	}
+	waitGroup.Add(1)
 
-	if !reflect.DeepEqual(existingLockfile, newLockfile) {
+	go v.verifyDockerfileImages(
+		existingLockfile.DockerfileImages, newLockfile.DockerfileImages,
+		errSignal, done, &waitGroup,
+	)
+
+	waitGroup.Add(1)
+
+	go v.verifyComposefileImages(
+		existingLockfile.ComposefileImages, newLockfile.ComposefileImages,
+		errSignal, done, &waitGroup,
+	)
+
+	go func() {
+		waitGroup.Wait()
+		close(errSignal)
+	}()
+
+	for range errSignal {
 		return &DifferentLockfileError{
 			ExistingLockfile: &existingLockfile,
 			NewLockfile:      &newLockfile,
@@ -96,58 +97,176 @@ func (v *Verifier) VerifyLockfile(reader io.Reader) error {
 	return nil
 }
 
-func (*Verifier) filterDockerfileImageTags(
-	pathImages map[string][]*parse.DockerfileImage,
-) map[string][]*parse.DockerfileImage {
-	filteredPathImages := map[string][]*parse.DockerfileImage{}
+func (v *Verifier) verifyDockerfileImages(
+	existingPathImages map[string][]*parse.DockerfileImage,
+	newPathImages map[string][]*parse.DockerfileImage,
+	errSignal chan<- struct{},
+	done <-chan struct{},
+	waitGroup *sync.WaitGroup,
+) {
+	defer waitGroup.Done()
 
-	for path, images := range pathImages {
-		filteredImages := make([]*parse.DockerfileImage, len(images))
-
-		for i, image := range images {
-			filteredImage := &parse.Image{
-				Name:   image.Name,
-				Digest: image.Digest,
-			}
-
-			filteredDockerfileImage := &parse.DockerfileImage{
-				Image: filteredImage,
-			}
-
-			filteredImages[i] = filteredDockerfileImage
+	if len(existingPathImages) != len(newPathImages) {
+		select {
+		case errSignal <- struct{}{}:
+		case <-done:
 		}
 
-		filteredPathImages[path] = filteredImages
+		return
 	}
 
-	return filteredPathImages
+	for path, existingImages := range existingPathImages {
+		path := path
+		existingImages := existingImages
+
+		waitGroup.Add(1)
+
+		go func() {
+			defer waitGroup.Done()
+
+			newImages, ok := newPathImages[path]
+			if !ok {
+				select {
+				case errSignal <- struct{}{}:
+				case <-done:
+				}
+
+				return
+			}
+
+			if len(existingImages) != len(newImages) {
+				select {
+				case errSignal <- struct{}{}:
+				case <-done:
+				}
+
+				return
+			}
+
+			for i, existingImage := range existingImages {
+				i := i
+				existingImage := existingImage
+
+				waitGroup.Add(1)
+
+				go func() {
+					defer waitGroup.Done()
+
+					if existingImage == nil ||
+						newImages[i] == nil ||
+						existingImage.Image == nil ||
+						newImages[i].Image == nil {
+						select {
+						case errSignal <- struct{}{}:
+						case <-done:
+						}
+
+						return
+					}
+
+					if v.ExcludeTags {
+						existingImage.Image.Tag = ""
+						newImages[i].Image.Tag = ""
+					}
+
+					if *existingImage.Image != *newImages[i].Image {
+						select {
+						case errSignal <- struct{}{}:
+						case <-done:
+						}
+
+						return
+					}
+				}()
+			}
+		}()
+	}
 }
 
-func (*Verifier) filterComposefileImageTags(
-	pathImages map[string][]*parse.ComposefileImage,
-) map[string][]*parse.ComposefileImage {
-	filteredPathImages := map[string][]*parse.ComposefileImage{}
+func (v *Verifier) verifyComposefileImages(
+	existingPathImages map[string][]*parse.ComposefileImage,
+	newPathImages map[string][]*parse.ComposefileImage,
+	errSignal chan<- struct{},
+	done <-chan struct{},
+	waitGroup *sync.WaitGroup,
+) {
+	defer waitGroup.Done()
 
-	for path, images := range pathImages {
-		filteredImages := make([]*parse.ComposefileImage, len(images))
-
-		for i, image := range images {
-			filteredImage := &parse.Image{
-				Name:   image.Name,
-				Digest: image.Digest,
-			}
-
-			filteredComposefileImage := &parse.ComposefileImage{
-				Image:          filteredImage,
-				ServiceName:    image.ServiceName,
-				DockerfilePath: image.DockerfilePath,
-			}
-
-			filteredImages[i] = filteredComposefileImage
+	if len(existingPathImages) != len(newPathImages) {
+		select {
+		case errSignal <- struct{}{}:
+		case <-done:
 		}
 
-		filteredPathImages[path] = filteredImages
+		return
 	}
 
-	return filteredPathImages
+	for path, existingImages := range existingPathImages {
+		path := path
+		existingImages := existingImages
+
+		waitGroup.Add(1)
+
+		go func() {
+			defer waitGroup.Done()
+
+			newImages, ok := newPathImages[path]
+			if !ok {
+				select {
+				case errSignal <- struct{}{}:
+				case <-done:
+				}
+
+				return
+			}
+
+			if len(existingImages) != len(newImages) {
+				select {
+				case errSignal <- struct{}{}:
+				case <-done:
+				}
+
+				return
+			}
+
+			for i, existingImage := range existingImages {
+				i := i
+				existingImage := existingImage
+
+				waitGroup.Add(1)
+
+				go func() {
+					defer waitGroup.Done()
+
+					if existingImage == nil ||
+						newImages[i] == nil ||
+						existingImage.Image == nil ||
+						newImages[i].Image == nil {
+						select {
+						case errSignal <- struct{}{}:
+						case <-done:
+						}
+
+						return
+					}
+
+					if v.ExcludeTags {
+						existingImage.Image.Tag = ""
+						newImages[i].Image.Tag = ""
+					}
+
+					if *existingImage.Image != *newImages[i].Image ||
+						existingImage.ServiceName != newImages[i].ServiceName ||
+						existingImage.DockerfilePath != newImages[i].DockerfilePath { // nolint: lll
+						select {
+						case errSignal <- struct{}{}:
+						case <-done:
+						}
+
+						return
+					}
+				}()
+			}
+		}()
+	}
 }
