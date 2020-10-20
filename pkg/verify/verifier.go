@@ -184,7 +184,7 @@ func (v *Verifier) verifyDockerfileImages(
 						newImage.Tag = ""
 					}
 
-					if *existingImage.Image != *newImages[i].Image {
+					if *existingImage.Image != *newImage.Image {
 						select {
 						case errSignal <- struct{}{}:
 						case <-done:
@@ -289,9 +289,9 @@ func (v *Verifier) verifyComposefileImages(
 						newImage.Tag = ""
 					}
 
-					if *existingImage.Image != *newImages[i].Image ||
-						existingImage.ServiceName != newImages[i].ServiceName ||
-						existingImage.DockerfilePath != newImages[i].DockerfilePath { // nolint: lll
+					if *existingImage.Image != *newImage.Image ||
+						existingImage.ServiceName != newImage.ServiceName ||
+						existingImage.DockerfilePath != newImage.DockerfilePath { // nolint: lll
 						select {
 						case errSignal <- struct{}{}:
 						case <-done:
