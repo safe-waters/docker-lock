@@ -153,8 +153,8 @@ func (c *ComposefileDifferentiator) Differentiate(
 						if existingImage.DockerfilePath != newImage.DockerfilePath { // nolint: lll
 							select {
 							case errCh <- fmt.Errorf(
-								"on path %s existing DockerfilePath %s differs"+
-									"from the new DockerfilePath %s",
+								"on path %s existing DockerfilePath %s "+
+									"differs from the new DockerfilePath %s",
 								path, existingImage.DockerfilePath,
 								newImage.DockerfilePath,
 							):

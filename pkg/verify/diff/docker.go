@@ -123,7 +123,7 @@ func (d *DockerfileDifferentiator) Differentiate(
 						if *existingImage.Image != *newImage.Image {
 							select {
 							case errCh <- fmt.Errorf(
-								"on path %s existing image %v differs"+
+								"on path %s existing image %v differs "+
 									"from the new image %v",
 								path, *existingImage.Image, *newImage.Image,
 							):
