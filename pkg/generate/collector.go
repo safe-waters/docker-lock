@@ -17,18 +17,20 @@ type PathCollector struct {
 // IPathCollector provides an interface for PathCollector's exported
 // methods, which are used by Generator.
 type IPathCollector interface {
-	CollectPaths(done <-chan struct{}) <-chan *AnyPath
+	CollectPaths(done <-chan struct{}) <-chan *CollectedPath
 }
 
-// AnyPath contains any possible type of path.
-type AnyPath struct {
-	DockerfilePath  string
-	ComposefilePath string
-	Err             error
+// CollectedPath contains any possible type of path.
+type CollectedPath struct {
+	Type FileType
+	Path string
+	Err  error
 }
 
 // CollectPaths collects paths to be parsed.
-func (p *PathCollector) CollectPaths(done <-chan struct{}) <-chan *AnyPath {
+func (p *PathCollector) CollectPaths(
+	done <-chan struct{},
+) <-chan *CollectedPath {
 	if (p.DockerfileCollector == nil ||
 		reflect.ValueOf(p.DockerfileCollector).IsNil()) &&
 		(p.ComposefileCollector == nil ||
@@ -36,7 +38,7 @@ func (p *PathCollector) CollectPaths(done <-chan struct{}) <-chan *AnyPath {
 		return nil
 	}
 
-	anyPaths := make(chan *AnyPath)
+	collectedPaths := make(chan *CollectedPath)
 
 	var waitGroup sync.WaitGroup
 
@@ -59,8 +61,9 @@ func (p *PathCollector) CollectPaths(done <-chan struct{}) <-chan *AnyPath {
 					if dockerfilePathResult.Err != nil {
 						select {
 						case <-done:
-						case anyPaths <- &AnyPath{
-							Err: dockerfilePathResult.Err,
+						case collectedPaths <- &CollectedPath{
+							Type: Dockerfile,
+							Err:  dockerfilePathResult.Err,
 						}:
 						}
 
@@ -70,8 +73,9 @@ func (p *PathCollector) CollectPaths(done <-chan struct{}) <-chan *AnyPath {
 					select {
 					case <-done:
 						return
-					case anyPaths <- &AnyPath{
-						DockerfilePath: dockerfilePathResult.Path,
+					case collectedPaths <- &CollectedPath{
+						Type: Dockerfile,
+						Path: dockerfilePathResult.Path,
 					}:
 					}
 				}
@@ -92,8 +96,9 @@ func (p *PathCollector) CollectPaths(done <-chan struct{}) <-chan *AnyPath {
 					if composefilePathResult.Err != nil {
 						select {
 						case <-done:
-						case anyPaths <- &AnyPath{
-							Err: composefilePathResult.Err,
+						case collectedPaths <- &CollectedPath{
+							Type: Composefile,
+							Err:  composefilePathResult.Err,
 						}:
 						}
 
@@ -103,8 +108,9 @@ func (p *PathCollector) CollectPaths(done <-chan struct{}) <-chan *AnyPath {
 					select {
 					case <-done:
 						return
-					case anyPaths <- &AnyPath{
-						ComposefilePath: composefilePathResult.Path,
+					case collectedPaths <- &CollectedPath{
+						Type: Composefile,
+						Path: composefilePathResult.Path,
 					}:
 					}
 				}
@@ -114,8 +120,8 @@ func (p *PathCollector) CollectPaths(done <-chan struct{}) <-chan *AnyPath {
 
 	go func() {
 		waitGroup.Wait()
-		close(anyPaths)
+		close(collectedPaths)
 	}()
 
-	return anyPaths
+	return collectedPaths
 }
