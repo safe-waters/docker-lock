@@ -17,10 +17,7 @@ type ImageParser struct {
 // IImageParser provides an interface for Parser's exported methods,
 // which are used by Generator.
 type IImageParser interface {
-	ParseFiles(
-		collectedPaths <-chan *CollectedPath,
-		done <-chan struct{},
-	) <-chan *AnyImage
+	ParseFiles(anyPaths <-chan *AnyPath, done <-chan struct{}) <-chan *AnyImage
 }
 
 // AnyImage contains any possible type of parser.
@@ -32,14 +29,14 @@ type AnyImage struct {
 
 // ParseFiles parses Dockerfiles and docker-compose files for Images.
 func (i *ImageParser) ParseFiles(
-	collectedPaths <-chan *CollectedPath,
+	anyPaths <-chan *AnyPath,
 	done <-chan struct{},
 ) <-chan *AnyImage {
 	if ((i.DockerfileImageParser == nil ||
 		reflect.ValueOf(i.DockerfileImageParser).IsNil()) &&
 		(i.ComposefileImageParser == nil ||
 			reflect.ValueOf(i.ComposefileImageParser).IsNil())) ||
-		collectedPaths == nil {
+		anyPaths == nil {
 		return nil
 	}
 
@@ -62,18 +59,18 @@ func (i *ImageParser) ParseFiles(
 		go func() {
 			defer pathsWaitGroup.Done()
 
-			for collectedPath := range collectedPaths {
-				if collectedPath.Err != nil {
+			for anyPath := range anyPaths {
+				if anyPath.Err != nil {
 					select {
 					case <-done:
-					case anyImages <- &AnyImage{Err: collectedPath.Err}:
+					case anyImages <- &AnyImage{Err: anyPath.Err}:
 					}
 
 					return
 				}
 
-				switch collectedPath.Type {
-				case Dockerfile:
+				switch {
+				case anyPath.DockerfilePath != "":
 					if i.DockerfileImageParser == nil ||
 						reflect.ValueOf(i.DockerfileImageParser).IsNil() {
 						select {
@@ -81,7 +78,7 @@ func (i *ImageParser) ParseFiles(
 						case anyImages <- &AnyImage{
 							Err: fmt.Errorf(
 								"dockerfile %s found, but its parser is nil",
-								collectedPath.Path,
+								anyPath.DockerfilePath,
 							),
 						}:
 						}
@@ -92,9 +89,9 @@ func (i *ImageParser) ParseFiles(
 					select {
 					case <-done:
 						return
-					case dockerfilePaths <- collectedPath.Path:
+					case dockerfilePaths <- anyPath.DockerfilePath:
 					}
-				case Composefile:
+				case anyPath.ComposefilePath != "":
 					if i.ComposefileImageParser == nil ||
 						reflect.ValueOf(i.ComposefileImageParser).IsNil() {
 						select {
@@ -102,7 +99,7 @@ func (i *ImageParser) ParseFiles(
 						case anyImages <- &AnyImage{
 							Err: fmt.Errorf(
 								"composefile %s found, but its parser is nil",
-								collectedPath.Path,
+								anyPath.ComposefilePath,
 							),
 						}:
 						}
@@ -113,7 +110,7 @@ func (i *ImageParser) ParseFiles(
 					select {
 					case <-done:
 						return
-					case composefilePaths <- collectedPath.Path:
+					case composefilePaths <- anyPath.ComposefilePath:
 					}
 				}
 			}

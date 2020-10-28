@@ -15,7 +15,7 @@ func TestPathCollector(t *testing.T) {
 	tests := []struct {
 		Name          string
 		PathCollector *generate.PathCollector
-		Expected      []*generate.CollectedPath
+		Expected      []*generate.AnyPath
 		PathsToCreate []string
 	}{
 		{
@@ -25,14 +25,12 @@ func TestPathCollector(t *testing.T) {
 				[]string{"docker-compose.yml"}, nil, nil, false, false,
 			),
 			PathsToCreate: []string{"Dockerfile", "docker-compose.yml"},
-			Expected: []*generate.CollectedPath{
+			Expected: []*generate.AnyPath{
 				{
-					Type: generate.Dockerfile,
-					Path: "Dockerfile",
+					DockerfilePath: "Dockerfile",
 				},
 				{
-					Type: generate.Composefile,
-					Path: "docker-compose.yml",
+					ComposefilePath: "docker-compose.yml",
 				},
 			},
 		},
@@ -62,34 +60,34 @@ func TestPathCollector(t *testing.T) {
 				t, tempDir, test.PathsToCreate, pathsToCreateContents,
 			)
 
-			var got []*generate.CollectedPath
+			var got []*generate.AnyPath
 
 			done := make(chan struct{})
-			for collectedPath := range test.PathCollector.CollectPaths(done) {
-				if collectedPath.Err != nil {
+			for anyPath := range test.PathCollector.CollectPaths(done) {
+				if anyPath.Err != nil {
 					close(done)
-					t.Fatal(collectedPath.Err)
+					t.Fatal(anyPath.Err)
 				}
-				got = append(got, collectedPath)
+				got = append(got, anyPath)
 			}
 
-			for _, collectedPath := range test.Expected {
-				switch collectedPath.Type {
-				case generate.Dockerfile:
-					collectedPath.Path = filepath.Join(
-						tempDir, collectedPath.Path,
+			for _, anyPath := range test.Expected {
+				switch {
+				case anyPath.DockerfilePath != "":
+					anyPath.DockerfilePath = filepath.Join(
+						tempDir, anyPath.DockerfilePath,
 					)
-				case generate.Composefile:
-					collectedPath.Path = filepath.Join(
-						tempDir, collectedPath.Path,
+				case anyPath.ComposefilePath != "":
+					anyPath.ComposefilePath = filepath.Join(
+						tempDir, anyPath.ComposefilePath,
 					)
 				}
 			}
 
-			sortCollectedPaths(t, test.Expected)
-			sortCollectedPaths(t, got)
+			sortAnyPaths(t, test.Expected)
+			sortAnyPaths(t, got)
 
-			assertCollectedPathsEqual(t, test.Expected, got)
+			assertAnyPathsEqual(t, test.Expected, got)
 		})
 	}
 }

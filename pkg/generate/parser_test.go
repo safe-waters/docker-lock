@@ -97,21 +97,17 @@ services:
 				t, tempDir, test.ComposefilePaths, test.ComposefileContents,
 			)
 
-			collectedPaths := make(
-				chan *generate.CollectedPath,
+			anyPaths := make(
+				chan *generate.AnyPath,
 				len(dockerfilePaths)+len(composefilePaths),
 			)
 			for _, path := range dockerfilePaths {
-				collectedPaths <- &generate.CollectedPath{
-					Type: generate.Dockerfile, Path: path,
-				}
+				anyPaths <- &generate.AnyPath{DockerfilePath: path}
 			}
 			for _, path := range composefilePaths {
-				collectedPaths <- &generate.CollectedPath{
-					Type: generate.Composefile, Path: path,
-				}
+				anyPaths <- &generate.AnyPath{ComposefilePath: path}
 			}
-			close(collectedPaths)
+			close(anyPaths)
 
 			done := make(chan struct{})
 
@@ -128,7 +124,7 @@ services:
 				DockerfileImageParser:  dockerfileImageParser,
 				ComposefileImageParser: composefileImageParser,
 			}
-			anyImages := imageParser.ParseFiles(collectedPaths, done)
+			anyImages := imageParser.ParseFiles(anyPaths, done)
 
 			var got []*generate.AnyImage
 

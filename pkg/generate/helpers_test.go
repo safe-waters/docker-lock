@@ -50,10 +50,10 @@ type AnyImageWithoutStructTags struct {
 	ComposefileImage *ComposefileImageWithoutStructTags
 }
 
-func assertCollectedPathsEqual(
+func assertAnyPathsEqual(
 	t *testing.T,
-	expected []*generate.CollectedPath,
-	got []*generate.CollectedPath,
+	expected []*generate.AnyPath,
+	got []*generate.AnyPath,
 ) {
 	t.Helper()
 
@@ -516,18 +516,18 @@ func makeTempDir(t *testing.T, dirName string) string {
 	return dir
 }
 
-func sortCollectedPaths(
+func sortAnyPaths(
 	t *testing.T,
-	collectedPaths []*generate.CollectedPath,
+	anyPaths []*generate.AnyPath,
 ) {
 	t.Helper()
 
-	sort.Slice(collectedPaths, func(i, j int) bool {
+	sort.Slice(anyPaths, func(i, j int) bool {
 		switch {
-		case collectedPaths[i].Type != collectedPaths[j].Type:
-			return collectedPaths[i].Type < collectedPaths[j].Type
+		case anyPaths[i].DockerfilePath != anyPaths[j].DockerfilePath:
+			return anyPaths[i].DockerfilePath < anyPaths[j].DockerfilePath
 		default:
-			return collectedPaths[i].Path < collectedPaths[j].Path
+			return anyPaths[i].ComposefilePath < anyPaths[j].ComposefilePath
 		}
 	})
 }
