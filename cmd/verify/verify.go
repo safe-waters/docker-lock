@@ -12,6 +12,7 @@ import (
 	"github.com/safe-waters/docker-lock/pkg/generate"
 	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 	"github.com/safe-waters/docker-lock/pkg/verify"
+	"github.com/safe-waters/docker-lock/pkg/verify/diff"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -125,7 +126,16 @@ func SetupVerifier(
 		return nil, err
 	}
 
-	return verify.NewVerifier(generator, flags.ExcludeTags)
+	dockerfileDifferentiator := &diff.DockerfileDifferentiator{
+		ExcludeTags: flags.ExcludeTags,
+	}
+	composefileDifferentiator := &diff.ComposefileDifferentiator{
+		ExcludeTags: flags.ExcludeTags,
+	}
+
+	return verify.NewVerifier(
+		generator, dockerfileDifferentiator, composefileDifferentiator,
+	)
 }
 
 func bindPFlags(cmd *cobra.Command, flagNames []string) error {
