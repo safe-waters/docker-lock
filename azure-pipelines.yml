@@ -41,23 +41,24 @@ jobs:
   pool: 
     vmImage: windows-2019
   steps:
-  - bash: find . -type f -print0 | xargs -0 dos2unix
-    displayName: Convert CLRF to LF
+  # - bash: find . -type f -print0 | xargs -0 dos2unix
+  #   displayName: Convert CLRF to LF
 
-  - bash: |
-      set -euo pipefail
-      curl -sSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(WINCRED_VERSION)/docker-credential-wincred-v$(WINCRED_VERSION)-amd64.zip" -o docker-credential-wincred.zip
-      unzip docker-credential-wincred.zip
-      mkdir -p /usr/bin
-      mv docker-credential-wincred.exe /usr/bin
-      mkdir -p "${USERPROFILE}/.docker"
-      echo '{"credsStore":"wincred"}' > "${USERPROFILE}/.docker/config.json"
-    displayName: Configure wincred
+  # - bash: |
+  #     set -euo pipefail
+  #     curl -sSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(WINCRED_VERSION)/docker-credential-wincred-v$(WINCRED_VERSION)-amd64.zip" -o docker-credential-wincred.zip
+  #     unzip docker-credential-wincred.zip
+  #     mkdir -p /usr/bin
+  #     mv docker-credential-wincred.exe /usr/bin
+  #     mkdir -p "${USERPROFILE}/.docker"
+  #     echo '{"credsStore":"wincred"}' > "${USERPROFILE}/.docker/config.json"
+  #   displayName: Configure wincred
 
   - bash: |
       set -euo pipefail
       GOLANGCI_LINT_VERSION=1.27.0
-      curl -fSsL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- -b $(go env GOPATH)/bin v"${GOLANGCI_LINT_VERSION}"
+      # curl -fSsL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- -b $(go env GOPATH)/bin v"${GOLANGCI_LINT_VERSION}"
+      GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.27.0
     displayName: Install golangci-lint
 
   - bash: |
