@@ -28,7 +28,7 @@ install:
 	@echo "running build target..."
 	@echo "installing docker-lock into docker's cli-plugins folder..."
 	@mkdir -p ~/.docker/cli-plugins
-	@go build -o ~/.docker/cli-plugins ./cmd/docker-lock
+	@CGO_ENABLED=0 go build -o ~/.docker/cli-plugins ./cmd/docker-lock
 	@chmod +x ~/.docker/cli-plugins/docker-lock
 	@echo "installation passed!"
 	@echo "build target passed!"
