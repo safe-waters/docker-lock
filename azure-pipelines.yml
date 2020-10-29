@@ -23,84 +23,11 @@ jobs:
     displayName: Build Dev Container
 
   - bash: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make
-    displayName: Make All
+    displayName: Format, Lint, Install, Unit Tests
 
-- job: Build
-  dependsOn: DevContainer
-  condition: succeeded()
-  pool:
-    vmImage: ubuntu-18.04
-  steps:
-  - bash: |
-      set -euo pipefail
-      curl -fsSL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | bash
-      sudo mv ./bin/goreleaser /usr/local/bin
-    displayName: Install goreleaser
-  - bash: |
-      set -euo pipefail
-      goreleaser build --snapshot
-    displayName: Build all architectures and operating systems
-
-  - publish: "$(System.DefaultWorkingDirectory)/dist/docker-lock_linux_amd64/docker-lock"
-    artifact: docker-lock_linux_amd64
-    displayName: Publish docker-lock_linux_amd64
-
-  - publish: "$(System.DefaultWorkingDirectory)/dist/docker-lock_darwin_amd64/docker-lock"
-    artifact: docker-lock_darwin_amd64
-    displayName: Publish docker-lock_darwin_amd64
-
-  - publish: "$(System.DefaultWorkingDirectory)/dist/docker-lock_windows_amd64/docker-lock.exe"
-    artifact: docker-lock_windows_amd64
-    displayName: Publish docker-lock_windows_amd64
-
-- job: TestWindows
-  dependsOn: Build
-  condition: succeeded()
-  variables:
-    WINCRED_VERSION: '0.6.3'
-  pool: 
-    vmImage: windows-2019
-  steps:
-  - bash: find . -type f -print0 | xargs -0 dos2unix
-    displayName: Convert CLRF to LF
-
-  - bash: |
-      set -euo pipefail
-      curl -sSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(WINCRED_VERSION)/docker-credential-wincred-v$(WINCRED_VERSION)-amd64.zip" -o docker-credential-wincred.zip
-      unzip docker-credential-wincred.zip
-      mkdir -p /usr/bin
-      mv docker-credential-wincred.exe /usr/bin
-      mkdir -p "${USERPROFILE}/.docker"
-      echo '{"credsStore":"wincred"}' > "${USERPROFILE}/.docker/config.json"
-    displayName: Configure wincred
-
-  - bash: |
-      set -euo pipefail
-      # run without -race, because it requires gcc
-      go test -v ./...
-    displayName: Run unit tests
-
-  - download: current
-    artifact: docker-lock_windows_amd64
-    displayName: Download docker-lock_windows_amd64
+  - bash: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make inttest
     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-
-  - script: |
-      # $(Pipeline.Workspace) git bash bug, using cmd as workaround
-      move "$(Pipeline.Workspace)\docker-lock_windows_amd64\docker-lock.exe" docker-lock.exe
-    displayName: Move artifact to current directory
-    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-
-  - bash: |
-      set -euo pipefail
-      chmod +x docker-lock.exe
-      mkdir -p "${USERPROFILE}/.docker/cli-plugins/"
-      mv docker-lock.exe "${USERPROFILE}/.docker/cli-plugins/"
-      ./test/registry/firstparty/tests.sh windows
-      ./test/registry/contrib/tests.sh
-      ./test/demo-app/tests.sh
-    displayName: Run Integration Tests
-    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+    displayName: Integration Tests
     env:
       DOCKER_USERNAME: "$(DOCKER_USERNAME)"
       DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
@@ -108,136 +35,191 @@ jobs:
       ACR_PASSWORD: "$(ACR_PASSWORD)"
       ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
 
-- job: TestMacOS
-  dependsOn: Build
-  condition: succeeded()
-  variables:
-    OSXKEYCHAIN_VERSION: '0.6.3'
-    DOCKER_VERSION: '19.03.9'
-  pool:
-    vmImage: macOS-10.14
-  steps:
-  - bash: |
-      set -euo pipefail
-      curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(OSXKEYCHAIN_VERSION)/docker-credential-osxkeychain-v$(OSXKEYCHAIN_VERSION)-amd64.tar.gz" | gunzip | tar xopf -
-      mv docker-credential-osxkeychain /usr/local/bin
-      # docker cli does not come installed by default on the build agent
-      curl -fsSL "https://download.docker.com/mac/static/stable/x86_64/docker-$(DOCKER_VERSION).tgz" | gunzip | tar xopf -
-      mv docker/docker /usr/local/bin
-      mkdir -p "${HOME}/.docker"
-      echo '{"credsStore":"osxkeychain"}' > "${HOME}/.docker/config.json"
-    displayName: Configure osxkeychain
+# - job: TestWindows
+#   dependsOn: Build
+#   condition: succeeded()
+#   variables:
+#     WINCRED_VERSION: '0.6.3'
+#   pool: 
+#     vmImage: windows-2019
+#   steps:
+#   - bash: find . -type f -print0 | xargs -0 dos2unix
+#     displayName: Convert CLRF to LF
 
-  - bash: |
-      set -euo pipefail
-      make test
-    displayName: Run unit tests
+#   - bash: |
+#       set -euo pipefail
+#       curl -sSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(WINCRED_VERSION)/docker-credential-wincred-v$(WINCRED_VERSION)-amd64.zip" -o docker-credential-wincred.zip
+#       unzip docker-credential-wincred.zip
+#       mkdir -p /usr/bin
+#       mv docker-credential-wincred.exe /usr/bin
+#       mkdir -p "${USERPROFILE}/.docker"
+#       echo '{"credsStore":"wincred"}' > "${USERPROFILE}/.docker/config.json"
+#     displayName: Configure wincred
 
-  - download: current
-    artifact: docker-lock_darwin_amd64
-    displayName: Download docker-lock_darwin_amd64
-    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+#   - bash: |
+#       set -euo pipefail
+#       # run without -race, because it requires gcc
+#       go test -v ./...
+#     displayName: Run unit tests
 
-  - bash: |
-      set -euo pipefail
-      mv "$(Pipeline.Workspace)/docker-lock_darwin_amd64/docker-lock" docker-lock
-      chmod +x docker-lock
-      mkdir -p "${HOME}/.docker/cli-plugins/"
-      mv docker-lock "${HOME}/.docker/cli-plugins/"
-      export PATH="/usr/local/opt/gettext/bin:${PATH}"
-      ./test/registry/firstparty/tests.sh mac
-      ./test/registry/contrib/tests.sh
-      ./test/demo-app/tests.sh
-    displayName: Run Integration Tests
-    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-    env:
-      DOCKER_USERNAME: "$(DOCKER_USERNAME)"
-      DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
-      ACR_USERNAME: "$(ACR_USERNAME)"
-      ACR_PASSWORD: "$(ACR_PASSWORD)"
-      ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
+#   - download: current
+#     artifact: docker-lock_windows_amd64
+#     displayName: Download docker-lock_windows_amd64
+#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
 
-- job: TestLinux
-  dependsOn: Build
-  condition: succeeded()
-  pool:
-    vmImage: ubuntu-18.04
-  steps:
-  - bash: |
-      set -euo pipefail
-      make test
-    displayName: Run unit tests
+#   - script: |
+#       # $(Pipeline.Workspace) git bash bug, using cmd as workaround
+#       move "$(Pipeline.Workspace)\docker-lock_windows_amd64\docker-lock.exe" docker-lock.exe
+#     displayName: Move artifact to current directory
+#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
 
-  - download: current
-    artifact: docker-lock_linux_amd64
-    displayName: Download docker-lock_linux_amd64
-    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+#   - bash: |
+#       set -euo pipefail
+#       chmod +x docker-lock.exe
+#       mkdir -p "${USERPROFILE}/.docker/cli-plugins/"
+#       mv docker-lock.exe "${USERPROFILE}/.docker/cli-plugins/"
+#       ./test/registry/firstparty/tests.sh windows
+#       ./test/registry/contrib/tests.sh
+#       ./test/demo-app/tests.sh
+#     displayName: Run Integration Tests
+#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+#     env:
+#       DOCKER_USERNAME: "$(DOCKER_USERNAME)"
+#       DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
+#       ACR_USERNAME: "$(ACR_USERNAME)"
+#       ACR_PASSWORD: "$(ACR_PASSWORD)"
+#       ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
 
-  - bash: |
-      set -euo pipefail
-      mv "$(Pipeline.Workspace)/docker-lock_linux_amd64/docker-lock" docker-lock
-      chmod +x docker-lock
-      mkdir -p "${HOME}/.docker/cli-plugins/"
-      mv docker-lock "${HOME}/.docker/cli-plugins/"
-      ./test/registry/firstparty/tests.sh linux
-      ./test/registry/contrib/tests.sh
-      ./test/demo-app/tests.sh
-    displayName: Run Integration Tests
-    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-    env:
-      DOCKER_USERNAME: "$(DOCKER_USERNAME)"
-      DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
-      ACR_USERNAME: "$(ACR_USERNAME)"
-      ACR_PASSWORD: "$(ACR_PASSWORD)"
-      ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
+# - job: TestMacOS
+#   dependsOn: Build
+#   condition: succeeded()
+#   variables:
+#     OSXKEYCHAIN_VERSION: '0.6.3'
+#     DOCKER_VERSION: '19.03.9'
+#   pool:
+#     vmImage: macOS-10.14
+#   steps:
+#   - bash: |
+#       set -euo pipefail
+#       curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(OSXKEYCHAIN_VERSION)/docker-credential-osxkeychain-v$(OSXKEYCHAIN_VERSION)-amd64.tar.gz" | gunzip | tar xopf -
+#       mv docker-credential-osxkeychain /usr/local/bin
+#       # docker cli does not come installed by default on the build agent
+#       curl -fsSL "https://download.docker.com/mac/static/stable/x86_64/docker-$(DOCKER_VERSION).tgz" | gunzip | tar xopf -
+#       mv docker/docker /usr/local/bin
+#       mkdir -p "${HOME}/.docker"
+#       echo '{"credsStore":"osxkeychain"}' > "${HOME}/.docker/config.json"
+#     displayName: Configure osxkeychain
 
-# create a release by pushing a semver git tag such as v0.0.1 
-- job: Release
-  dependsOn:
-  - TestWindows
-  - TestMacOS
-  - TestLinux
-  condition: and(succeeded('TestWindows'), succeeded('TestMacOS'), succeeded('TestLinux'))
-  pool:
-    vmImage: ubuntu-18.04
-  steps:
-  - bash: |
-      set -euo pipefail
-      mkdir -p ~/.docker/cli-plugins
-      curl -fsSL https://github.com/docker/buildx/releases/download/v0.4.2/buildx-v0.4.2.linux-amd64 -o ~/.docker/cli-plugins/docker-buildx
-      chmod +x ~/.docker/cli-plugins/docker-buildx
-    displayName: Install docker buildx
-    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-  - task: Docker@2
-    displayName: login
-    inputs:
-      command: login
-      containerRegistry: safe-waters
-    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-  - bash: |
-      set -euo pipefail
-      export DOCKER_CLI_EXPERIMENTAL=enabled
-      export DOCKER_BUILDKIT=1
-      sudo service docker restart
-      docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-      docker buildx create --use
-      latest_tag="$(git tag -l | tail -n 1)"
-      latest_tag="${latest_tag/v}"
-      curl -fsSL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | bash
-      sudo mv ./bin/goreleaser /usr/local/bin
-      if ! curl -fsSL "https://github.com/safe-waters/docker-lock/releases/download/v${latest_tag}/docker-lock_${latest_tag}_Linux_x86_64.tar.gz" -o /dev/null; then
-        echo "releasing version ${latest_tag} to github"
-        goreleaser --rm-dist
-        echo "releasing version ${latest_tag} to dockerhub"
-        docker buildx build --push --platform linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/386 -t "safewaters/docker-lock:${latest_tag}" .
-      fi
-      echo "no new tag, skipping release to github"
-      if [[ "$(Build.SourceBranch)" == 'refs/heads/master' ]]; then
-        echo "releasing version latest to dockerhub"
-        goreleaser build --rm-dist --snapshot
-        docker buildx build --push --platform linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/386 -t safewaters/docker-lock .
-      fi
-    displayName: Release to github and dockerhub
-    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-    env:
-      GITHUB_TOKEN: "$(GITHUB_TOKEN)"
+#   - bash: |
+#       set -euo pipefail
+#       make test
+#     displayName: Run unit tests
+
+#   - download: current
+#     artifact: docker-lock_darwin_amd64
+#     displayName: Download docker-lock_darwin_amd64
+#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+
+#   - bash: |
+#       set -euo pipefail
+#       mv "$(Pipeline.Workspace)/docker-lock_darwin_amd64/docker-lock" docker-lock
+#       chmod +x docker-lock
+#       mkdir -p "${HOME}/.docker/cli-plugins/"
+#       mv docker-lock "${HOME}/.docker/cli-plugins/"
+#       export PATH="/usr/local/opt/gettext/bin:${PATH}"
+#       ./test/registry/firstparty/tests.sh mac
+#       ./test/registry/contrib/tests.sh
+#       ./test/demo-app/tests.sh
+#     displayName: Run Integration Tests
+#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+#     env:
+#       DOCKER_USERNAME: "$(DOCKER_USERNAME)"
+#       DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
+#       ACR_USERNAME: "$(ACR_USERNAME)"
+#       ACR_PASSWORD: "$(ACR_PASSWORD)"
+#       ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
+
+# - job: TestLinux
+#   dependsOn: Build
+#   condition: succeeded()
+#   pool:
+#     vmImage: ubuntu-18.04
+#   steps:
+#   - bash: |
+#       set -euo pipefail
+#       make test
+#     displayName: Run unit tests
+
+#   - download: current
+#     artifact: docker-lock_linux_amd64
+#     displayName: Download docker-lock_linux_amd64
+#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+
+#   - bash: |
+#       set -euo pipefail
+#       mv "$(Pipeline.Workspace)/docker-lock_linux_amd64/docker-lock" docker-lock
+#       chmod +x docker-lock
+#       mkdir -p "${HOME}/.docker/cli-plugins/"
+#       mv docker-lock "${HOME}/.docker/cli-plugins/"
+#       ./test/registry/firstparty/tests.sh linux
+#       ./test/registry/contrib/tests.sh
+#       ./test/demo-app/tests.sh
+#     displayName: Run Integration Tests
+#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+#     env:
+#       DOCKER_USERNAME: "$(DOCKER_USERNAME)"
+#       DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
+#       ACR_USERNAME: "$(ACR_USERNAME)"
+#       ACR_PASSWORD: "$(ACR_PASSWORD)"
+#       ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
+
+# # create a release by pushing a semver git tag such as v0.0.1 
+# - job: Release
+#   dependsOn:
+#   - TestWindows
+#   - TestMacOS
+#   - TestLinux
+#   condition: and(succeeded('TestWindows'), succeeded('TestMacOS'), succeeded('TestLinux'))
+#   pool:
+#     vmImage: ubuntu-18.04
+#   steps:
+#   - bash: |
+#       set -euo pipefail
+#       mkdir -p ~/.docker/cli-plugins
+#       curl -fsSL https://github.com/docker/buildx/releases/download/v0.4.2/buildx-v0.4.2.linux-amd64 -o ~/.docker/cli-plugins/docker-buildx
+#       chmod +x ~/.docker/cli-plugins/docker-buildx
+#     displayName: Install docker buildx
+#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+#   - task: Docker@2
+#     displayName: login
+#     inputs:
+#       command: login
+#       containerRegistry: safe-waters
+#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+#   - bash: |
+#       set -euo pipefail
+#       export DOCKER_CLI_EXPERIMENTAL=enabled
+#       export DOCKER_BUILDKIT=1
+#       sudo service docker restart
+#       docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+#       docker buildx create --use
+#       latest_tag="$(git tag -l | tail -n 1)"
+#       latest_tag="${latest_tag/v}"
+#       curl -fsSL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | bash
+#       sudo mv ./bin/goreleaser /usr/local/bin
+#       if ! curl -fsSL "https://github.com/safe-waters/docker-lock/releases/download/v${latest_tag}/docker-lock_${latest_tag}_Linux_x86_64.tar.gz" -o /dev/null; then
+#         echo "releasing version ${latest_tag} to github"
+#         goreleaser --rm-dist
+#         echo "releasing version ${latest_tag} to dockerhub"
+#         docker buildx build --push --platform linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/386 -t "safewaters/docker-lock:${latest_tag}" .
+#       fi
+#       echo "no new tag, skipping release to github"
+#       if [[ "$(Build.SourceBranch)" == 'refs/heads/master' ]]; then
+#         echo "releasing version latest to dockerhub"
+#         goreleaser build --rm-dist --snapshot
+#         docker buildx build --push --platform linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/386 -t safewaters/docker-lock .
+#       fi
+#     displayName: Release to github and dockerhub
+#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+#     env:
+#       GITHUB_TOKEN: "$(GITHUB_TOKEN)"

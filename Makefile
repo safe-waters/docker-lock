@@ -1,7 +1,7 @@
 SHELL=/bin/bash -euo pipefail
 
 .PHONY: all
-all: clean format lint install test
+all: clean format lint install unittest
 
 .PHONY: format
 format:
@@ -33,14 +33,14 @@ install:
 	@echo "installation passed!"
 	@echo "build target passed!"
 
-.PHONY: test
+.PHONY: unittest
 test:
-	@echo "running test target..."
+	@echo "running unittest target..."
 	@echo "running go test's unit tests, writing coverage output to coverage.html..."
 	@go test -race ./... -v -count=1 -coverprofile=coverage.out
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo "go test passed!"
-	@echo "test target passed!"
+	@echo "unittest target passed!"
 
 .PHONY: clean
 clean:
@@ -49,3 +49,26 @@ clean:
 	@rm -f ~/.docker/cli-plugins/docker-lock
 	@echo "removing passed!"
 	@echo "clean target passed!"
+
+# Only used in CI
+OSFLAG 				:=
+ifeq ($(OS),Windows_NT)
+	OSFLAG += windows
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Linux)
+		OSFLAG += linux
+	endif
+	ifeq ($(UNAME_S),Darwin)
+		OSFLAG += mac
+	endif
+endif
+
+.PHONY: inttest
+inttest: clean install
+	@echo $(OSFLAG)
+	@echo "running inttest target..."
+	@./test/registry/firstparty/tests.sh $(OSFLAG) && \
+    	./test/registry/contrib/tests.sh && \
+    	./test/demo-app/tests.sh;
+	@echo "inttest passed!"
