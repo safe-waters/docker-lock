@@ -55,6 +55,15 @@ jobs:
     displayName: Configure wincred
 
   - bash: |
+      GOLANGCI_LINT_VERSION=1.27.0
+      curl -fSsL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sudo bash -s -- -b /usr/bin v"${GOLANGCI_LINT_VERSION}"
+    displayName: Install golangci-lint
+
+  - bash: |
+      sudo choco install mingw
+    displayName: Install GCC
+
+  - bash: |
       set -euo pipefail
       make lint install unittest
     displayName: Lint, Install, Unit Tests
