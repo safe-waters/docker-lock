@@ -55,11 +55,13 @@ jobs:
     displayName: Configure wincred
 
   - bash: |
+      set -euo pipefail
       GOLANGCI_LINT_VERSION=1.27.0
-      curl -fSsL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- -b /usr/bin v"${GOLANGCI_LINT_VERSION}"
+      curl -fSsL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- -b $(go env GOPATH)/bin v"${GOLANGCI_LINT_VERSION}"
     displayName: Install golangci-lint
 
   - bash: |
+      set -euo pipefail
       choco install -y mingw
     displayName: Install GCC
 
