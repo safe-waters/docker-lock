@@ -14,73 +14,114 @@ schedules:
     - master
   always: true
 
-jobs:
-- job: DevContainer
-  pool:
-    vmImage: ubuntu-18.04
-  steps:
-  - bash: docker build -t devcontainer ./.devcontainer
-    displayName: Build Dev Container
+# jobs:
+# - job: DevContainer
+#   pool:
+#     vmImage: ubuntu-18.04
+#   steps:
+#   - bash: docker build -t devcontainer ./.devcontainer
+#     displayName: Build Dev Container
 
-  - bash: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make lint install unittest
+#   - bash: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make lint install unittest
+#     displayName: Lint, Install, Unit Tests
+
+#   - bash: docker run --network host -v /var/run/docker.sock:/var/run/docker.sock -v "${PWD}:/workspaces/docker-lock" -e DOCKER_USERNAME="${DOCKER_USERNAME}" -e DOCKER_PASSWORD="${DOCKER_PASSWORD}" -e ACR_USERNAME="${ACR_USERNAME}" -e ACR_PASSWORD="${ACR_PASSWORD}" -e ACR_REGISTRY_NAME="${ACR_REGISTRY_NAME}" devcontainer make inttest
+#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+#     displayName: Integration Tests
+#     env:
+#       DOCKER_USERNAME: "$(DOCKER_USERNAME)"
+#       DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
+#       ACR_USERNAME: "$(ACR_USERNAME)"
+#       ACR_PASSWORD: "$(ACR_PASSWORD)"
+#       ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
+
+- job: TestWindows
+  dependsOn: Build
+  condition: succeeded()
+  variables:
+    WINCRED_VERSION: '0.6.3'
+  pool: 
+    vmImage: windows-2019
+  steps:
+  - bash: find . -type f -print0 | xargs -0 dos2unix
+    displayName: Convert CLRF to LF
+
+  - bash: |
+      set -euo pipefail
+      curl -sSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(WINCRED_VERSION)/docker-credential-wincred-v$(WINCRED_VERSION)-amd64.zip" -o docker-credential-wincred.zip
+      unzip docker-credential-wincred.zip
+      mkdir -p /usr/bin
+      mv docker-credential-wincred.exe /usr/bin
+      mkdir -p "${USERPROFILE}/.docker"
+      echo '{"credsStore":"wincred"}' > "${USERPROFILE}/.docker/config.json"
+    displayName: Configure wincred
+
+  - bash: |
+      set -euo pipefail
+      make lint install unittest
     displayName: Lint, Install, Unit Tests
 
-  - bash: docker run --network host -v /var/run/docker.sock:/var/run/docker.sock -v "${PWD}:/workspaces/docker-lock" -e DOCKER_USERNAME="${DOCKER_USERNAME}" -e DOCKER_PASSWORD="${DOCKER_PASSWORD}" -e ACR_USERNAME="${ACR_USERNAME}" -e ACR_PASSWORD="${ACR_PASSWORD}" -e ACR_REGISTRY_NAME="${ACR_REGISTRY_NAME}" devcontainer make inttest
-    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-    displayName: Integration Tests
-    env:
-      DOCKER_USERNAME: "$(DOCKER_USERNAME)"
-      DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
-      ACR_USERNAME: "$(ACR_USERNAME)"
-      ACR_PASSWORD: "$(ACR_PASSWORD)"
-      ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
+  # - download: current
+  #   artifact: docker-lock_windows_amd64
+  #   displayName: Download docker-lock_windows_amd64
+  #   condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
 
-# - job: TestWindows
-#   dependsOn: Build
-#   condition: succeeded()
+  # - script: |
+  #     # $(Pipeline.Workspace) git bash bug, using cmd as workaround
+  #     move "$(Pipeline.Workspace)\docker-lock_windows_amd64\docker-lock.exe" docker-lock.exe
+  #   displayName: Move artifact to current directory
+  #   condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+
+  # - bash: |
+  #     set -euo pipefail
+  #     chmod +x docker-lock.exe
+  #     mkdir -p "${USERPROFILE}/.docker/cli-plugins/"
+  #     mv docker-lock.exe "${USERPROFILE}/.docker/cli-plugins/"
+  #     ./test/registry/firstparty/tests.sh windows
+  #     ./test/registry/contrib/tests.sh
+  #     ./test/demo-app/tests.sh
+  #   displayName: Run Integration Tests
+  #   condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+  #   env:
+  #     DOCKER_USERNAME: "$(DOCKER_USERNAME)"
+  #     DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
+  #     ACR_USERNAME: "$(ACR_USERNAME)"
+  #     ACR_PASSWORD: "$(ACR_PASSWORD)"
+  #     ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
+
+# - job: TestMacOS
 #   variables:
-#     WINCRED_VERSION: '0.6.3'
-#   pool: 
-#     vmImage: windows-2019
+#     OSXKEYCHAIN_VERSION: '0.6.3'
+#     DOCKER_VERSION: '19.03.9'
+#   pool:
+#     vmImage: macOS-10.14
 #   steps:
-#   - bash: find . -type f -print0 | xargs -0 dos2unix
-#     displayName: Convert CLRF to LF
+#   - bash: |
+#       set -euo pipefail
+#       curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(OSXKEYCHAIN_VERSION)/docker-credential-osxkeychain-v$(OSXKEYCHAIN_VERSION)-amd64.tar.gz" | gunzip | tar xopf -
+#       mv docker-credential-osxkeychain /usr/local/bin
+#       # docker cli does not come installed by default on the build agent
+#       curl -fsSL "https://download.docker.com/mac/static/stable/x86_64/docker-$(DOCKER_VERSION).tgz" | gunzip | tar xopf -
+#       mv docker/docker /usr/local/bin
+#       mkdir -p "${HOME}/.docker"
+#       echo '{"credsStore":"osxkeychain"}' > "${HOME}/.docker/config.json"
+#     displayName: Configure osxkeychain
+
+#   - bash: |
+#       GOLANGCI_LINT_VERSION=1.27.0
+#       curl -fSsL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sudo bash -s -- -b /usr/local/bin v"${GOLANGCI_LINT_VERSION}"
+#     displayName: Install golangci-lint
 
 #   - bash: |
 #       set -euo pipefail
-#       curl -sSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(WINCRED_VERSION)/docker-credential-wincred-v$(WINCRED_VERSION)-amd64.zip" -o docker-credential-wincred.zip
-#       unzip docker-credential-wincred.zip
-#       mkdir -p /usr/bin
-#       mv docker-credential-wincred.exe /usr/bin
-#       mkdir -p "${USERPROFILE}/.docker"
-#       echo '{"credsStore":"wincred"}' > "${USERPROFILE}/.docker/config.json"
-#     displayName: Configure wincred
+#       make lint install unittest
+#     displayName: Lint, Install, Unit Tests
 
 #   - bash: |
 #       set -euo pipefail
-#       # run without -race, because it requires gcc
-#       go test -v ./...
-#     displayName: Run unit tests
-
-#   - download: current
-#     artifact: docker-lock_windows_amd64
-#     displayName: Download docker-lock_windows_amd64
-#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-
-#   - script: |
-#       # $(Pipeline.Workspace) git bash bug, using cmd as workaround
-#       move "$(Pipeline.Workspace)\docker-lock_windows_amd64\docker-lock.exe" docker-lock.exe
-#     displayName: Move artifact to current directory
-#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-
-#   - bash: |
-#       set -euo pipefail
-#       chmod +x docker-lock.exe
-#       mkdir -p "${USERPROFILE}/.docker/cli-plugins/"
-#       mv docker-lock.exe "${USERPROFILE}/.docker/cli-plugins/"
-#       ./test/registry/firstparty/tests.sh windows
-#       ./test/registry/contrib/tests.sh
-#       ./test/demo-app/tests.sh
+#       # add envsubst to the path
+#       export PATH="/usr/local/opt/gettext/bin:${PATH}"
+#       make inttest
 #     displayName: Run Integration Tests
 #     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
 #     env:
@@ -89,48 +130,6 @@ jobs:
 #       ACR_USERNAME: "$(ACR_USERNAME)"
 #       ACR_PASSWORD: "$(ACR_PASSWORD)"
 #       ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
-
-- job: TestMacOS
-  variables:
-    OSXKEYCHAIN_VERSION: '0.6.3'
-    DOCKER_VERSION: '19.03.9'
-  pool:
-    vmImage: macOS-10.14
-  steps:
-  - bash: |
-      set -euo pipefail
-      curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(OSXKEYCHAIN_VERSION)/docker-credential-osxkeychain-v$(OSXKEYCHAIN_VERSION)-amd64.tar.gz" | gunzip | tar xopf -
-      mv docker-credential-osxkeychain /usr/local/bin
-      # docker cli does not come installed by default on the build agent
-      curl -fsSL "https://download.docker.com/mac/static/stable/x86_64/docker-$(DOCKER_VERSION).tgz" | gunzip | tar xopf -
-      mv docker/docker /usr/local/bin
-      mkdir -p "${HOME}/.docker"
-      echo '{"credsStore":"osxkeychain"}' > "${HOME}/.docker/config.json"
-    displayName: Configure osxkeychain
-
-  - bash: |
-      GOLANGCI_LINT_VERSION=1.27.0
-      curl -fSsL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sudo bash -s -- -b /usr/local/bin v"${GOLANGCI_LINT_VERSION}"
-    displayName: Install golangci-lint
-
-  - bash: |
-      set -euo pipefail
-      make lint install unittest
-    displayName: Lint, Install, Unit Tests
-
-  - bash: |
-      set -euo pipefail
-      # add envsubst to the path
-      export PATH="/usr/local/opt/gettext/bin:${PATH}"
-      make inttest
-    displayName: Run Integration Tests
-    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-    env:
-      DOCKER_USERNAME: "$(DOCKER_USERNAME)"
-      DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
-      ACR_USERNAME: "$(ACR_USERNAME)"
-      ACR_PASSWORD: "$(ACR_PASSWORD)"
-      ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
 
 - job: TestLinux
   pool:

@@ -66,7 +66,6 @@ endif
 
 .PHONY: inttest
 inttest: clean install
-	@echo $(OSFLAG)
 	@echo "running inttest target..."
 	@./test/registry/firstparty/tests.sh $(OSFLAG) && \
     	./test/registry/contrib/tests.sh && \
