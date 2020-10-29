@@ -148,7 +148,7 @@ jobs:
   - TestWindows
   - TestMacOS
   - TestLinux
-  condition: and(succeeded('TestWindows'), succeeded('TestMacOS'), succeeded('TestLinux'), eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock'))
+  condition: and(succeeded('TestWindows'), succeeded('TestMacOS'), succeeded('TestLinux'), succeeded('DevContainer'))
   pool:
     vmImage: ubuntu-18.04
   steps:
@@ -158,11 +158,13 @@ jobs:
       curl -fsSL https://github.com/docker/buildx/releases/download/v0.4.2/buildx-v0.4.2.linux-amd64 -o ~/.docker/cli-plugins/docker-buildx
       chmod +x ~/.docker/cli-plugins/docker-buildx
     displayName: Install docker buildx
+    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
   - task: Docker@2
     displayName: login
     inputs:
       command: login
       containerRegistry: safe-waters
+    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
   - bash: |
       set -euo pipefail
       export DOCKER_CLI_EXPERIMENTAL=enabled
@@ -187,5 +189,6 @@ jobs:
         docker buildx build --push --platform linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/386 -t safewaters/docker-lock .
       fi
     displayName: Release to github and dockerhub
+    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
     env:
       GITHUB_TOKEN: "$(GITHUB_TOKEN)"
