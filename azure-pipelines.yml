@@ -15,18 +15,18 @@ schedules:
   always: true
 
 jobs:
-- job: 'Dev Container'
+- job: DevContainer
   pool:
     vmImage: ubuntu-18.04
   steps:
   - bash: docker build -t devcontainer ./.devcontainer
     displayName: Build Dev Container
 
-  - bash: docker run -v "${PWD}:/app" devcontainer /bin/bash -c "cd /app && make"
-    displayName: Make
+  - bash: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make
+    displayName: Make All
 
 - job: Build
-  dependsOn: 'Dev Container'
+  dependsOn: DevContainer
   condition: succeeded()
   pool:
     vmImage: ubuntu-18.04
