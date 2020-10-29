@@ -62,7 +62,7 @@ jobs:
   - bash: |
       set -euo pipefail
       make install unittest
-    displayName: Lint, Install, Unit Tests
+    displayName: Install, Unit Tests
 
   # - download: current
   #   artifact: docker-lock_windows_amd64
