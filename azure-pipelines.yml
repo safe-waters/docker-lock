@@ -15,18 +15,18 @@ schedules:
   always: true
 
 jobs:
-- job: Lint
+- job: 'Dev Container'
   pool:
     vmImage: ubuntu-18.04
   steps:
   - bash: docker build -t devcontainer ./.devcontainer
     displayName: Build Dev Container
 
-  - bash: docker run -v "${PWD}:/app" devcontainer /app/scripts/lint.sh
-    displayName: Run linters
+  - bash: docker run -v "${PWD}:/app" devcontainer /bin/bash -c "cd /app && make"
+    displayName: Make
 
 - job: Build
-  dependsOn: Lint
+  dependsOn: 'Dev Container'
   condition: succeeded()
   pool:
     vmImage: ubuntu-18.04
@@ -77,7 +77,7 @@ jobs:
   - bash: |
       set -euo pipefail
       # run without -race, because it requires gcc
-      go test ./...
+      go test -v ./...
     displayName: Run unit tests
 
   - download: current
@@ -130,7 +130,7 @@ jobs:
 
   - bash: |
       set -euo pipefail
-      ./scripts/unittest.sh
+      make test
     displayName: Run unit tests
 
   - download: current
@@ -165,7 +165,7 @@ jobs:
   steps:
   - bash: |
       set -euo pipefail
-      ./scripts/unittest.sh
+      make test
     displayName: Run unit tests
 
   - download: current
