@@ -23,7 +23,7 @@ func TestVerifier(t *testing.T) {
 		ShouldFail  bool
 	}{
 		{
-			Name: "Different Number of Images in Dockerfile",
+			Name: "Dockerfile Diff",
 			Contents: [][]byte{
 				[]byte(`
 FROM busybox
@@ -47,31 +47,7 @@ FROM busybox
 			ShouldFail: true,
 		},
 		{
-			Name: "Different Digests in Dockerfile",
-			Contents: [][]byte{
-				[]byte(`
-FROM busybox
-`,
-				),
-				[]byte(`
-{
-	"dockerfiles": {
-		"Dockerfile": [
-			{
-				"name": "busybox",
-				"tag": "latest",
-				"digest": "notbusybox"
-			}
-		]
-	}
-}
-`,
-				),
-			},
-			ShouldFail: true,
-		},
-		{
-			Name: "Different Number of Images in Composefile",
+			Name: "Composefile Diff",
 			Contents: [][]byte{
 				[]byte(`
 version: '3'
@@ -91,34 +67,6 @@ services:
 				"tag": "latest",
 				"digest": "busybox",
 				"service": "svc-two"
-			}
-		]
-	}
-}
-`,
-				),
-			},
-			ShouldFail: true,
-		},
-		{
-			Name: "Different Digests in Composefile",
-			Contents: [][]byte{
-				[]byte(`
-version: '3'
-services:
-  svc:
-    image: busybox
-`,
-				),
-				[]byte(`
-{
-	"composefiles": {
-		"docker-compose.yml": [
-			{
-				"name": "busybox",
-				"tag": "latest",
-				"digest": "notbusybox",
-				"service": "svc"
 			}
 		]
 	}

@@ -131,6 +131,9 @@ func TestDockerfileDifferentiator(t *testing.T) {
 			ExcludeTags: true,
 		},
 		{
+			Name: "Nil",
+		},
+		{
 			Name: "Normal",
 			Existing: map[string][]*parse.DockerfileImage{
 				"Dockerfile": {

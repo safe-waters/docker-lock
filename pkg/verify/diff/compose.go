@@ -126,7 +126,7 @@ func (c *ComposefileDifferentiator) Differentiate(
 						if *existingImage.Image != *newImage.Image {
 							select {
 							case errCh <- fmt.Errorf(
-								"on path %s existing image %v differs"+
+								"on path %s existing image %v differs "+
 									"from the new image %v",
 								path, *existingImage.Image, *newImage.Image,
 							):
@@ -139,7 +139,7 @@ func (c *ComposefileDifferentiator) Differentiate(
 						if existingImage.ServiceName != newImage.ServiceName {
 							select {
 							case errCh <- fmt.Errorf(
-								"on path %s existing ServiceName %s differs"+
+								"on path %s existing ServiceName %s differs "+
 									"from the new ServiceName %s",
 								path, existingImage.ServiceName,
 								newImage.ServiceName,

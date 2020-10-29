@@ -51,6 +51,13 @@ func (v *Verifier) VerifyLockfile(reader io.Reader) error {
 		return errors.New("reader cannot be nil")
 	}
 
+	if (v.DockerfileVerifier == nil ||
+		reflect.ValueOf(v.DockerfileVerifier).IsNil()) &&
+		(v.ComposefileVerifier == nil ||
+			reflect.ValueOf(v.ComposefileVerifier).IsNil()) {
+		return nil
+	}
+
 	var existingLockfile generate.Lockfile
 	if err := json.NewDecoder(reader).Decode(&existingLockfile); err != nil {
 		return err
@@ -87,10 +94,6 @@ func (v *Verifier) VerifyLockfile(reader io.Reader) error {
 			existingLockfile.ComposefileImages, newLockfile.ComposefileImages,
 			done,
 		)
-	}
-
-	if dockerfileErrCh == nil && composefileErrCh == nil {
-		return nil
 	}
 
 	for {
