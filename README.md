@@ -269,20 +269,12 @@ so you can use `docker` and `docker-compose` commands from within the container
 as if they were run on the host.
 
 ## Build From Source
-From the root of the project:
+To build and install `docker-lock` in `docker`'s cli-plugins directory,
+from the root of the project, run:
 
 ```bash
-$ go build ./cmd/docker-lock
+$ make install
 ```
-
-If on Mac or Linux, make the output binary executable:
-
-```bash
-$ chmod +x docker-lock
-```
-
-Finally, move the binary to the cli-plugins folder or add it to your PATH,
-as described in the [installation section](#Install).
 
 If you would like to cross-compile for another operating system
 or architecture, from the root of the project, run:
@@ -292,18 +284,23 @@ $ CGO_ENABLED=0 GOOS=<your os> GOARCH=<your arch> go build ./cmd/docker-lock
 ```
 
 ## Code Quality and Correctness
-Unit tests, integration tests, and linting run in the
-[CI pipeline](https://dev.azure.com/michaelsethperel/docker-lock/_build)
-on pull requests. Locally, you can run quality checks for everything except for integration tests.
-* To format your code: `./scripts/format.sh`
-* To lint your code: `./scripts/lint.sh`
-* To run unit tests: `./scripts/unittest.sh`
-* To generate a coverage report: `./scripts/coverage.sh`
-* To view the coverage report on your browser, open a console, but not in
-`docker`, run:
+To clean, format, lint, and run unit tests:
 ```bash
-$ go tool cover -html=coverage.out
+make
 ```
+
+The [CI pipeline](https://dev.azure.com/michaelsethperel/docker-lock/_build)
+will additionally run integration tests on pull requests.
+
+You can run any step individually.
+
+* To uninstall: `make clean`
+* To format your code: `make format`
+* To lint your code: `make lint`
+* To run unit tests: `make unittest`
+
+To view the coverage report after running unit tests, open `coverage.html` in
+your browser.
 
 # Tutorials
 * [Tags Vs. Digests](./docs/tutorials/tags-vs-digests.md)
