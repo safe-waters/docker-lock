@@ -34,7 +34,7 @@ install:
 	@echo "build target passed!"
 
 .PHONY: unittest
-test:
+unittest:
 	@echo "running unittest target..."
 	@echo "running go test's unit tests, writing coverage output to coverage.html..."
 	@go test -race ./... -v -count=1 -coverprofile=coverage.out
