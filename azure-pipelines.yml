@@ -144,6 +144,10 @@ jobs:
     vmImage: ubuntu-18.04
   steps:
   - bash: |
+      GOLANGCI_LINT_VERSION=1.27.0
+      curl -fSsL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- -b /usr/local/bin v"${GOLANGCI_LINT_VERSION}"
+    displayName: Install golangci-lint
+  - bash: |
       set -euo pipefail
       make lint install unittest
     displayName: Lint, Install, Unit Tests
