@@ -7,6 +7,7 @@ import (
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 )
 
+// IComposefileDifferentiator provides an interface for diffing Composefiles.
 type IComposefileDifferentiator interface {
 	Differentiate(
 		existingPathImages map[string][]*parse.ComposefileImage,
@@ -15,10 +16,13 @@ type IComposefileDifferentiator interface {
 	) <-chan error
 }
 
+// ComposefileDifferentiator provides methods for diffing Composefile Path
+// Images.
 type ComposefileDifferentiator struct {
 	ExcludeTags bool
 }
 
+// Differentiate diffs Composefile Path Images.
 func (c *ComposefileDifferentiator) Differentiate(
 	existingPathImages map[string][]*parse.ComposefileImage,
 	newPathImages map[string][]*parse.ComposefileImage,

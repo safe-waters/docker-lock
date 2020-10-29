@@ -8,6 +8,7 @@ import (
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 )
 
+// IDockerfileDifferentiator provides an interface for diffing Dockerfiles.
 type IDockerfileDifferentiator interface {
 	Differentiate(
 		existingPathImages map[string][]*parse.DockerfileImage,
@@ -16,10 +17,12 @@ type IDockerfileDifferentiator interface {
 	) <-chan error
 }
 
+// DockerfileDifferentiator provides methods for diffing Dockerfile Path Images.
 type DockerfileDifferentiator struct {
 	ExcludeTags bool
 }
 
+// Differentiate diffs Dockerfile Path Images.
 func (d *DockerfileDifferentiator) Differentiate(
 	existingPathImages map[string][]*parse.DockerfileImage,
 	newPathImages map[string][]*parse.DockerfileImage,
