@@ -25,7 +25,7 @@ jobs:
   - bash: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make
     displayName: Format, Lint, Install, Unit Tests
 
-  - bash: docker run -v "${PWD}:/workspaces/docker-lock" -e DOCKER_USERNAME="${DOCKER_USERNAME}" -e DOCKER_PASSWORD="${DOCKER_PASSWORD}" -e ACR_USERNAME="${ACR_USERNAME}" -e ACR_PASSWORD="${ACR_PASSWORD}" -e ACR_REGISTRY_NAME="${ACR_REGISTRY_NAME} devcontainer make inttest
+  - bash: docker run -v "${PWD}:/workspaces/docker-lock" -e DOCKER_USERNAME="${DOCKER_USERNAME}" -e DOCKER_PASSWORD="${DOCKER_PASSWORD}" -e ACR_USERNAME="${ACR_USERNAME}" -e ACR_PASSWORD="${ACR_PASSWORD}" -e ACR_REGISTRY_NAME="${ACR_REGISTRY_NAME}" devcontainer make inttest
     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
     displayName: Integration Tests
     env:
