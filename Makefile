@@ -41,11 +41,11 @@ install:
 	@echo "installing docker-lock into docker's cli-plugins folder..."
 	@if [[ $(OSFLAG) == "windows" ]]; then \
 		mkdir -p ${USERPROFILE}/.docker/cli-plugins; \
-		CGO_ENABLED=0 go build -o ${USERPROFILE}/.docker/cli-plugins ./cmd/docker-lock; \
+		CGO_ENABLED=0 go build -o ${USERPROFILE}/.docker/cli-plugins/docker-lock.exe ./cmd/docker-lock; \
 		chmod +x ${USERPROFILE}/.docker/cli-plugins/docker-lock.exe; \
 	else \
 		mkdir -p ${HOME}/.docker/cli-plugins; \
-		CGO_ENABLED=0 go build -o ${HOME}/.docker/cli-plugins ./cmd/docker-lock; \
+		CGO_ENABLED=0 go build -o ${HOME}/.docker/cli-plugins/docker-lock ./cmd/docker-lock; \
 		chmod +x ${HOME}/.docker/cli-plugins/docker-lock; \
 	fi
 	@echo "installation passed!"
