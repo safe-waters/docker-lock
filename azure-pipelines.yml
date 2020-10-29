@@ -22,8 +22,8 @@ jobs:
   - bash: docker build -t devcontainer ./.devcontainer
     displayName: Build Dev Container
 
-  - bash: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make
-    displayName: Format, Lint, Install, Unit Tests
+  - bash: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make lint install unittest
+    displayName: Lint, Install, Unit Tests
 
   - bash: docker run --network host -v /var/run/docker.sock:/var/run/docker.sock -v "${PWD}:/workspaces/docker-lock" -e DOCKER_USERNAME="${DOCKER_USERNAME}" -e DOCKER_PASSWORD="${DOCKER_PASSWORD}" -e ACR_USERNAME="${ACR_USERNAME}" -e ACR_PASSWORD="${ACR_PASSWORD}" -e ACR_REGISTRY_NAME="${ACR_REGISTRY_NAME}" devcontainer make inttest
     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
@@ -145,14 +145,12 @@ jobs:
   steps:
   - bash: |
       set -euo pipefail
-      make
-    displayName: Format, Lint, Install, Unit Tests
+      make lint install unittest
+    displayName: Lint, Install, Unit Tests
 
   - bash: |
       set -euo pipefail
-      ./test/registry/firstparty/tests.sh linux
-      ./test/registry/contrib/tests.sh
-      ./test/demo-app/tests.sh
+      make inttest
     displayName: Run Integration Tests
     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
     env:
