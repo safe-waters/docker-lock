@@ -41,18 +41,18 @@ jobs:
   pool: 
     vmImage: windows-2019
   steps:
-  # - bash: find . -type f -print0 | xargs -0 dos2unix
-  #   displayName: Convert CLRF to LF
+  - bash: find . -type f -print0 | xargs -0 dos2unix
+    displayName: Convert CLRF to LF
 
-  # - bash: |
-  #     set -euo pipefail
-  #     curl -sSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(WINCRED_VERSION)/docker-credential-wincred-v$(WINCRED_VERSION)-amd64.zip" -o docker-credential-wincred.zip
-  #     unzip docker-credential-wincred.zip
-  #     mkdir -p /usr/bin
-  #     mv docker-credential-wincred.exe /usr/bin
-  #     mkdir -p "${USERPROFILE}/.docker"
-  #     echo '{"credsStore":"wincred"}' > "${USERPROFILE}/.docker/config.json"
-  #   displayName: Configure wincred
+  - bash: |
+      set -euo pipefail
+      curl -sSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(WINCRED_VERSION)/docker-credential-wincred-v$(WINCRED_VERSION)-amd64.zip" -o docker-credential-wincred.zip
+      unzip docker-credential-wincred.zip
+      mkdir -p /usr/bin
+      mv docker-credential-wincred.exe /usr/bin
+      mkdir -p "${USERPROFILE}/.docker"
+      echo '{"credsStore":"wincred"}' > "${USERPROFILE}/.docker/config.json"
+    displayName: Configure wincred
 
   - bash: |
       set -euo pipefail
@@ -64,33 +64,17 @@ jobs:
       make install unittest
     displayName: Install, Unit Tests
 
-  # - download: current
-  #   artifact: docker-lock_windows_amd64
-  #   displayName: Download docker-lock_windows_amd64
-  #   condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-
-  # - script: |
-  #     # $(Pipeline.Workspace) git bash bug, using cmd as workaround
-  #     move "$(Pipeline.Workspace)\docker-lock_windows_amd64\docker-lock.exe" docker-lock.exe
-  #   displayName: Move artifact to current directory
-  #   condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-
-  # - bash: |
-  #     set -euo pipefail
-  #     chmod +x docker-lock.exe
-  #     mkdir -p "${USERPROFILE}/.docker/cli-plugins/"
-  #     mv docker-lock.exe "${USERPROFILE}/.docker/cli-plugins/"
-  #     ./test/registry/firstparty/tests.sh windows
-  #     ./test/registry/contrib/tests.sh
-  #     ./test/demo-app/tests.sh
-  #   displayName: Run Integration Tests
-  #   condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-  #   env:
-  #     DOCKER_USERNAME: "$(DOCKER_USERNAME)"
-  #     DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
-  #     ACR_USERNAME: "$(ACR_USERNAME)"
-  #     ACR_PASSWORD: "$(ACR_PASSWORD)"
-  #     ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
+  - bash: |
+      set -euo pipefail
+      make inttest
+    displayName: Run Integration Tests
+    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+    env:
+      DOCKER_USERNAME: "$(DOCKER_USERNAME)"
+      DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
+      ACR_USERNAME: "$(ACR_USERNAME)"
+      ACR_PASSWORD: "$(ACR_PASSWORD)"
+      ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
 
 # - job: TestMacOS
 #   variables:

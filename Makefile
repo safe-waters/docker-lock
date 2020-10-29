@@ -21,36 +21,13 @@ lint:
 	@golangci-lint run
 	@echo "golangci-lint passed!"
 	@echo "lint target passed!"
-	
-OSFLAG 				:=
-ifeq ($(OS),Windows_NT)
-	OSFLAG += windows
-else
-	UNAME_S := $(shell uname -s)
-	ifeq ($(UNAME_S),Linux)
-		OSFLAG += linux
-	endif
-	ifeq ($(UNAME_S),Darwin)
-		OSFLAG += mac
-	endif
-endif
 
 .PHONY: install
 install:
 	@echo "running build target..."
 	@echo "installing docker-lock into docker's cli-plugins folder..."
-	@if [[ $(OSFLAG) == "windows" ]]; then \
-		mkdir -p ${USERPROFILE}/.docker/cli-plugins; \
-		CGO_ENABLED=0 go build -o ${USERPROFILE}/.docker/cli-plugins/docker-lock.exe ./cmd/docker-lock; \
-		ls -al ${USERPROFILE}; \
-		ls -al ${USERPROFILE}/.docker; \
-		ls -al ${USERPROFILE}/.docker/cli-plugins; \
-		chmod +x ${USERPROFILE}/.docker/cli-plugins/docker-lock.exe; \
-	else \
-		mkdir -p ${HOME}/.docker/cli-plugins; \
-		CGO_ENABLED=0 go build -o ${HOME}/.docker/cli-plugins/docker-lock ./cmd/docker-lock; \
-		chmod +x ${HOME}/.docker/cli-plugins/docker-lock; \
-	fi
+	@mkdir -p "$${HOME}/.docker/cli-plugins"
+	@CGO_ENABLED=0 go build -o "$${HOME}/.docker/cli-plugins" ./cmd/docker-lock
 	@echo "installation passed!"
 	@echo "build target passed!"
 
@@ -67,13 +44,22 @@ unittest:
 clean:
 	@echo "running clean target..."
 	@echo "removing docker-lock from docker's cli-plugins folder..."
-	@if [[ $(OSFLAG) == "windows" ]]; then \
-		rm -f ${USERPROFILE}/.docker/cli-plugins/docker-lock.exe; \
-	else \
-		rm -f ${HOME}/.docker/cli-plugins/docker-lock; \
-	fi
+	@rm -f "$${HOME}"/.docker/cli-plugins/docker-lock*
 	@echo "removing passed!"
 	@echo "clean target passed!"
+
+OSFLAG 				:=
+ifeq ($(OS),Windows_NT)
+	OSFLAG += windows
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Linux)
+		OSFLAG += linux
+	endif
+	ifeq ($(UNAME_S),Darwin)
+		OSFLAG += mac
+	endif
+endif
 
 .PHONY: inttest
 inttest: clean install
