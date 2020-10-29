@@ -42,6 +42,9 @@ install:
 	@if [[ $(OSFLAG) == "windows" ]]; then \
 		mkdir -p ${USERPROFILE}/.docker/cli-plugins; \
 		CGO_ENABLED=0 go build -o ${USERPROFILE}/.docker/cli-plugins/docker-lock.exe ./cmd/docker-lock; \
+		ls -al ${USERPROFILE};
+		ls -al ${USERPROFILE}/.docker;
+		ls -al ${USERPROFILE}/.docker/cli-plugins;
 		chmod +x ${USERPROFILE}/.docker/cli-plugins/docker-lock.exe; \
 	else \
 		mkdir -p ${HOME}/.docker/cli-plugins; \
