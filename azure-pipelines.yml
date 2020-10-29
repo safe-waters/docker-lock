@@ -90,54 +90,47 @@ jobs:
 #       ACR_PASSWORD: "$(ACR_PASSWORD)"
 #       ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
 
-# - job: TestMacOS
-#   dependsOn: Build
-#   condition: succeeded()
-#   variables:
-#     OSXKEYCHAIN_VERSION: '0.6.3'
-#     DOCKER_VERSION: '19.03.9'
-#   pool:
-#     vmImage: macOS-10.14
-#   steps:
-#   - bash: |
-#       set -euo pipefail
-#       curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(OSXKEYCHAIN_VERSION)/docker-credential-osxkeychain-v$(OSXKEYCHAIN_VERSION)-amd64.tar.gz" | gunzip | tar xopf -
-#       mv docker-credential-osxkeychain /usr/local/bin
-#       # docker cli does not come installed by default on the build agent
-#       curl -fsSL "https://download.docker.com/mac/static/stable/x86_64/docker-$(DOCKER_VERSION).tgz" | gunzip | tar xopf -
-#       mv docker/docker /usr/local/bin
-#       mkdir -p "${HOME}/.docker"
-#       echo '{"credsStore":"osxkeychain"}' > "${HOME}/.docker/config.json"
-#     displayName: Configure osxkeychain
+- job: TestMacOS
+  variables:
+    OSXKEYCHAIN_VERSION: '0.6.3'
+    DOCKER_VERSION: '19.03.9'
+  pool:
+    vmImage: macOS-10.14
+  steps:
+  - bash: |
+      set -euo pipefail
+      curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(OSXKEYCHAIN_VERSION)/docker-credential-osxkeychain-v$(OSXKEYCHAIN_VERSION)-amd64.tar.gz" | gunzip | tar xopf -
+      mv docker-credential-osxkeychain /usr/local/bin
+      # docker cli does not come installed by default on the build agent
+      curl -fsSL "https://download.docker.com/mac/static/stable/x86_64/docker-$(DOCKER_VERSION).tgz" | gunzip | tar xopf -
+      mv docker/docker /usr/local/bin
+      mkdir -p "${HOME}/.docker"
+      echo '{"credsStore":"osxkeychain"}' > "${HOME}/.docker/config.json"
+    displayName: Configure osxkeychain
 
-#   - bash: |
-#       set -euo pipefail
-#       make test
-#     displayName: Run unit tests
+  - bash: |
+      GOLANGCI_LINT_VERSION=1.27.0
+      curl -fSsL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sudo bash -s -- -b /usr/local/bin v"${GOLANGCI_LINT_VERSION}"
+    displayName: Install golangci-lint
 
-#   - download: current
-#     artifact: docker-lock_darwin_amd64
-#     displayName: Download docker-lock_darwin_amd64
-#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+  - bash: |
+      set -euo pipefail
+      make lint install unittest
+    displayName: Lint, Install, Unit Tests
 
-#   - bash: |
-#       set -euo pipefail
-#       mv "$(Pipeline.Workspace)/docker-lock_darwin_amd64/docker-lock" docker-lock
-#       chmod +x docker-lock
-#       mkdir -p "${HOME}/.docker/cli-plugins/"
-#       mv docker-lock "${HOME}/.docker/cli-plugins/"
-#       export PATH="/usr/local/opt/gettext/bin:${PATH}"
-#       ./test/registry/firstparty/tests.sh mac
-#       ./test/registry/contrib/tests.sh
-#       ./test/demo-app/tests.sh
-#     displayName: Run Integration Tests
-#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-#     env:
-#       DOCKER_USERNAME: "$(DOCKER_USERNAME)"
-#       DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
-#       ACR_USERNAME: "$(ACR_USERNAME)"
-#       ACR_PASSWORD: "$(ACR_PASSWORD)"
-#       ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
+  - bash: |
+      set -euo pipefail
+      # add envsubst to the path
+      export PATH="/usr/local/opt/gettext/bin:${PATH}"
+      make inttest
+    displayName: Run Integration Tests
+    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+    env:
+      DOCKER_USERNAME: "$(DOCKER_USERNAME)"
+      DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
+      ACR_USERNAME: "$(ACR_USERNAME)"
+      ACR_PASSWORD: "$(ACR_PASSWORD)"
+      ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
 
 - job: TestLinux
   pool:
@@ -147,6 +140,7 @@ jobs:
       GOLANGCI_LINT_VERSION=1.27.0
       curl -fSsL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sudo bash -s -- -b /usr/local/bin v"${GOLANGCI_LINT_VERSION}"
     displayName: Install golangci-lint
+
   - bash: |
       set -euo pipefail
       make lint install unittest
