@@ -36,8 +36,6 @@ jobs:
 #       ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
 
 - job: TestWindows
-  dependsOn: Build
-  condition: succeeded()
   variables:
     WINCRED_VERSION: '0.6.3'
   pool: 
@@ -131,31 +129,31 @@ jobs:
 #       ACR_PASSWORD: "$(ACR_PASSWORD)"
 #       ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
 
-- job: TestLinux
-  pool:
-    vmImage: ubuntu-18.04
-  steps:
-  - bash: |
-      GOLANGCI_LINT_VERSION=1.27.0
-      curl -fSsL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sudo bash -s -- -b /usr/local/bin v"${GOLANGCI_LINT_VERSION}"
-    displayName: Install golangci-lint
+# - job: TestLinux
+#   pool:
+#     vmImage: ubuntu-18.04
+#   steps:
+#   - bash: |
+#       GOLANGCI_LINT_VERSION=1.27.0
+#       curl -fSsL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sudo bash -s -- -b /usr/local/bin v"${GOLANGCI_LINT_VERSION}"
+#     displayName: Install golangci-lint
 
-  - bash: |
-      set -euo pipefail
-      make lint install unittest
-    displayName: Lint, Install, Unit Tests
+#   - bash: |
+#       set -euo pipefail
+#       make lint install unittest
+#     displayName: Lint, Install, Unit Tests
 
-  - bash: |
-      set -euo pipefail
-      make inttest
-    displayName: Run Integration Tests
-    condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
-    env:
-      DOCKER_USERNAME: "$(DOCKER_USERNAME)"
-      DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
-      ACR_USERNAME: "$(ACR_USERNAME)"
-      ACR_PASSWORD: "$(ACR_PASSWORD)"
-      ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
+#   - bash: |
+#       set -euo pipefail
+#       make inttest
+#     displayName: Run Integration Tests
+#     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
+#     env:
+#       DOCKER_USERNAME: "$(DOCKER_USERNAME)"
+#       DOCKER_PASSWORD: "$(DOCKER_PASSWORD)"
+#       ACR_USERNAME: "$(ACR_USERNAME)"
+#       ACR_PASSWORD: "$(ACR_PASSWORD)"
+#       ACR_REGISTRY_NAME: "$(ACR_REGISTRY_NAME)"
 
 # # create a release by pushing a semver git tag such as v0.0.1 
 # - job: Release
