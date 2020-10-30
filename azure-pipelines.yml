@@ -93,6 +93,10 @@ jobs:
   steps:
   - bash: |
       set -euo pipefail
+      curl -fsSL https://get.docker.com | bash
+    displayName: Install Docker
+  - bash: |
+      set -euo pipefail
       curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(OSXKEYCHAIN_VERSION)/docker-credential-osxkeychain-v$(OSXKEYCHAIN_VERSION)-amd64.tar.gz" | gunzip | tar xopf -
       mv docker-credential-osxkeychain /usr/local/bin
       # docker cli does not come installed by default on the build agent

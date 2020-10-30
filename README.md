@@ -302,5 +302,9 @@ You can run any step individually.
 To view the coverage report after running unit tests, open `coverage.html` in
 your browser.
 
+>Note: While there exists a target in the Makefile for integration tests, these
+cannot run locally because they require credentials that are only available in
+the CI pipeline.
+
 # Tutorials
 * [Tags Vs. Digests](./docs/tutorials/tags-vs-digests.md)
