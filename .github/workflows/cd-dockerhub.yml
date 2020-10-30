@@ -38,7 +38,7 @@ jobs:
       - name: check
         run: echo ${TAG}
         env:
-          TAG: ${{ outputs.tag }}
+          TAG: ${{ steps.vars.outputs.tag }}
 
       # - name: build and push
       #   run: |
