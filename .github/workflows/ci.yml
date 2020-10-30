@@ -30,8 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - steps:
-        name: Install Mac Prerequisites
+      - name: Install Mac Prerequisites
         run: |
           set -euo pipefail
           curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(OSXKEYCHAIN_VERSION)/docker-credential-osxkeychain-v$(OSXKEYCHAIN_VERSION)-amd64.tar.gz" | gunzip | tar xopf -
@@ -44,8 +43,7 @@ jobs:
         shell: bash
         if: matrix.os == 'macos-10.15'
 
-      - steps:
-        name: Install Windows Prerequisites
+      - name: Install Windows Prerequisites
         run: |
           set -euo pipefail
           curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(WINCRED_VERSION)/docker-credential-wincred-v$(WINCRED_VERSION)-amd64.zip" -o docker-credential-wincred.zip
@@ -58,8 +56,7 @@ jobs:
         shell: bash
         if: matrix.os == 'windows-2019'
 
-      - steps:
-        name: Make
+      - name: Make
         run: |
           set -euo pipefail
           make lint install unittest
