@@ -9,7 +9,6 @@ on:
 jobs:
   dev-container:
     runs-on: ubuntu-18.04
-
     steps:
       - uses: actions/checkout@v2
 
@@ -45,7 +44,6 @@ jobs:
       matrix:
         os: [ubuntu-18.04, windows-2019, macos-10.15]
     runs-on: ${{ matrix.os }}
-
     steps:
       - uses: actions/checkout@v2
 
@@ -103,3 +101,10 @@ jobs:
           ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
           ACR_REGISTRY_NAME: ${{ secrets.ACR_REGISTRY_NAME }}
         if: github.event.pull_request.head.repo.full_name == github.repository
+
+  release:
+    needs: [dev-container, all-hosts]
+    runs-on: ubuntu-18.04
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v2
