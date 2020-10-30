@@ -36,9 +36,8 @@ jobs:
         run: echo ::set-output name=tag::notlatest
 
       - name: build and push
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          push: false
-          tags: safewaters/docker-lock:${{ steps.vars.outputs.tag }}
-          platforms: linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64
+        run: |
+          set -euo pipefail
+          docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/386 -t safewaters/docker-lock:${TAG} .
+        env:
+          TAG: ${{ steps.vars.outputs.tag }}
