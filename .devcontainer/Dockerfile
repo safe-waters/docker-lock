@@ -1,6 +1,6 @@
 FROM ubuntu:bionic
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-ARG GO_VERSION=1.14
+ARG GO_VERSION=1.15
 ARG GOLANGCI_LINT_VERSION=1.27.0
 RUN apt-get update && \
     apt-get install curl gcc git vim tree tmux shellcheck make gettext-base -y && \
