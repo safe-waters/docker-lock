@@ -17,12 +17,20 @@ jobs:
         run: docker build -t devcontainer ./.devcontainer
         shell: bash
 
-      - name: make
-        run: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make lint install unittest
+      - name: make lint
+        run: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make lint
         shell: bash
 
+      - name: make format
+        run: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make format
+        shell: bash
+
+      - name: make unittest
+        run: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make unittest
+        shell: bash
+      
       # - name: make inttest
-      #   run: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make lint install unittest
+      #   run: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer inttest
       #   shell: bash
       #   if: github.event.pull_request.head.repo.full_name == github.repository
 
