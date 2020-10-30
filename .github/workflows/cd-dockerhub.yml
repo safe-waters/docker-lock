@@ -20,6 +20,11 @@ jobs:
         with:
           args: build --snapshot
 
+      - name: LS
+        run: |
+          pwd
+          ls -al
+
       - name: setup qemu
         uses: docker/setup-qemu-action@v1
 
