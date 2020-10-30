@@ -295,8 +295,8 @@ will additionally run integration tests on pull requests.
 You can run any step individually.
 
 * To uninstall: `make clean`
-* To format your code: `make format`
-* To lint your code: `make lint`
+* To format Go code: `make format`
+* To lint all code: `make lint`
 * To run unit tests: `make unittest`
 
 To view the coverage report after running unit tests, open `coverage.html` in
