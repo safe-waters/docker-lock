@@ -27,12 +27,12 @@ lint:
 
 .PHONY: install
 install:
-	@echo "running build target..."
+	@echo "running install target..."
 	@echo "installing docker-lock into docker's cli-plugins folder..."
 	@mkdir -p "$${HOME}/.docker/cli-plugins"
 	@CGO_ENABLED=0 go build -o "$${HOME}/.docker/cli-plugins" ./cmd/docker-lock
 	@echo "installation passed!"
-	@echo "build target passed!"
+	@echo "install target passed!"
 
 .PHONY: unittest
 unittest:
@@ -57,4 +57,4 @@ inttest: clean install
 	@./test/registry/firstparty/tests.sh && \
     	./test/registry/contrib/tests.sh && \
     	./test/demo-app/tests.sh;
-	@echo "inttest passed!"
+	@echo "inttest target passed!"
