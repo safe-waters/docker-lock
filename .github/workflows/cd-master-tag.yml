@@ -36,7 +36,8 @@ jobs:
       #     password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: set image tag
-        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> "${GITHUB_ENV}"
+        run: echo "TAG=${GITHUB_REF#refs/*/}" >> "${GITHUB_ENV}"
+        shell: bash
 
       - name: build images and push to dockerhub
         uses: docker/build-push-action@v2
