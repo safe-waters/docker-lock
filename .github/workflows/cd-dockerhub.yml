@@ -33,12 +33,10 @@ jobs:
       #     password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: set tag
-        run: echo "::set-output name=tag::notlatest"
+        run: echo "TAG=notlatest" >> "${GITHUB_ENV}"
 
       - name: check
         run: echo ${TAG}
-        env:
-          TAG: ${{ steps.vars.outputs.tag }}
 
       # - name: build and push
       #   run: |
