@@ -20,11 +20,6 @@ jobs:
         with:
           args: build --snapshot
 
-      - name: LS
-        run: |
-          pwd
-          ls -al
-
       - name: setup qemu
         uses: docker/setup-qemu-action@v1
 
@@ -36,11 +31,6 @@ jobs:
       #   with:
       #     username: ${{ secrets.DOCKERHUB_USERNAME }}
       #     password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: LS
-        run: |
-          pwd
-          ls -al
 
       - name: build and push
         uses: docker/build-push-action@v2
