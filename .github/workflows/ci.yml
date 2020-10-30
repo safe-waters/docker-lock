@@ -33,7 +33,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       DOCKER_VERSION: '19.03.9'
-      GO_VERSION: '1.14.0'
 
     steps:
       - uses: actions/checkout@v2
@@ -71,7 +70,7 @@ jobs:
       - name: install go
         uses: actions/setup-go@v2
         with:
-          go-version: "${GO_VERSION}"
+          go-version: '1.14.0'
 
       - name: make install
         run: make install
