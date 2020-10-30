@@ -145,6 +145,7 @@ jobs:
 # create a release by pushing a semver git tag such as v0.0.1 
 - job: Release
   dependsOn:
+  - DevContainer
   - TestWindows
   - TestMacOS
   - TestLinux
