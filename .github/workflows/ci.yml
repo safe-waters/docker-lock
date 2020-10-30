@@ -33,6 +33,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       DOCKER_VERSION: '19.03.9'
+      GO_VERSION: '1.14.0'
 
     steps:
       - uses: actions/checkout@v2
@@ -66,6 +67,11 @@ jobs:
         env:
           WINCRED_VERSION: '0.6.3'
         if: matrix.os == 'windows-2019'
+
+      - name: install go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "${GO_VERSION}"
 
       - name: make install
         run: make install
