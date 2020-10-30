@@ -48,6 +48,9 @@ jobs:
     vmImage: windows-2019
   steps:
   - bash: |
+      choco install -y docker-desktop
+    displayName: Install Docker
+  - bash: |
       set -euo pipefail
       find . -type f -print0 | xargs -0 dos2unix
     displayName: Convert CLRF to LF
@@ -91,10 +94,6 @@ jobs:
   pool:
     vmImage: macOS-10.14
   steps:
-  - bash: |
-      set -euo pipefail
-      curl -fsSL https://get.docker.com | bash
-    displayName: Install Docker
   - bash: |
       set -euo pipefail
       curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(OSXKEYCHAIN_VERSION)/docker-credential-osxkeychain-v$(OSXKEYCHAIN_VERSION)-amd64.tar.gz" | gunzip | tar xopf -
