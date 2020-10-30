@@ -21,16 +21,18 @@ jobs:
         run: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make lint install unittest
         shell: bash
 
-      - name: make inttest
-        run: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make lint install unittest
-        shell: bash
-        if: github.event.pull_request.head.repo.full_name == github.repository
+      # - name: make inttest
+      #   run: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make lint install unittest
+      #   shell: bash
+      #   if: github.event.pull_request.head.repo.full_name == github.repository
 
   all-hosts:
     strategy:
       matrix:
         os: [ubuntu-18.04, windows-2019, macos-10.15]
     runs-on: ${{ matrix.os }}
+    env:
+      DOCKER_VERSION: '19.03.9'
 
     steps:
       - uses: actions/checkout@v2
@@ -46,6 +48,8 @@ jobs:
           mkdir -p "${HOME}/.docker"
           echo '{"credsStore":"osxkeychain"}' > "${HOME}/.docker/config.json"
         shell: bash
+        env:
+          OSXKEYCHAIN_VERSION: '0.6.3'
         if: matrix.os == 'macos-10.15'
 
       - name: install windows prerequisites
@@ -59,6 +63,8 @@ jobs:
           echo '{"credsStore":"wincred"}' > "${USERPROFILE}/.docker/config.json"
           choco install -y mingw
         shell: bash
+        env:
+          WINCRED_VERSION: '0.6.3'
         if: matrix.os == 'windows-2019'
 
       - name: make install
@@ -69,7 +75,7 @@ jobs:
         run: make unittest
         shell: bash
 
-      - name: make inttest
-        run: make inttest
-        shell: bash
-        if: github.event.pull_request.head.repo.full_name == github.repository
+      # - name: make inttest
+      #   run: make inttest
+      #   shell: bash
+      #   if: github.event.pull_request.head.repo.full_name == github.repository
