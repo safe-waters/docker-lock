@@ -40,5 +40,5 @@ jobs:
         with:
           context: .
           push: false
-          tags: safewaters/docker-lock:${TAG}
+          tags: safewaters/docker-lock:${{ env.TAG }}
           platforms: linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64
