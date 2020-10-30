@@ -40,10 +40,10 @@ jobs:
       - name: install mac prerequisites
         run: |
           set -euo pipefail
-          curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(OSXKEYCHAIN_VERSION)/docker-credential-osxkeychain-v$(OSXKEYCHAIN_VERSION)-amd64.tar.gz" | gunzip | tar xopf -
+          curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v${OSXKEYCHAIN_VERSION}/docker-credential-osxkeychain-v${OSXKEYCHAIN_VERSION}-amd64.tar.gz" | gunzip | tar xopf -
           mv docker-credential-osxkeychain /usr/local/bin
           # docker cli does not come installed by default on the build agent
-          curl -fsSL "https://download.docker.com/mac/static/stable/x86_64/docker-$(DOCKER_VERSION).tgz" | gunzip | tar xopf -
+          curl -fsSL "https://download.docker.com/mac/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz" | gunzip | tar xopf -
           mv docker/docker /usr/local/bin
           mkdir -p "${HOME}/.docker"
           echo '{"credsStore":"osxkeychain"}' > "${HOME}/.docker/config.json"
@@ -55,7 +55,7 @@ jobs:
       - name: install windows prerequisites
         run: |
           set -euo pipefail
-          curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(WINCRED_VERSION)/docker-credential-wincred-v$(WINCRED_VERSION)-amd64.zip" -o docker-credential-wincred.zip
+          curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v${WINCRED_VERSION}/docker-credential-wincred-v${WINCRED_VERSION}-amd64.zip" -o docker-credential-wincred.zip
           unzip docker-credential-wincred.zip
           mkdir -p /usr/bin
           mv docker-credential-wincred.exe /usr/bin
