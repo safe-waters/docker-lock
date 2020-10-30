@@ -2,7 +2,6 @@ name: cd-master-tag
 
 on:
   push:
-    branches: [ 'miperel/gh-actions' ]
     tags: [ 'v*.*.*' ]
 
 jobs:
