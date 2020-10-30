@@ -1,0 +1,11 @@
+name: cd-dockerhub
+
+on:
+  push:
+    branches: [ 'miperel/gh-actions' ]
+
+jobs:
+  release:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
