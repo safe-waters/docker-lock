@@ -54,7 +54,7 @@ jobs:
 
   - bash: |
       set -euo pipefail
-      curl -sSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(WINCRED_VERSION)/docker-credential-wincred-v$(WINCRED_VERSION)-amd64.zip" -o docker-credential-wincred.zip
+      curl -fsSL "https://github.com/docker/docker-credential-helpers/releases/download/v$(WINCRED_VERSION)/docker-credential-wincred-v$(WINCRED_VERSION)-amd64.zip" -o docker-credential-wincred.zip
       unzip docker-credential-wincred.zip
       mkdir -p /usr/bin
       mv docker-credential-wincred.exe /usr/bin
@@ -154,9 +154,9 @@ jobs:
   steps:
   - bash: |
       set -euo pipefail
-      mkdir -p ~/.docker/cli-plugins
-      curl -fsSL https://github.com/docker/buildx/releases/download/v0.4.2/buildx-v0.4.2.linux-amd64 -o ~/.docker/cli-plugins/docker-buildx
-      chmod +x ~/.docker/cli-plugins/docker-buildx
+      mkdir -p "${HOME}/.docker/cli-plugins"
+      curl -fsSL https://github.com/docker/buildx/releases/download/v0.4.2/buildx-v0.4.2.linux-amd64 -o "${HOME}/.docker/cli-plugins/docker-buildx"
+      chmod +x "${HOME}/.docker/cli-plugins/docker-buildx"
     displayName: Install docker buildx
     condition: eq(variables['Build.Repository.Name'], 'safe-waters/docker-lock')
   - task: Docker@2
