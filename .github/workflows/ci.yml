@@ -21,6 +21,11 @@ jobs:
         run: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make lint install unittest
         shell: bash
 
+      - name: make inttest
+        run: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make lint install unittest
+        shell: bash
+        if: github.event.pull_request.head.repo.full_name == github.repository
+
   all-hosts:
     strategy:
       matrix:
@@ -63,3 +68,8 @@ jobs:
       - name: make unittest
         run: make unittest
         shell: bash
+
+      - name: make inttest
+        run: make inttest
+        shell: bash
+        if: github.event.pull_request.head.repo.full_name == github.repository
