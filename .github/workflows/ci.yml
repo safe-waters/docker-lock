@@ -29,18 +29,22 @@ jobs:
         run: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer make unittest
         shell: bash
       
-      # - name: make inttest
-      #   run: docker run -v "${PWD}:/workspaces/docker-lock" devcontainer inttest
-      #   shell: bash
-      #   if: github.event.pull_request.head.repo.full_name == github.repository
+      - name: make inttest
+        run: docker run --network host -v /var/run/docker.sock:/var/run/docker.sock -v "${PWD}:/workspaces/docker-lock" -e DOCKER_USERNAME="${DOCKER_USERNAME}" -e DOCKER_PASSWORD="${DOCKER_PASSWORD}" -e ACR_USERNAME="${ACR_USERNAME}" -e ACR_PASSWORD="${ACR_PASSWORD}" -e ACR_REGISTRY_NAME="${ACR_REGISTRY_NAME}" devcontainer make inttest
+        shell: bash
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+          ACR_REGISTRY_NAME: ${{ secrets.ACR_REGISTRY_NAME }}
+        if: github.event.pull_request.head.repo.full_name == github.repository
 
   all-hosts:
     strategy:
       matrix:
         os: [ubuntu-18.04, windows-2019, macos-10.15]
     runs-on: ${{ matrix.os }}
-    env:
-      DOCKER_VERSION: '19.03.9'
 
     steps:
       - uses: actions/checkout@v2
@@ -58,6 +62,7 @@ jobs:
         shell: bash
         env:
           OSXKEYCHAIN_VERSION: '0.6.3'
+          DOCKER_VERSION: '19.03.9'
         if: matrix.os == 'macos-10.15'
 
       - name: install windows prerequisites
@@ -88,7 +93,13 @@ jobs:
         run: make unittest
         shell: bash
 
-      # - name: make inttest
-      #   run: make inttest
-      #   shell: bash
-      #   if: github.event.pull_request.head.repo.full_name == github.repository
+      - name: make inttest
+        run: make inttest
+        shell: bash
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+          ACR_REGISTRY_NAME: ${{ secrets.ACR_REGISTRY_NAME }}
+        if: github.event.pull_request.head.repo.full_name == github.repository
