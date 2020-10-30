@@ -48,9 +48,6 @@ jobs:
     vmImage: windows-2019
   steps:
   - bash: |
-      choco install -y docker-desktop
-    displayName: Install Docker
-  - bash: |
       set -euo pipefail
       find . -type f -print0 | xargs -0 dos2unix
     displayName: Convert CLRF to LF
