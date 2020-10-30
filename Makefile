@@ -48,23 +48,10 @@ clean:
 	@echo "removing passed!"
 	@echo "clean target passed!"
 
-OSFLAG 				:=
-ifeq ($(OS),Windows_NT)
-	OSFLAG += windows
-else
-	UNAME_S := $(shell uname -s)
-	ifeq ($(UNAME_S),Linux)
-		OSFLAG += linux
-	endif
-	ifeq ($(UNAME_S),Darwin)
-		OSFLAG += mac
-	endif
-endif
-
 .PHONY: inttest
 inttest: clean install
 	@echo "running inttest target..."
-	@./test/registry/firstparty/tests.sh $(OSFLAG) && \
+	@./test/registry/firstparty/tests.sh && \
     	./test/registry/contrib/tests.sh && \
     	./test/demo-app/tests.sh;
 	@echo "inttest passed!"

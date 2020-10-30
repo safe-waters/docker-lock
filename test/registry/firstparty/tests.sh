@@ -89,15 +89,15 @@ main() {
 
     (
         # only linux build agent has docker daemon
-        # if [[ "${1}" == "linux" ]]; then
+        if [[ "$(uname -s)" == "Linux" ]]; then
             cd internal/
             USERNAME="${DOCKER_USERNAME}"
             PASSWORD="${DOCKER_PASSWORD}"
             before_test
             run_internal_tests "${USERNAME}" "${PASSWORD}" ""
             echo "------ PASSED INTERNAL REGISTRY TESTS  ------"
-        # fi
+        fi
     )
 }
 
-main "${1}"
+main
