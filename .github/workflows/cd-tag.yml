@@ -1,4 +1,4 @@
-name: cd-master-tag
+name: cd-tag
 
 on:
   push:
