@@ -2,7 +2,7 @@ name: cd-master
 
 on:
   push:
-    branches: [ 'miperel/gh-actions' ]
+    branches: [ master ]
 
 jobs:
   release:

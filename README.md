@@ -1,10 +1,7 @@
 ![Docker-Lock-Banner](./docs/assets/readme-banner.png)
 # About
 [![Go Report Card](https://goreportcard.com/badge/github.com/safe-waters/docker-lock)](https://goreportcard.com/report/github.com/safe-waters/docker-lock)
-[![Build Status](https://dev.azure.com/michaelsethperel/docker-lock/_apis/build/status/safe-waters.docker-lock?branchName=master)](https://dev.azure.com/michaelsethperel/docker-lock/_build/latest?definitionId=6&branchName=master)
-[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/safe-waters/docker-lock)
-<!-- https://github.com/golang/go/issues/40506 -->
-<!-- [![PkgGoDev](https://pkg.go.dev/badge/github.com/safe-waters/docker-lock)](https://pkg.go.dev/github.com/safe-waters/docker-lock) -->
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/safe-waters/docker-lock)](https://pkg.go.dev/github.com/safe-waters/docker-lock)
 
 `docker-lock` is a cli tool that automates managing image digests by tracking
 them in a separate Lockfile (think package-lock.json or Pipfile.lock). With
@@ -289,8 +286,7 @@ To clean, format, lint, and run unit tests:
 make
 ```
 
-The [CI pipeline](https://dev.azure.com/michaelsethperel/docker-lock/_build)
-will additionally run integration tests on pull requests.
+The CI pipeline will additionally run integration tests on pull requests.
 
 You can run any step individually.
 
