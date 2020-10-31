@@ -1,5 +1,8 @@
 ![Docker-Lock-Banner](./docs/assets/readme-banner.png)
 # About
+![ci](https://github.com/safe-waters/docker-lock/workflows/ci/badge.svg)
+![cd-master](https://github.com/safe-waters/docker-lock/workflows/cd-master/badge.svg)
+![cd-tag](https://github.com/safe-waters/docker-lock/workflows/cd-tag/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/safe-waters/docker-lock)](https://goreportcard.com/report/github.com/safe-waters/docker-lock)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/safe-waters/docker-lock)](https://pkg.go.dev/github.com/safe-waters/docker-lock)
 
