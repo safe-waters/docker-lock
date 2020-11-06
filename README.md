@@ -294,6 +294,7 @@ The CI pipeline will additionally run integration tests on pull requests.
 You can run any step individually.
 
 * To uninstall: `make clean`
+* To install into `docker`'s cli-plugins directory: `make install`
 * To format Go code: `make format`
 * To lint all code: `make lint`
 * To run unit tests: `make unittest`
