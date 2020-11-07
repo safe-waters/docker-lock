@@ -3,6 +3,7 @@ module github.com/safe-waters/docker-lock
 go 1.14
 
 require (
+	github.com/docker/cli v20.10.0-beta1+incompatible
 	github.com/docker/docker-credential-helpers v0.6.3
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/joho/godotenv v1.3.0
