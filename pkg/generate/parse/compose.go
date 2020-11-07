@@ -118,6 +118,8 @@ func (c *ComposefileImageParser) parseFile(
 
 	envVars := map[string]string{}
 
+	// ADD in future .env file, which should have less priority
+	// than regular env vars.
 	for _, envVarStr := range os.Environ() {
 		envVarVal := strings.SplitN(envVarStr, "=", 2)
 		envVars[envVarVal[0]] = envVarVal[1]
@@ -138,17 +140,17 @@ func (c *ComposefileImageParser) parseFile(
 		return
 	}
 
-	for _, service := range loadedComposefile.Services {
+	for _, serviceConfig := range loadedComposefile.Services {
 		waitGroup.Add(1)
 
 		go c.parseService(
-			service, path, composefileImages, waitGroup, done,
+			serviceConfig, path, composefileImages, waitGroup, done,
 		)
 	}
 }
 
 func (c *ComposefileImageParser) parseService(
-	service types.ServiceConfig,
+	serviceConfig types.ServiceConfig,
 	path string,
 	composefileImages chan<- *ComposefileImage,
 	waitGroup *sync.WaitGroup,
@@ -156,14 +158,14 @@ func (c *ComposefileImageParser) parseService(
 ) {
 	defer waitGroup.Done()
 
-	if service.Build.Context == "" {
-		image := convertImageLineToImage(service.Image)
+	if serviceConfig.Build.Context == "" {
+		image := convertImageLineToImage(serviceConfig.Image)
 
 		select {
 		case <-done:
 		case composefileImages <- &ComposefileImage{
 			Image:       image,
-			ServiceName: service.Name,
+			ServiceName: serviceConfig.Name,
 			Path:        path,
 		}:
 		}
@@ -180,12 +182,12 @@ func (c *ComposefileImageParser) parseService(
 	go func() {
 		defer dockerfileImageWaitGroup.Done()
 
-		context := service.Build.Context
+		context := serviceConfig.Build.Context
 		if !filepath.IsAbs(context) {
 			context = filepath.Join(filepath.Dir(path), context)
 		}
 
-		dockerfile := service.Build.Dockerfile
+		dockerfile := serviceConfig.Build.Dockerfile
 		if dockerfile == "" {
 			dockerfile = "Dockerfile"
 		}
@@ -194,7 +196,7 @@ func (c *ComposefileImageParser) parseService(
 
 		buildArgs := map[string]string{}
 
-		for arg, val := range service.Build.Args {
+		for arg, val := range serviceConfig.Build.Args {
 			if val == nil {
 				buildArgs[arg] = os.Getenv(arg)
 			} else {
@@ -234,7 +236,7 @@ func (c *ComposefileImageParser) parseService(
 			Image:          dockerfileImage.Image,
 			DockerfilePath: dockerfileImage.Path,
 			Position:       dockerfileImage.Position,
-			ServiceName:    service.Name,
+			ServiceName:    serviceConfig.Name,
 			Path:           path,
 		}:
 		}
