@@ -10,6 +10,7 @@ import (
 
 	"github.com/docker/cli/cli/compose/loader"
 	"github.com/docker/cli/cli/compose/types"
+	"github.com/docker/cli/opts"
 )
 
 // ComposefileImageParser extracts image values from docker-compose files
@@ -118,11 +119,22 @@ func (c *ComposefileImageParser) parseFile(
 
 	envVars := map[string]string{}
 
-	// ADD in future .env file, which should have less priority
-	// than regular env vars.
 	for _, envVarStr := range os.Environ() {
 		envVarVal := strings.SplitN(envVarStr, "=", 2)
 		envVars[envVarVal[0]] = envVarVal[1]
+	}
+
+	var envFileVars []string
+
+	if envFileVars, err = opts.ParseEnvFile(
+		filepath.Join(filepath.Dir(path), ".env"),
+	); err != nil {
+		for _, envVarStr := range envFileVars {
+			envVarVal := strings.SplitN(envVarStr, "=", 2)
+			if _, ok := envVars[envVarVal[0]]; !ok {
+				envVars[envVarVal[0]] = envVarVal[1]
+			}
+		}
 	}
 
 	loadedComposefile, err := loader.Load(types.ConfigDetails{
