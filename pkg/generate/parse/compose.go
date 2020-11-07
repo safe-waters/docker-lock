@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"github.com/docker/cli/cli/compose/loader"
-	composetypes "github.com/docker/cli/cli/compose/types"
+	"github.com/docker/cli/cli/compose/types"
 )
 
 // ComposefileImageParser extracts image values from docker-compose files
@@ -123,8 +123,8 @@ func (c *ComposefileImageParser) parseFile(
 		envVars[envVarVal[0]] = envVarVal[1]
 	}
 
-	loadedComposefile, err := loader.Load(composetypes.ConfigDetails{
-		ConfigFiles: []composetypes.ConfigFile{
+	loadedComposefile, err := loader.Load(types.ConfigDetails{
+		ConfigFiles: []types.ConfigFile{
 			{Config: composefileData, Filename: path},
 		},
 		Environment: envVars,
@@ -148,7 +148,7 @@ func (c *ComposefileImageParser) parseFile(
 }
 
 func (c *ComposefileImageParser) parseService(
-	service composetypes.ServiceConfig,
+	service types.ServiceConfig,
 	path string,
 	composefileImages chan<- *ComposefileImage,
 	waitGroup *sync.WaitGroup,
