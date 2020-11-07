@@ -106,7 +106,7 @@ func (c *ComposefileImageParser) parseFile(
 		return
 	}
 
-	yamlData, err := loader.ParseYAML(byt)
+	composefileData, err := loader.ParseYAML(byt)
 	if err != nil {
 		select {
 		case <-done:
@@ -123,9 +123,9 @@ func (c *ComposefileImageParser) parseFile(
 		envVars[envVarVal[0]] = envVarVal[1]
 	}
 
-	cfg, err := loader.Load(composetypes.ConfigDetails{
+	loadedComposefile, err := loader.Load(composetypes.ConfigDetails{
 		ConfigFiles: []composetypes.ConfigFile{
-			{Config: yamlData, Filename: path},
+			{Config: composefileData, Filename: path},
 		},
 		Environment: envVars,
 	})
@@ -138,7 +138,7 @@ func (c *ComposefileImageParser) parseFile(
 		return
 	}
 
-	for _, service := range cfg.Services {
+	for _, service := range loadedComposefile.Services {
 		waitGroup.Add(1)
 
 		go c.parseService(
