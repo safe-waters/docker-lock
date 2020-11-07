@@ -2,10 +2,11 @@
 package parse
 
 import (
-	"bufio"
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/moby/buildkit/frontend/dockerfile/parser"
 )
 
 // DockerfileImageParser extracts image values from Dockerfiles.
@@ -84,72 +85,84 @@ func (d *DockerfileImageParser) parseFile(
 	}
 	defer f.Close()
 
+	res, err := parser.Parse(f)
+	if err != nil {
+		select {
+		case <-done:
+		case dockerfileImages <- &DockerfileImage{Err: err}:
+		}
+
+		return
+	}
+
 	position := 0                     // order of image in Dockerfile
 	stages := map[string]bool{}       // FROM <image line> as <stage>
 	globalArgs := map[string]string{} // ARGs before the first FROM
 	globalContext := true             // true if before first FROM
-	scanner := bufio.NewScanner(f)
-	scanner.Split(bufio.ScanLines)
 
-	for scanner.Scan() {
-		fields := strings.Fields(scanner.Text())
+	for _, child := range res.AST.Children {
+		switch child.Value {
+		case "arg":
+			var raw []string
+			for n := child.Next; n != nil; n = n.Next {
+				raw = append(raw, n.Value)
+			}
 
-		const instructionIndex = 0
+			rawStr := strings.Join(raw, " ")
 
-		const imageLineIndex = 1
+			if globalContext {
+				if strings.Contains(rawStr, "=") {
+					// ARG VAR=VAL
+					varVal := strings.SplitN(rawStr, "=", 2)
 
-		if len(fields) > 0 {
-			switch strings.ToLower(fields[instructionIndex]) {
-			case "arg":
-				if globalContext {
-					if strings.Contains(fields[imageLineIndex], "=") {
-						// ARG VAR=VAL
-						varVal := strings.SplitN(fields[imageLineIndex], "=", 2)
+					const varIndex = 0
 
-						const varIndex = 0
+					const valIndex = 1
 
-						const valIndex = 1
+					strippedVar := d.stripQuotes(varVal[varIndex])
+					strippedVal := d.stripQuotes(varVal[valIndex])
 
-						strippedVar := d.stripQuotes(varVal[varIndex])
-						strippedVal := d.stripQuotes(varVal[valIndex])
+					globalArgs[strippedVar] = strippedVal
+				} else {
+					// ARG VAR1
+					strippedVar := d.stripQuotes(rawStr)
 
-						globalArgs[strippedVar] = strippedVal
-					} else {
-						// ARG VAR1
-						strippedVar := d.stripQuotes(fields[imageLineIndex])
-
-						globalArgs[strippedVar] = ""
-					}
+					globalArgs[strippedVar] = ""
 				}
-			case "from":
-				globalContext = false
+			}
+		case "from":
+			var raw []string
+			for n := child.Next; n != nil; n = n.Next {
+				raw = append(raw, n.Value)
+			}
 
-				imageLine := fields[imageLineIndex]
+			globalContext = false
 
-				if !stages[imageLine] {
-					imageLine = expandField(imageLine, globalArgs, buildArgs)
+			imageLine := raw[0]
 
-					image := convertImageLineToImage(imageLine)
+			if !stages[imageLine] {
+				imageLine = expandField(imageLine, globalArgs, buildArgs)
 
-					select {
-					case <-done:
-						return
-					case dockerfileImages <- &DockerfileImage{
-						Image: image, Position: position, Path: path,
-					}:
-						position++
-					}
+				image := convertImageLineToImage(imageLine)
+
+				select {
+				case <-done:
+					return
+				case dockerfileImages <- &DockerfileImage{
+					Image: image, Position: position, Path: path,
+				}:
+					position++
 				}
+			}
 
-				// FROM <image> AS <stage>
-				// FROM <stage> AS <another stage>
-				const maxNumFields = 4
-				if len(fields) == maxNumFields {
-					const stageIndex = 3
+			// <image> AS <stage>
+			// <stage> AS <another stage>
+			const maxNumFields = 3
+			if len(raw) == maxNumFields {
+				const stageIndex = 2
 
-					stage := fields[stageIndex]
-					stages[stage] = true
-				}
+				stage := raw[stageIndex]
+				stages[stage] = true
 			}
 		}
 	}
