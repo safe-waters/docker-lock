@@ -212,6 +212,36 @@ services:
 			},
 		},
 		{
+			Name:             "Os Env Overrides Dot Env",
+			ComposefilePaths: []string{"docker-compose.yml"},
+			EnvironmentVariables: map[string]string{
+				"OS_ENV_OVERRIDES_DOT_ENV_IMAGE": "busybox",
+			},
+			DotEnvContents: [][]byte{
+				[]byte(`
+OS_ENV_OVERRIDES_DOT_ENV_IMAGE=ubuntu
+`),
+			},
+			ComposefileContents: [][]byte{
+				[]byte(`
+version: '3'
+services:
+  svc:
+    image: ${OS_ENV_OVERRIDES_DOT_ENV_IMAGE}
+`),
+			},
+			Expected: []*parse.ComposefileImage{
+				{
+					Image: &parse.Image{
+						Name: "busybox",
+						Tag:  "latest",
+					},
+					Path:        "docker-compose.yml",
+					ServiceName: "svc",
+				},
+			},
+		},
+		{
 			Name: "Dot Env Args Env List",
 			DotEnvContents: [][]byte{
 				[]byte(`

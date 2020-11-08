@@ -2,6 +2,7 @@
 package parse
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -85,7 +86,7 @@ func (d *DockerfileImageParser) parseFile(
 	}
 	defer f.Close()
 
-	res, err := parser.Parse(f)
+	loadedDockerfile, err := parser.Parse(f)
 	if err != nil {
 		select {
 		case <-done:
@@ -100,7 +101,7 @@ func (d *DockerfileImageParser) parseFile(
 	globalArgs := map[string]string{} // ARGs before the first FROM
 	globalContext := true             // true if before first FROM
 
-	for _, child := range res.AST.Children {
+	for _, child := range loadedDockerfile.AST.Children {
 		switch child.Value {
 		case "arg":
 			var raw []string
@@ -108,12 +109,22 @@ func (d *DockerfileImageParser) parseFile(
 				raw = append(raw, n.Value)
 			}
 
-			rawStr := strings.Join(raw, " ")
+			if len(raw) == 0 {
+				err := fmt.Errorf(
+					"invalid arg instruction in Dockerfile '%s'", path,
+				)
+				select {
+				case <-done:
+				case dockerfileImages <- &DockerfileImage{Err: err}:
+				}
+
+				return
+			}
 
 			if globalContext {
-				if strings.Contains(rawStr, "=") {
+				if strings.Contains(raw[0], "=") {
 					// ARG VAR=VAL
-					varVal := strings.SplitN(rawStr, "=", 2)
+					varVal := strings.SplitN(raw[0], "=", 2)
 
 					const varIndex = 0
 
@@ -125,7 +136,7 @@ func (d *DockerfileImageParser) parseFile(
 					globalArgs[strippedVar] = strippedVal
 				} else {
 					// ARG VAR1
-					strippedVar := d.stripQuotes(rawStr)
+					strippedVar := d.stripQuotes(raw[0])
 
 					globalArgs[strippedVar] = ""
 				}
@@ -136,12 +147,22 @@ func (d *DockerfileImageParser) parseFile(
 				raw = append(raw, n.Value)
 			}
 
+			if len(raw) == 0 {
+				err := fmt.Errorf(
+					"invalid from instruction in Dockerfile '%s'", path,
+				)
+				select {
+				case <-done:
+				case dockerfileImages <- &DockerfileImage{Err: err}:
+				}
+
+				return
+			}
+
 			globalContext = false
 
-			imageLine := raw[0]
-
-			if !stages[imageLine] {
-				imageLine = expandField(imageLine, globalArgs, buildArgs)
+			if !stages[raw[0]] {
+				imageLine := expandField(raw[0], globalArgs, buildArgs)
 
 				image := convertImageLineToImage(imageLine)
 

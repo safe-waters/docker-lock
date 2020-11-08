@@ -18,6 +18,7 @@ func TestDockerfileImageParser(t *testing.T) {
 		DockerfilePaths    []string
 		DockerfileContents [][]byte
 		Expected           []*parse.DockerfileImage
+		ShouldFail         bool
 	}{
 		{
 			Name:            "Position",
@@ -69,6 +70,25 @@ FROM scratch
 			DockerfileContents: [][]byte{
 				[]byte(`
 FROM ubuntu@sha256:bae015c28bc7
+`),
+			},
+			Expected: []*parse.DockerfileImage{
+				{
+					Image: &parse.Image{
+						Name:   "ubuntu",
+						Digest: "bae015c28bc7",
+					},
+					Position: 0,
+					Path:     "Dockerfile",
+				},
+			},
+		},
+		{
+			Name:            "Flag",
+			DockerfilePaths: []string{"Dockerfile"},
+			DockerfileContents: [][]byte{
+				[]byte(`
+FROM --platform=$BUILDPLATFORM ubuntu@sha256:bae015c28bc7
 `),
 			},
 			Expected: []*parse.DockerfileImage{
@@ -206,6 +226,27 @@ FROM busybox
 				},
 			},
 		},
+		{
+			Name:            "Invalid Arg",
+			DockerfilePaths: []string{"Dockerfile"},
+			DockerfileContents: [][]byte{
+				[]byte(`
+ARG
+FROM busybox
+`),
+			},
+			ShouldFail: true,
+		},
+		{
+			Name:            "Invalid From",
+			DockerfilePaths: []string{"Dockerfile"},
+			DockerfileContents: [][]byte{
+				[]byte(`
+FROM
+`),
+			},
+			ShouldFail: true,
+		},
 	}
 
 	for _, test := range tests {
@@ -240,10 +281,19 @@ FROM busybox
 			var got []*parse.DockerfileImage
 
 			for dockerfileImage := range dockerfileImages {
+				if test.ShouldFail {
+					if dockerfileImage.Err == nil {
+						t.Fatal("expected error but did not get one")
+					}
+
+					return
+				}
+
 				if dockerfileImage.Err != nil {
 					close(done)
 					t.Fatal(dockerfileImage.Err)
 				}
+
 				got = append(got, dockerfileImage)
 			}
 

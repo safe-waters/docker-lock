@@ -9,7 +9,7 @@
 `docker-lock` is a cli tool that automates managing image digests by tracking
 them in a separate Lockfile (think package-lock.json or Pipfile.lock). With
 `docker-lock`, you can refer to images in Dockerfiles or 
-`docker-compose` files by mutable tags (as in `python:3.6`) yet receive the same 
+`docker-compose` v3 files by mutable tags (as in `python:3.6`) yet receive the same 
 benefits as if you had specified immutable digests (as in `python:3.6@sha256:25a189a536ae4d7c77dd5d0929da73057b85555d6b6f8a66bfbcc1a7a7de094b`).
 
 > Note: If you are unsure about the differences between tags and digests,
