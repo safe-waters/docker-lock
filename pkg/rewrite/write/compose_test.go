@@ -24,10 +24,8 @@ func TestComposefileWriter(t *testing.T) {
 		{
 			Name: "Dockerfile",
 			Contents: [][]byte{
-				[]byte(`
-from busybox
-`,
-				),
+				[]byte(`FROM busybox
+`),
 				[]byte(`
 version: '3'
 
@@ -51,10 +49,8 @@ services:
 				},
 			},
 			Expected: [][]byte{
-				[]byte(`
-from busybox:latest@sha256:busybox
-`,
-				),
+				[]byte(`FROM busybox:latest@sha256:busybox
+`),
 			},
 		},
 		{
@@ -166,10 +162,8 @@ services:
 		{
 			Name: "Dockerfile And Composefile",
 			Contents: [][]byte{
-				[]byte(`
-from golang
-`,
-				),
+				[]byte(`FROM golang
+`),
 				[]byte(`
 version: '3'
 
@@ -203,10 +197,8 @@ services:
 				},
 			},
 			Expected: [][]byte{
-				[]byte(`
-from golang:latest@sha256:golang
-`,
-				),
+				[]byte(`FROM golang:latest@sha256:golang
+`),
 				[]byte(`
 version: '3'
 
@@ -222,10 +214,8 @@ services:
 		{
 			Name: "More Services In Composefile",
 			Contents: [][]byte{
-				[]byte(`
-from golang
-`,
-				),
+				[]byte(`FROM golang
+`),
 				[]byte(`
 version: '3'
 
@@ -255,10 +245,8 @@ services:
 		{
 			Name: "Fewer Services In Composefile",
 			Contents: [][]byte{
-				[]byte(`
-from golang
-`,
-				),
+				[]byte(`FROM golang
+`),
 				[]byte(`
 version: '3'
 
@@ -304,10 +292,8 @@ services:
 		{
 			Name: "Multiple Services Same Dockerfile Different Images",
 			Contents: [][]byte{
-				[]byte(`
-from golang
-`,
-				),
+				[]byte(`FROM golang
+`),
 				[]byte(`
 version: '3'
 
@@ -356,10 +342,8 @@ services:
 		{
 			Name: "Multiple Composefiles Same Dockerfile Different Images",
 			Contents: [][]byte{
-				[]byte(`
-from golang
-`,
-				),
+				[]byte(`FROM golang
+`),
 				[]byte(`
 version: '3'
 
@@ -426,10 +410,8 @@ services:
 		{
 			Name: "Multiple Services Same Dockerfile Same Images",
 			Contents: [][]byte{
-				[]byte(`
-from golang
-`,
-				),
+				[]byte(`FROM golang
+`),
 				[]byte(`
 version: '3'
 
@@ -474,10 +456,8 @@ services:
 				},
 			},
 			Expected: [][]byte{
-				[]byte(`
-from golang:latest@sha256:golang
-`,
-				),
+				[]byte(`FROM golang:latest@sha256:golang
+`),
 				[]byte(`
 version: '3'
 
@@ -495,10 +475,8 @@ services:
 		{
 			Name: "Multiple Composefiles Same Dockerfile Same Images",
 			Contents: [][]byte{
-				[]byte(`
-from golang
-`,
-				),
+				[]byte(`FROM golang
+`),
 				[]byte(`
 version: '3'
 
@@ -561,10 +539,8 @@ services:
 				},
 			},
 			Expected: [][]byte{
-				[]byte(`
-from golang:latest@sha256:golang
-`,
-				),
+				[]byte(`FROM golang:latest@sha256:golang
+`),
 				[]byte(`
 version: '3'
 
@@ -590,14 +566,10 @@ services:
 		{
 			Name: "Multiple Composefiles Multiple Services",
 			Contents: [][]byte{
-				[]byte(`
-from golang
-`,
-				),
-				[]byte(`
-from python
-`,
-				),
+				[]byte(`FROM golang
+`),
+				[]byte(`FROM python
+`),
 				[]byte(`
 version: '3'
 
@@ -662,14 +634,10 @@ services:
 				},
 			},
 			Expected: [][]byte{
-				[]byte(`
-from golang:latest@sha256:golang
-`,
-				),
-				[]byte(`
-from python:latest@sha256:python
-`,
-				),
+				[]byte(`FROM golang:latest@sha256:golang
+`),
+				[]byte(`FROM python:latest@sha256:python
+`),
 				[]byte(`
 version: '3'
 

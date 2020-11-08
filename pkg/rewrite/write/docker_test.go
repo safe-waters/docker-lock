@@ -24,8 +24,7 @@ func TestDockerfileWriter(t *testing.T) {
 		{
 			Name: "Single Dockerfile",
 			Contents: [][]byte{
-				[]byte(`
-from busybox
+				[]byte(`FROM busybox
 COPY . .
 FROM redis:latest
 # comment
@@ -58,11 +57,9 @@ FROM golang:latest@sha256:12345
 				},
 			},
 			Expected: [][]byte{
-				[]byte(`
-from busybox:latest@sha256:busybox
+				[]byte(`FROM busybox:latest@sha256:busybox
 COPY . .
 FROM redis:latest@sha256:redis
-# comment
 FROM golang:latest@sha256:golang
 `),
 			},
@@ -70,9 +67,7 @@ FROM golang:latest@sha256:golang
 		{
 			Name: "Scratch",
 			Contents: [][]byte{
-				[]byte(`
-FROM scratch
-`),
+				[]byte(`FROM scratch`),
 			},
 			PathImages: map[string][]*parse.DockerfileImage{
 				"Dockerfile": {
@@ -86,21 +81,18 @@ FROM scratch
 				},
 			},
 			Expected: [][]byte{
-				[]byte(`
-FROM scratch
+				[]byte(`FROM scratch
 `),
 			},
 		},
 		{
 			Name: "Multiple Dockerfiles",
 			Contents: [][]byte{
-				[]byte(`
-FROM busybox
+				[]byte(`FROM busybox
 FROM redis
 FROM golang
 `),
-				[]byte(`
-FROM golang
+				[]byte(`FROM golang
 FROM busybox
 FROM redis
 `),
@@ -154,13 +146,11 @@ FROM redis
 				},
 			},
 			Expected: [][]byte{
-				[]byte(`
-FROM busybox:latest@sha256:busybox-1
+				[]byte(`FROM busybox:latest@sha256:busybox-1
 FROM redis:latest@sha256:redis-1
 FROM golang:latest@sha256:golang-1
 `),
-				[]byte(`
-FROM golang:latest@sha256:golang-2
+				[]byte(`FROM golang:latest@sha256:golang-2
 FROM busybox:latest@sha256:busybox-2
 FROM redis:latest@sha256:redis-2
 `),
@@ -169,8 +159,7 @@ FROM redis:latest@sha256:redis-2
 		{
 			Name: "Exclude Tags",
 			Contents: [][]byte{
-				[]byte(`
-FROM busybox
+				[]byte(`FROM busybox
 FROM redis
 FROM golang
 `),
@@ -202,8 +191,7 @@ FROM golang
 				},
 			},
 			Expected: [][]byte{
-				[]byte(`
-FROM busybox@sha256:busybox
+				[]byte(`FROM busybox@sha256:busybox
 FROM redis@sha256:redis
 FROM golang@sha256:golang
 `),
@@ -212,8 +200,7 @@ FROM golang@sha256:golang
 		{
 			Name: "Stages",
 			Contents: [][]byte{
-				[]byte(`
-FROM busybox AS base
+				[]byte(`FROM busybox AS base
 FROM redis
 FROM base
 FROM golang
@@ -245,8 +232,7 @@ FROM golang
 				},
 			},
 			Expected: [][]byte{
-				[]byte(`
-FROM busybox:latest@sha256:busybox AS base
+				[]byte(`FROM busybox:latest@sha256:busybox AS base
 FROM redis:latest@sha256:redis
 FROM base
 FROM golang:latest@sha256:golang
@@ -256,8 +242,8 @@ FROM golang:latest@sha256:golang
 		{
 			Name: "Platform",
 			Contents: [][]byte{
-				[]byte(`
-FROM --platform=$BUILDPLATFORM busybox AS base
+				[]byte(`FROM --platform=$BUILDPLATFORM busybox \
+AS base
 FROM --platform=$BUILDPLATFORM redis
 FROM --platform=$BUILDPLATFORM base AS anotherbase
 `),
@@ -281,8 +267,8 @@ FROM --platform=$BUILDPLATFORM base AS anotherbase
 				},
 			},
 			Expected: [][]byte{
-				[]byte(`
-FROM --platform=$BUILDPLATFORM busybox:latest@sha256:busybox AS base
+				// nolint: lll
+				[]byte(`FROM --platform=$BUILDPLATFORM busybox:latest@sha256:busybox AS base
 FROM --platform=$BUILDPLATFORM redis:latest@sha256:redis
 FROM --platform=$BUILDPLATFORM base AS anotherbase
 `),
@@ -291,9 +277,7 @@ FROM --platform=$BUILDPLATFORM base AS anotherbase
 		{
 			Name: "Fewer Images In Dockerfile",
 			Contents: [][]byte{
-				[]byte(`
-FROM busybox
-`),
+				[]byte(`FROM busybox`),
 			},
 			PathImages: map[string][]*parse.DockerfileImage{
 				"Dockerfile": {
@@ -318,8 +302,7 @@ FROM busybox
 		{
 			Name: "More Images In Dockerfile",
 			Contents: [][]byte{
-				[]byte(`
-FROM busybox
+				[]byte(`FROM busybox
 FROM redis
 `),
 			},
@@ -339,9 +322,7 @@ FROM redis
 		{
 			Name: "Only From",
 			Contents: [][]byte{
-				[]byte(`
-FROM
-`),
+				[]byte(`FROM`),
 			},
 			PathImages: map[string][]*parse.DockerfileImage{
 				"Dockerfile": {
@@ -359,9 +340,7 @@ FROM
 		{
 			Name: "Only Platform",
 			Contents: [][]byte{
-				[]byte(`
-FROM --platform=$BUILDTARGET
-`),
+				[]byte(`FROM --platform=$BUILDTARGET`),
 			},
 			PathImages: map[string][]*parse.DockerfileImage{
 				"Dockerfile": {

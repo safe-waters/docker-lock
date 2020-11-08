@@ -26,8 +26,7 @@ func TestRewriter(t *testing.T) {
 		{
 			Name: "Composefile Overrides Dockerfile",
 			Contents: [][]byte{
-				[]byte(`
-from golang
+				[]byte(`FROM golang
 `,
 				),
 				[]byte(`
@@ -65,8 +64,7 @@ services:
 				),
 			},
 			Expected: [][]byte{
-				[]byte(`
-from golang:latest@sha256:golang
+				[]byte(`FROM golang:latest@sha256:golang
 `,
 				),
 				[]byte(`
@@ -82,8 +80,7 @@ services:
 		{
 			Name: "Duplicate Services Same Dockerfile Images",
 			Contents: [][]byte{
-				[]byte(`
-from golang
+				[]byte(`FROM golang
 `,
 				),
 				[]byte(`
@@ -121,8 +118,7 @@ services:
 				),
 			},
 			Expected: [][]byte{
-				[]byte(`
-from golang:latest@sha256:golang
+				[]byte(`FROM golang:latest@sha256:golang
 `,
 				),
 				[]byte(`
@@ -140,8 +136,7 @@ services:
 		{
 			Name: "Different Composefiles Same Dockerfile Images",
 			Contents: [][]byte{
-				[]byte(`
-from golang
+				[]byte(`FROM golang
 `,
 				),
 				[]byte(`
@@ -187,8 +182,7 @@ services:
 				),
 			},
 			Expected: [][]byte{
-				[]byte(`
-from golang:latest@sha256:golang
+				[]byte(`FROM golang:latest@sha256:golang
 `,
 				),
 				[]byte(`
@@ -212,8 +206,7 @@ services:
 		{
 			Name: "Duplicate Services Different Dockerfile Images",
 			Contents: [][]byte{
-				[]byte(`
-from golang
+				[]byte(`FROM golang
 `,
 				),
 				[]byte(`
@@ -255,8 +248,7 @@ services:
 		{
 			Name: "Different Composefiles Different Dockerfile Images",
 			Contents: [][]byte{
-				[]byte(`
-from golang
+				[]byte(`FROM golang
 `,
 				),
 				[]byte(`

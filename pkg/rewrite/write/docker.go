@@ -2,7 +2,6 @@
 package write
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io/ioutil"
@@ -10,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 )
 
@@ -98,13 +98,16 @@ func (d *DockerfileWriter) writeFile(
 	path string,
 	images []*parse.DockerfileImage,
 ) (string, error) {
-	dockerfile, err := os.Open(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
-	defer dockerfile.Close()
+	defer f.Close()
 
-	scanner := bufio.NewScanner(dockerfile)
+	loadedDockerfile, err := parser.Parse(f)
+	if err != nil {
+		return "", err
+	}
 
 	stageNames := map[string]bool{}
 
@@ -112,43 +115,24 @@ func (d *DockerfileWriter) writeFile(
 
 	var outputBuffer bytes.Buffer
 
-	for scanner.Scan() {
-		inputLine := scanner.Text()
-		outputLine := inputLine
-		fields := strings.Fields(inputLine)
+	for _, child := range loadedDockerfile.AST.Children {
+		var raw []string
+		for n := child.Next; n != nil; n = n.Next {
+			raw = append(raw, n.Value)
+		}
 
-		const instructionIndex = 0 // for instance, FROM is an instruction
-		if len(fields) > 0 &&
-			strings.ToLower(fields[instructionIndex]) == "from" {
-			// FROM instructions may take the form:
-			// FROM <image>
-			// FROM <image> AS <stage>
-			// FROM <stage> AS <another stage>
-			// FROM --platform=$BUILDPLATFORM ...
-			// Only replace the image, never the stage.
-			if len(fields) == 1 {
+		outputLine := child.Original
+
+		if child.Value == "from" {
+			if len(raw) == 0 {
 				return "", fmt.Errorf(
 					"invalid from instruction in Dockerfile '%s'", path,
 				)
 			}
 
-			imageLineIndex := 1
-			maxNumFields := 4
-
-			if strings.HasPrefix(fields[1], "--platform") {
-				const onlyPlatform = 2
-
-				if len(fields) == onlyPlatform {
-					return "", fmt.Errorf(
-						"invalid from instruction in Dockerfile '%s'", path,
-					)
-				}
-
-				imageLineIndex++
-				maxNumFields++
-			}
-
-			imageLine := fields[imageLineIndex]
+			imageLineIndex := 0
+			maxNumFields := 3
+			imageLine := raw[imageLineIndex]
 
 			if !stageNames[imageLine] {
 				if imageIndex >= len(images) {
@@ -161,7 +145,8 @@ func (d *DockerfileWriter) writeFile(
 				replacementImageLine := convertImageToImageLine(
 					images[imageIndex].Image, d.ExcludeTags,
 				)
-				fields[imageLineIndex] = replacementImageLine
+
+				raw[imageLineIndex] = replacementImageLine
 				imageIndex++
 			}
 			// Ensure stage is added to the stage name set:
@@ -170,14 +155,13 @@ func (d *DockerfileWriter) writeFile(
 			// Ensure another stage is added to the stage name set:
 			// FROM <stage> AS <another stage>
 
-			// Handle FROM --platform=$BUILDPLATFORM ...
-			if len(fields) == maxNumFields {
+			if len(raw) == maxNumFields {
 				stageIndex := maxNumFields - 1
 
-				stageNames[fields[stageIndex]] = true
+				stageNames[raw[stageIndex]] = true
 			}
 
-			outputLine = strings.Join(fields, " ")
+			outputLine = formatASTLine(child, raw)
 		}
 
 		outputBuffer.WriteString(fmt.Sprintf("%s\n", outputLine))
@@ -203,6 +187,17 @@ func (d *DockerfileWriter) writeFile(
 	}
 
 	return writtenFile.Name(), err
+}
+
+func formatASTLine(child *parser.Node, raw []string) string {
+	line := []string{strings.ToUpper(child.Value)}
+	if child.Flags != nil {
+		line = append(line, child.Flags...)
+	}
+
+	line = append(line, raw...)
+
+	return strings.Join(line, " ")
 }
 
 func convertImageToImageLine(image *parse.Image, excludeTags bool) string {

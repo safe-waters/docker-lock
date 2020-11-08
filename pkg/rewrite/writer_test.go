@@ -49,8 +49,7 @@ func TestWriter(t *testing.T) {
 				},
 			},
 			Contents: [][]byte{
-				[]byte(`
-from golang
+				[]byte(`FROM golang
 `,
 				),
 				[]byte(`
@@ -63,8 +62,7 @@ services:
 				),
 			},
 			Expected: [][]byte{
-				[]byte(`
-from golang:latest@sha256:golang
+				[]byte(`FROM golang:latest@sha256:golang
 `,
 				),
 				[]byte(`
