@@ -124,8 +124,29 @@ func (d *DockerfileWriter) writeFile(
 			// FROM <image>
 			// FROM <image> AS <stage>
 			// FROM <stage> AS <another stage>
+			// FROM --platform=$BUILDPLATFORM ...
 			// Only replace the image, never the stage.
-			const imageLineIndex = 1
+			if len(fields) == 1 {
+				return "", fmt.Errorf(
+					"invalid from instruction in Dockerfile '%s'", path,
+				)
+			}
+
+			imageLineIndex := 1
+			maxNumFields := 4
+
+			if strings.HasPrefix(fields[1], "--platform") {
+				const onlyPlatform = 2
+
+				if len(fields) == onlyPlatform {
+					return "", fmt.Errorf(
+						"invalid from instruction in Dockerfile '%s'", path,
+					)
+				}
+
+				imageLineIndex++
+				maxNumFields++
+			}
 
 			imageLine := fields[imageLineIndex]
 
@@ -148,9 +169,10 @@ func (d *DockerfileWriter) writeFile(
 
 			// Ensure another stage is added to the stage name set:
 			// FROM <stage> AS <another stage>
-			const maxNumFields = 4
+
+			// Handle FROM --platform=$BUILDPLATFORM ...
 			if len(fields) == maxNumFields {
-				const stageIndex = 3
+				stageIndex := maxNumFields - 1
 
 				stageNames[fields[stageIndex]] = true
 			}

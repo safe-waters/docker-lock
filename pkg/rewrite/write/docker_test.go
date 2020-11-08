@@ -254,6 +254,41 @@ FROM golang:latest@sha256:golang
 			},
 		},
 		{
+			Name: "Platform",
+			Contents: [][]byte{
+				[]byte(`
+FROM --platform=$BUILDPLATFORM busybox AS base
+FROM --platform=$BUILDPLATFORM redis
+FROM --platform=$BUILDPLATFORM base AS anotherbase
+`),
+			},
+			PathImages: map[string][]*parse.DockerfileImage{
+				"Dockerfile": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "latest",
+							Digest: "busybox",
+						},
+					},
+					{
+						Image: &parse.Image{
+							Name:   "redis",
+							Tag:    "latest",
+							Digest: "redis",
+						},
+					},
+				},
+			},
+			Expected: [][]byte{
+				[]byte(`
+FROM --platform=$BUILDPLATFORM busybox:latest@sha256:busybox AS base
+FROM --platform=$BUILDPLATFORM redis:latest@sha256:redis
+FROM --platform=$BUILDPLATFORM base AS anotherbase
+`),
+			},
+		},
+		{
 			Name: "Fewer Images In Dockerfile",
 			Contents: [][]byte{
 				[]byte(`
@@ -286,6 +321,46 @@ FROM busybox
 				[]byte(`
 FROM busybox
 FROM redis
+`),
+			},
+			PathImages: map[string][]*parse.DockerfileImage{
+				"Dockerfile": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "latest",
+							Digest: "busybox",
+						},
+					},
+				},
+			},
+			ShouldFail: true,
+		},
+		{
+			Name: "Only From",
+			Contents: [][]byte{
+				[]byte(`
+FROM
+`),
+			},
+			PathImages: map[string][]*parse.DockerfileImage{
+				"Dockerfile": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "latest",
+							Digest: "busybox",
+						},
+					},
+				},
+			},
+			ShouldFail: true,
+		},
+		{
+			Name: "Only Platform",
+			Contents: [][]byte{
+				[]byte(`
+FROM --platform=$BUILDTARGET
 `),
 			},
 			PathImages: map[string][]*parse.DockerfileImage{
