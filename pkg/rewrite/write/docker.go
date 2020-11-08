@@ -118,14 +118,14 @@ func (d *DockerfileWriter) writeFile(
 	var outputBuffer bytes.Buffer
 
 	for _, child := range loadedDockerfile.AST.Children {
-		var raw []string
-		for n := child.Next; n != nil; n = n.Next {
-			raw = append(raw, n.Value)
-		}
-
 		outputLine := child.Original
 
 		if child.Value == "from" {
+			var raw []string
+			for n := child.Next; n != nil; n = n.Next {
+				raw = append(raw, n.Value)
+			}
+
 			if len(raw) == 0 {
 				return "", fmt.Errorf(
 					"invalid from instruction in Dockerfile '%s'", path,
