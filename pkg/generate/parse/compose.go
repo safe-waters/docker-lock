@@ -128,7 +128,7 @@ func (c *ComposefileImageParser) parseFile(
 
 	if envFileVars, err = opts.ParseEnvFile(
 		filepath.Join(filepath.Dir(path), ".env"),
-	); err != nil {
+	); err == nil {
 		for _, envVarStr := range envFileVars {
 			envVarVal := strings.SplitN(envVarStr, "=", 2)
 			if _, ok := envVars[envVarVal[0]]; !ok {

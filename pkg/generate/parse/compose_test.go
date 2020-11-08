@@ -16,6 +16,7 @@ func TestComposefileImageParser(t *testing.T) {
 	tests := []struct {
 		Name                 string
 		EnvironmentVariables map[string]string
+		DotEnvContents       [][]byte
 		ComposefilePaths     []string
 		ComposefileContents  [][]byte
 		DockerfilePaths      []string
@@ -178,6 +179,70 @@ services:
 						Tag:  "latest",
 					},
 					DockerfilePath: filepath.Join("dockerfile", "Dockerfile"),
+					Path:           "docker-compose.yml",
+					ServiceName:    "svc",
+				},
+			},
+		},
+		{
+			Name:             "Dot Env",
+			ComposefilePaths: []string{"docker-compose.yml"},
+			DotEnvContents: [][]byte{
+				[]byte(`
+DOT_ENV_IMAGE=busybox
+`),
+			},
+			ComposefileContents: [][]byte{
+				[]byte(`
+version: '3'
+services:
+  svc:
+    image: ${DOT_ENV_IMAGE}
+`),
+			},
+			Expected: []*parse.ComposefileImage{
+				{
+					Image: &parse.Image{
+						Name: "busybox",
+						Tag:  "latest",
+					},
+					Path:        "docker-compose.yml",
+					ServiceName: "svc",
+				},
+			},
+		},
+		{
+			Name: "Dot Env Args Env List",
+			DotEnvContents: [][]byte{
+				[]byte(`
+DOT_ENV_ARGS_ENV_LIST_IMAGE=busybox
+`),
+			},
+			ComposefilePaths: []string{"docker-compose.yml"},
+			ComposefileContents: [][]byte{
+				[]byte(`
+version: '3'
+services:
+  svc:
+    image: unused
+    build:
+      context: .
+      args:
+      - DOT_ENV_ARGS_ENV_LIST_IMAGE
+`),
+			},
+			DockerfilePaths: []string{"Dockerfile"},
+			DockerfileContents: [][]byte{[]byte(`
+ARG DOT_ENV_ARGS_ENV_LIST_IMAGE
+FROM ${DOT_ENV_ARGS_ENV_LIST_IMAGE}
+`)},
+			Expected: []*parse.ComposefileImage{
+				{
+					Image: &parse.Image{
+						Name: "busybox",
+						Tag:  "latest",
+					},
+					DockerfilePath: "Dockerfile",
 					Path:           "docker-compose.yml",
 					ServiceName:    "svc",
 				},
@@ -457,6 +522,17 @@ services:
 			makeParentDirsInTempDirFromFilePaths(
 				t, tempDir, test.ComposefilePaths,
 			)
+			if len(test.DotEnvContents) != 0 {
+				dotEnvFiles := make([]string, len(test.DotEnvContents))
+
+				for i := range test.DotEnvContents {
+					dotEnvFiles[i] = ".env"
+				}
+
+				_ = writeFilesToTempDir(
+					t, tempDir, dotEnvFiles, test.DotEnvContents,
+				)
+			}
 
 			_ = writeFilesToTempDir(
 				t, tempDir, test.DockerfilePaths, test.DockerfileContents,
