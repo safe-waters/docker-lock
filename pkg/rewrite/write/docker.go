@@ -113,6 +113,8 @@ func (d *DockerfileWriter) writeFile(
 
 	var imageIndex int
 
+	const maxNumFields = 3
+
 	var outputBuffer bytes.Buffer
 
 	for _, child := range loadedDockerfile.AST.Children {
@@ -130,11 +132,7 @@ func (d *DockerfileWriter) writeFile(
 				)
 			}
 
-			imageLineIndex := 0
-			maxNumFields := 3
-			imageLine := raw[imageLineIndex]
-
-			if !stageNames[imageLine] {
+			if !stageNames[raw[0]] {
 				if imageIndex >= len(images) {
 					return "", fmt.Errorf(
 						"more images exist in '%s' than in the Lockfile",
@@ -146,7 +144,7 @@ func (d *DockerfileWriter) writeFile(
 					images[imageIndex].Image, d.ExcludeTags,
 				)
 
-				raw[imageLineIndex] = replacementImageLine
+				raw[0] = replacementImageLine
 				imageIndex++
 			}
 			// Ensure stage is added to the stage name set:
@@ -154,14 +152,13 @@ func (d *DockerfileWriter) writeFile(
 
 			// Ensure another stage is added to the stage name set:
 			// FROM <stage> AS <another stage>
-
 			if len(raw) == maxNumFields {
-				stageIndex := maxNumFields - 1
+				const stageIndex = maxNumFields - 1
 
 				stageNames[raw[stageIndex]] = true
 			}
 
-			outputLine = formatASTLine(child, raw)
+			outputLine = d.formatASTLine(child, raw)
 		}
 
 		outputBuffer.WriteString(fmt.Sprintf("%s\n", outputLine))
@@ -189,7 +186,9 @@ func (d *DockerfileWriter) writeFile(
 	return writtenFile.Name(), err
 }
 
-func formatASTLine(child *parser.Node, raw []string) string {
+func (d *DockerfileWriter) formatASTLine(
+	child *parser.Node, raw []string,
+) string {
 	line := []string{strings.ToUpper(child.Value)}
 	if child.Flags != nil {
 		line = append(line, child.Flags...)
