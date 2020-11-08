@@ -137,12 +137,18 @@ func (c *ComposefileImageParser) parseFile(
 		}
 	}
 
-	loadedComposefile, err := loader.Load(types.ConfigDetails{
-		ConfigFiles: []types.ConfigFile{
-			{Config: composefileData, Filename: path},
+	loadedComposefile, err := loader.Load(
+		types.ConfigDetails{
+			ConfigFiles: []types.ConfigFile{
+				{
+					Config:   composefileData,
+					Filename: path,
+				},
+			},
+			// replaces env vars with $ in file
+			Environment: envVars,
 		},
-		Environment: envVars,
-	})
+	)
 	if err != nil {
 		select {
 		case <-done:
@@ -156,7 +162,7 @@ func (c *ComposefileImageParser) parseFile(
 		waitGroup.Add(1)
 
 		go c.parseService(
-			serviceConfig, path, composefileImages, waitGroup, done,
+			serviceConfig, path, envVars, composefileImages, waitGroup, done,
 		)
 	}
 }
@@ -164,6 +170,7 @@ func (c *ComposefileImageParser) parseFile(
 func (c *ComposefileImageParser) parseService(
 	serviceConfig types.ServiceConfig,
 	path string,
+	envVars map[string]string,
 	composefileImages chan<- *ComposefileImage,
 	waitGroup *sync.WaitGroup,
 	done <-chan struct{},
@@ -210,7 +217,11 @@ func (c *ComposefileImageParser) parseService(
 
 		for arg, val := range serviceConfig.Build.Args {
 			if val == nil {
-				buildArgs[arg] = os.Getenv(arg)
+				// For the case:
+				//	args:
+				//	  - MYENVVAR
+				// where MYENVVAR does not have $ in front
+				buildArgs[arg] = envVars[arg]
 			} else {
 				buildArgs[arg] = *val
 			}
