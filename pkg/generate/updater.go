@@ -125,6 +125,29 @@ func (i *ImageDigestUpdater) UpdateDigests(
 						digestsToUpdate[*anyImage.ComposefileImage.Image],
 						anyImage,
 					)
+				case anyImage.KubernetesfileImage != nil:
+					if anyImage.KubernetesfileImage.Image.Digest != "" {
+						select {
+						case <-done:
+							return
+						case updatedAnyImages <- anyImage:
+						}
+
+						continue
+					}
+
+					if _, ok := digestsToUpdate[*anyImage.KubernetesfileImage.Image]; !ok { // nolint: lll
+						select {
+						case <-done:
+							return
+						case imagesWithoutDigests <- anyImage.KubernetesfileImage.Image: // nolint: lll
+						}
+					}
+
+					digestsToUpdate[*anyImage.KubernetesfileImage.Image] = append(
+						digestsToUpdate[*anyImage.KubernetesfileImage.Image],
+						anyImage,
+					)
 				}
 			}
 		}()
@@ -162,6 +185,8 @@ func (i *ImageDigestUpdater) UpdateDigests(
 					anyImage.DockerfileImage.Digest = updatedImage.Digest
 				case anyImage.ComposefileImage != nil:
 					anyImage.ComposefileImage.Digest = updatedImage.Digest
+				case anyImage.KubernetesfileImage != nil:
+					anyImage.KubernetesfileImage.Digest = updatedImage.Digest
 				}
 
 				select {

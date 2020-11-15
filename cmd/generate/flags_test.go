@@ -258,12 +258,16 @@ func TestFlags(t *testing.T) {
 				test.Expected.FlagsWithSharedValues.IgnoreMissingDigests,
 				test.Expected.DockerfileFlags.ManualPaths,
 				test.Expected.ComposefileFlags.ManualPaths,
+				test.Expected.KubernetesfileFlags.ManualPaths,
 				test.Expected.DockerfileFlags.Globs,
 				test.Expected.ComposefileFlags.Globs,
+				test.Expected.KubernetesfileFlags.Globs,
 				test.Expected.DockerfileFlags.Recursive,
 				test.Expected.ComposefileFlags.Recursive,
+				test.Expected.KubernetesfileFlags.Recursive,
 				test.Expected.DockerfileFlags.ExcludePaths,
 				test.Expected.ComposefileFlags.ExcludePaths,
+				test.Expected.KubernetesfileFlags.ExcludePaths,
 			)
 
 			if test.ShouldFail {

@@ -10,8 +10,9 @@ import (
 
 // ImageParser contains ImageParsers for Dockerfiles and docker-compose files.
 type ImageParser struct {
-	DockerfileImageParser  parse.IDockerfileImageParser
-	ComposefileImageParser parse.IComposefileImageParser
+	DockerfileImageParser     parse.IDockerfileImageParser
+	ComposefileImageParser    parse.IComposefileImageParser
+	KubernetesfileImageParser parse.IKubernetesfileImageParser
 }
 
 // IImageParser provides an interface for Parser's exported methods,
@@ -22,9 +23,10 @@ type IImageParser interface {
 
 // AnyImage contains any possible type of parser.
 type AnyImage struct {
-	DockerfileImage  *parse.DockerfileImage
-	ComposefileImage *parse.ComposefileImage
-	Err              error
+	DockerfileImage     *parse.DockerfileImage
+	ComposefileImage    *parse.ComposefileImage
+	KubernetesfileImage *parse.KubernetesfileImage
+	Err                 error
 }
 
 // ParseFiles parses Dockerfiles and docker-compose files for Images.
@@ -35,7 +37,9 @@ func (i *ImageParser) ParseFiles(
 	if ((i.DockerfileImageParser == nil ||
 		reflect.ValueOf(i.DockerfileImageParser).IsNil()) &&
 		(i.ComposefileImageParser == nil ||
-			reflect.ValueOf(i.ComposefileImageParser).IsNil())) ||
+			reflect.ValueOf(i.ComposefileImageParser).IsNil())) &&
+		(i.KubernetesfileImageParser == nil ||
+			reflect.ValueOf(i.KubernetesfileImageParser).IsNil()) ||
 		anyPaths == nil {
 		return nil
 	}
@@ -51,6 +55,7 @@ func (i *ImageParser) ParseFiles(
 
 		dockerfilePaths := make(chan string)
 		composefilePaths := make(chan string)
+		kubernetesfilePaths := make(chan string)
 
 		var pathsWaitGroup sync.WaitGroup
 
@@ -112,6 +117,27 @@ func (i *ImageParser) ParseFiles(
 						return
 					case composefilePaths <- anyPath.ComposefilePath:
 					}
+				case anyPath.KubernetesfilePath != "":
+					if i.KubernetesfileImageParser == nil ||
+						reflect.ValueOf(i.KubernetesfileImageParser).IsNil() {
+						select {
+						case <-done:
+						case anyImages <- &AnyImage{
+							Err: fmt.Errorf(
+								"kubernetes file %s found, but its parser is nil",
+								anyPath.KubernetesfilePath,
+							),
+						}:
+						}
+
+						return
+					}
+
+					select {
+					case <-done:
+						return
+					case kubernetesfilePaths <- anyPath.KubernetesfilePath:
+					}
 				}
 			}
 		}()
@@ -121,11 +147,14 @@ func (i *ImageParser) ParseFiles(
 
 			close(dockerfilePaths)
 			close(composefilePaths)
+			close(kubernetesfilePaths)
 		}()
 
 		var dockerfileImages <-chan *parse.DockerfileImage
 
 		var composefileImages <-chan *parse.ComposefileImage
+
+		var kubernetesfileImages <-chan *parse.KubernetesfileImage
 
 		if i.DockerfileImageParser != nil &&
 			!reflect.ValueOf(i.DockerfileImageParser).IsNil() {
@@ -138,6 +167,13 @@ func (i *ImageParser) ParseFiles(
 			!reflect.ValueOf(i.ComposefileImageParser).IsNil() {
 			composefileImages = i.ComposefileImageParser.ParseFiles(
 				composefilePaths, done,
+			)
+		}
+
+		if i.KubernetesfileImageParser != nil &&
+			!reflect.ValueOf(i.KubernetesfileImageParser).IsNil() {
+			kubernetesfileImages = i.KubernetesfileImageParser.ParseFiles(
+				kubernetesfilePaths, done,
 			)
 		}
 
@@ -189,6 +225,35 @@ func (i *ImageParser) ParseFiles(
 						return
 					case anyImages <- &AnyImage{
 						ComposefileImage: composefileImage,
+					}:
+					}
+				}
+			}()
+		}
+
+		if kubernetesfileImages != nil {
+			waitGroup.Add(1)
+
+			go func() {
+				defer waitGroup.Done()
+
+				for kubernetesfileImage := range kubernetesfileImages {
+					if kubernetesfileImage.Err != nil {
+						select {
+						case <-done:
+						case anyImages <- &AnyImage{
+							Err: kubernetesfileImage.Err,
+						}:
+						}
+
+						return
+					}
+
+					select {
+					case <-done:
+						return
+					case anyImages <- &AnyImage{
+						KubernetesfileImage: kubernetesfileImage,
 					}:
 					}
 				}

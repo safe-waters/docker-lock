@@ -25,6 +25,8 @@ func DefaultPathCollector(flags *Flags) (generate.IPathCollector, error) {
 
 	var composefileCollector *collect.PathCollector
 
+	var kubernetesfileCollector *collect.PathCollector
+
 	var err error
 
 	if !flags.DockerfileFlags.ExcludePaths {
@@ -50,9 +52,25 @@ func DefaultPathCollector(flags *Flags) (generate.IPathCollector, error) {
 		}
 	}
 
+	if !flags.KubernetesfileFlags.ExcludePaths {
+		kubernetesfileCollector, err = collect.NewPathCollector(
+			flags.FlagsWithSharedValues.BaseDir,
+			[]string{
+				"deployment.yml", "deployment.yaml", "pod.yml", "pod.yaml",
+			},
+			flags.KubernetesfileFlags.ManualPaths,
+			flags.KubernetesfileFlags.Globs,
+			flags.KubernetesfileFlags.Recursive,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &generate.PathCollector{
-		DockerfileCollector:  dockerfileCollector,
-		ComposefileCollector: composefileCollector,
+		DockerfileCollector:     dockerfileCollector,
+		ComposefileCollector:    composefileCollector,
+		KubernetesfileCollector: kubernetesfileCollector,
 	}, nil
 }
 
@@ -65,6 +83,8 @@ func DefaultImageParser(flags *Flags) (generate.IImageParser, error) {
 	var dockerfileImageParser *parse.DockerfileImageParser
 
 	var composefileImageParser *parse.ComposefileImageParser
+
+	var kubernetesfileImageParser *parse.KubernetesfileImageParser
 
 	if !flags.DockerfileFlags.ExcludePaths ||
 		!flags.ComposefileFlags.ExcludePaths {
@@ -83,9 +103,14 @@ func DefaultImageParser(flags *Flags) (generate.IImageParser, error) {
 		}
 	}
 
+	if !flags.KubernetesfileFlags.ExcludePaths {
+		kubernetesfileImageParser = &parse.KubernetesfileImageParser{}
+	}
+
 	return &generate.ImageParser{
-		DockerfileImageParser:  dockerfileImageParser,
-		ComposefileImageParser: composefileImageParser,
+		DockerfileImageParser:     dockerfileImageParser,
+		ComposefileImageParser:    composefileImageParser,
+		KubernetesfileImageParser: kubernetesfileImageParser,
 	}, nil
 }
 

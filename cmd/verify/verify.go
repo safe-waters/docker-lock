@@ -112,10 +112,11 @@ func SetupVerifier(
 		j++
 	}
 
+	// TODO: revert
 	generatorFlags, err := cmd_generate.NewFlags(
 		".", "", flags.ConfigPath, flags.EnvPath, flags.IgnoreMissingDigests,
-		dockerfilePaths, composefilePaths, nil, nil, false, false,
-		len(dockerfilePaths) == 0, len(composefilePaths) == 0,
+		dockerfilePaths, composefilePaths, nil, nil, nil, nil, false, false, false,
+		len(dockerfilePaths) == 0, len(composefilePaths) == 0, false,
 	)
 	if err != nil {
 		return nil, err

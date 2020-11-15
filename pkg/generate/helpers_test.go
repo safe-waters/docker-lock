@@ -378,11 +378,12 @@ func makeFlags(
 ) *cmd_generate.Flags {
 	t.Helper()
 
+	// TODO: revert
 	flags, err := cmd_generate.NewFlags(
 		baseDir, lockfileName, configPath, envPath, ignoreMissingDigests,
-		dockerfilePaths, composefilePaths, dockerfileGlobs, composefileGlobs,
-		dockerfileRecursive, composefileRecursive,
-		dockerfileExcludeAll, composefileExcludeAll,
+		dockerfilePaths, composefilePaths, nil, dockerfileGlobs, composefileGlobs, nil,
+		dockerfileRecursive, composefileRecursive, false,
+		dockerfileExcludeAll, composefileExcludeAll, false,
 	)
 	if err != nil {
 		t.Fatal(err)
