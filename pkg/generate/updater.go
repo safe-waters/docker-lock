@@ -144,7 +144,7 @@ func (i *ImageDigestUpdater) UpdateDigests(
 						}
 					}
 
-					digestsToUpdate[*anyImage.KubernetesfileImage.Image] = append(
+					digestsToUpdate[*anyImage.KubernetesfileImage.Image] = append( // nolint: lll
 						digestsToUpdate[*anyImage.KubernetesfileImage.Image],
 						anyImage,
 					)

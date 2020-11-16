@@ -369,21 +369,25 @@ func makeFlags(
 	ignoreMissingDigests bool,
 	dockerfilePaths []string,
 	composefilePaths []string,
+	kubernetesfilePaths []string,
 	dockerfileGlobs []string,
 	composefileGlobs []string,
+	kubernetesfileGlobs []string,
 	dockerfileRecursive bool,
 	composefileRecursive bool,
+	kubernetesfileRecursive bool,
 	dockerfileExcludeAll bool,
 	composefileExcludeAll bool,
+	kubernetesfileExcludeAll bool,
 ) *cmd_generate.Flags {
 	t.Helper()
 
-	// TODO: revert
 	flags, err := cmd_generate.NewFlags(
 		baseDir, lockfileName, configPath, envPath, ignoreMissingDigests,
-		dockerfilePaths, composefilePaths, nil, dockerfileGlobs, composefileGlobs, nil,
-		dockerfileRecursive, composefileRecursive, false,
-		dockerfileExcludeAll, composefileExcludeAll, false,
+		dockerfilePaths, composefilePaths, kubernetesfilePaths,
+		dockerfileGlobs, composefileGlobs, kubernetesfileGlobs,
+		dockerfileRecursive, composefileRecursive, kubernetesfileRecursive,
+		dockerfileExcludeAll, composefileExcludeAll, kubernetesfileExcludeAll,
 	)
 	if err != nil {
 		t.Fatal(err)

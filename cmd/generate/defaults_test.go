@@ -48,6 +48,7 @@ func TestDefaults(t *testing.T) {
 			Flags: &cmd_generate.Flags{
 				DockerfileFlags:       &cmd_generate.FlagsWithSharedNames{},
 				ComposefileFlags:      &cmd_generate.FlagsWithSharedNames{},
+				KubernetesfileFlags:   &cmd_generate.FlagsWithSharedNames{},
 				FlagsWithSharedValues: &cmd_generate.FlagsWithSharedValues{},
 			},
 		},
@@ -58,6 +59,7 @@ func TestDefaults(t *testing.T) {
 					ExcludePaths: true,
 				},
 				ComposefileFlags:      &cmd_generate.FlagsWithSharedNames{},
+				KubernetesfileFlags:   &cmd_generate.FlagsWithSharedNames{},
 				FlagsWithSharedValues: &cmd_generate.FlagsWithSharedValues{},
 			},
 		},
@@ -68,6 +70,7 @@ func TestDefaults(t *testing.T) {
 				ComposefileFlags: &cmd_generate.FlagsWithSharedNames{
 					ExcludePaths: true,
 				},
+				KubernetesfileFlags:   &cmd_generate.FlagsWithSharedNames{},
 				FlagsWithSharedValues: &cmd_generate.FlagsWithSharedValues{},
 			},
 		},
@@ -78,6 +81,9 @@ func TestDefaults(t *testing.T) {
 					ExcludePaths: true,
 				},
 				ComposefileFlags: &cmd_generate.FlagsWithSharedNames{
+					ExcludePaths: true,
+				},
+				KubernetesfileFlags: &cmd_generate.FlagsWithSharedNames{
 					ExcludePaths: true,
 				},
 				FlagsWithSharedValues: &cmd_generate.FlagsWithSharedValues{},

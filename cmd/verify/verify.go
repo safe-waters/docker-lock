@@ -99,8 +99,11 @@ func SetupVerifier(
 
 	dockerfilePaths := make([]string, len(existingLockfile.DockerfileImages))
 	composefilePaths := make([]string, len(existingLockfile.ComposefileImages))
+	kubernetesfilePaths := make(
+		[]string, len(existingLockfile.KubernetesfileImages),
+	)
 
-	var i, j int
+	var i, j, k int
 
 	for p := range existingLockfile.DockerfileImages {
 		dockerfilePaths[i] = p
@@ -112,11 +115,16 @@ func SetupVerifier(
 		j++
 	}
 
-	// TODO: revert
+	for p := range existingLockfile.KubernetesfileImages {
+		kubernetesfilePaths[k] = p
+		k++
+	}
+
 	generatorFlags, err := cmd_generate.NewFlags(
 		".", "", flags.ConfigPath, flags.EnvPath, flags.IgnoreMissingDigests,
-		dockerfilePaths, composefilePaths, nil, nil, nil, nil, false, false, false,
-		len(dockerfilePaths) == 0, len(composefilePaths) == 0, false,
+		dockerfilePaths, composefilePaths, kubernetesfilePaths, nil, nil, nil,
+		false, false, false, len(dockerfilePaths) == 0,
+		len(composefilePaths) == 0, len(kubernetesfilePaths) == 0,
 	)
 	if err != nil {
 		return nil, err

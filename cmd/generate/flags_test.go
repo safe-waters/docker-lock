@@ -198,8 +198,9 @@ func TestFlags(t *testing.T) {
 						"my/lockfile/docker-lock.json",
 					),
 				},
-				DockerfileFlags:  &generate.FlagsWithSharedNames{},
-				ComposefileFlags: &generate.FlagsWithSharedNames{},
+				DockerfileFlags:     &generate.FlagsWithSharedNames{},
+				ComposefileFlags:    &generate.FlagsWithSharedNames{},
+				KubernetesfileFlags: &generate.FlagsWithSharedNames{},
 			},
 			ShouldFail: true,
 		},
@@ -210,7 +211,8 @@ func TestFlags(t *testing.T) {
 				DockerfileFlags: &generate.FlagsWithSharedNames{
 					ManualPaths: []string{getAbsPath(t)},
 				},
-				ComposefileFlags: &generate.FlagsWithSharedNames{},
+				ComposefileFlags:    &generate.FlagsWithSharedNames{},
+				KubernetesfileFlags: &generate.FlagsWithSharedNames{},
 			},
 			ShouldFail: true,
 		},
@@ -222,6 +224,7 @@ func TestFlags(t *testing.T) {
 				ComposefileFlags: &generate.FlagsWithSharedNames{
 					ManualPaths: []string{getAbsPath(t)},
 				},
+				KubernetesfileFlags: &generate.FlagsWithSharedNames{},
 			},
 			ShouldFail: true,
 		},
@@ -239,6 +242,9 @@ func TestFlags(t *testing.T) {
 				},
 				ComposefileFlags: &generate.FlagsWithSharedNames{
 					ManualPaths: []string{"docker-compose.yml"},
+				},
+				KubernetesfileFlags: &generate.FlagsWithSharedNames{
+					ManualPaths: []string{"pod.yaml"},
 				},
 			},
 		},

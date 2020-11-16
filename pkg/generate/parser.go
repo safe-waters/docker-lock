@@ -124,7 +124,7 @@ func (i *ImageParser) ParseFiles(
 						case <-done:
 						case anyImages <- &AnyImage{
 							Err: fmt.Errorf(
-								"kubernetes file %s found, but its parser is nil",
+								"k8s file %s found, but its parser is nil",
 								anyPath.KubernetesfilePath,
 							),
 						}:

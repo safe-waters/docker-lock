@@ -122,10 +122,10 @@ func (p *PathCollector) CollectPaths(done <-chan struct{}) <-chan *AnyPath {
 			go func() {
 				defer waitGroup.Done()
 
-				kubernetesfilePathResults := p.KubernetesfileCollector.CollectPaths(
+				kubernetesfilePathResults := p.KubernetesfileCollector.CollectPaths( // nolint: lll
 					done,
 				)
-				for kubernetesfilePathResult := range kubernetesfilePathResults {
+				for kubernetesfilePathResult := range kubernetesfilePathResults { // nolint: lll
 					if kubernetesfilePathResult.Err != nil {
 						select {
 						case <-done:

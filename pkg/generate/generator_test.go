@@ -22,9 +22,10 @@ func TestGenerator(t *testing.T) {
 	}{
 		{
 			Name: "Normal Dockerfiles and Composefiles",
-			Flags: makeFlags(t, "testdata/success", "docker-lock.json", "",
-				".env", false, []string{"nocompose/Dockerfile"}, nil, nil, nil,
-				false, false, false, false,
+			Flags: makeFlags(
+				t, "testdata/success", "docker-lock.json", "", ".env", false,
+				[]string{"nocompose/Dockerfile"}, nil, nil, nil, nil, nil,
+				false, false, false, false, false, false,
 			),
 			Expected: &generate.Lockfile{
 				DockerfileImages: map[string][]*parse.DockerfileImage{
@@ -70,9 +71,10 @@ func TestGenerator(t *testing.T) {
 		},
 		{
 			Name: "Exclude Dockerfiles",
-			Flags: makeFlags(t, "testdata/success", "docker-lock.json", "",
-				".env", false, []string{"nocompose/Dockerfile"}, nil, nil, nil,
-				false, false, true, false,
+			Flags: makeFlags(
+				t, "testdata/success", "docker-lock.json", "", ".env", false,
+				[]string{"nocompose/Dockerfile"}, nil, nil, nil, nil, nil,
+				false, false, false, true, false, false,
 			),
 			Expected: &generate.Lockfile{
 				DockerfileImages: nil,
@@ -101,10 +103,11 @@ func TestGenerator(t *testing.T) {
 		},
 		{
 			Name: "Exclude Composefiles",
-			Flags: makeFlags(t, "testdata/success", "docker-lock.json", "",
-				".env", false, []string{"nocompose/Dockerfile"},
-				[]string{"docker-compose.yml"}, nil, nil, false,
-				false, false, true,
+			Flags: makeFlags(
+				t, "testdata/success", "docker-lock.json", "", ".env", false,
+				[]string{"nocompose/Dockerfile"},
+				[]string{"docker-compose.yml"}, nil, nil, nil, nil,
+				false, false, false, false, true, false,
 			),
 			Expected: &generate.Lockfile{
 				DockerfileImages: map[string][]*parse.DockerfileImage{
@@ -130,20 +133,20 @@ func TestGenerator(t *testing.T) {
 		},
 		{
 			Name: "Exclude All",
-			Flags: makeFlags(t, "testdata/success", "docker-lock.json", "",
-				".env", false, []string{"nocompose/Dockerfile"},
-				[]string{"docker-compose.yml"}, nil, nil, false,
-				false, true, true,
+			Flags: makeFlags(
+				t, "testdata/success", "docker-lock.json", "", ".env", false,
+				[]string{"nocompose/Dockerfile"},
+				[]string{"docker-compose.yml"}, nil, nil, nil, nil,
+				false, false, false, true, true, true,
 			),
-			Expected: &generate.Lockfile{
-				DockerfileImages:  nil,
-				ComposefileImages: nil,
-			},
+			Expected: &generate.Lockfile{},
 		},
 		{
 			Name: "Service Typo",
-			Flags: makeFlags(t, "testdata/fail", "docker-lock.json", "", ".env",
-				false, nil, nil, nil, nil, false, false, false, false,
+			Flags: makeFlags(
+				t, "testdata/fail", "docker-lock.json", "", ".env", false,
+				nil, nil, nil, nil, nil, nil,
+				false, false, false, false, false, false,
 			),
 			ShouldFail: true,
 		},

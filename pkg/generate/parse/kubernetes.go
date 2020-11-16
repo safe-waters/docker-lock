@@ -131,17 +131,17 @@ func parseDocRecursive(
 	imagePosition *int,
 	done <-chan struct{},
 ) {
-	switch k8sYAML := doc.(type) {
+	switch doc := doc.(type) {
 	case map[interface{}]interface{}:
 		var containerName string
 
 		var imageLine string
 
-		if possibleContainerName, ok := k8sYAML["name"]; ok {
+		if possibleContainerName, ok := doc["name"]; ok {
 			containerName, _ = possibleContainerName.(string)
 		}
 
-		if possibleImageLine, ok := k8sYAML["image"]; ok {
+		if possibleImageLine, ok := doc["image"]; ok {
 			imageLine, _ = possibleImageLine.(string)
 		}
 
@@ -164,7 +164,7 @@ func parseDocRecursive(
 
 		var keys []string
 
-		for k := range k8sYAML {
+		for k := range doc {
 			if k, ok := k.(string); ok {
 				keys = append(keys, k)
 			}
@@ -174,14 +174,14 @@ func parseDocRecursive(
 
 		for _, k := range keys {
 			parseDocRecursive(
-				path, k8sYAML[k], kubernetesfileImages,
+				path, doc[k], kubernetesfileImages,
 				docPosition, imagePosition, done,
 			)
 		}
 	case []interface{}:
-		for i := range k8sYAML {
+		for i := range doc {
 			parseDocRecursive(
-				path, k8sYAML[i], kubernetesfileImages,
+				path, doc[i], kubernetesfileImages,
 				docPosition, imagePosition, done,
 			)
 		}
