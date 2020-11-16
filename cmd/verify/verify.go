@@ -141,9 +141,13 @@ func SetupVerifier(
 	composefileDifferentiator := &diff.ComposefileDifferentiator{
 		ExcludeTags: flags.ExcludeTags,
 	}
+	kubernetesfileDifferentiator := &diff.KubernetesfileDifferentiator{
+		ExcludeTags: flags.ExcludeTags,
+	}
 
 	return verify.NewVerifier(
-		generator, dockerfileDifferentiator, composefileDifferentiator,
+		generator, dockerfileDifferentiator,
+		composefileDifferentiator, kubernetesfileDifferentiator,
 	)
 }
 

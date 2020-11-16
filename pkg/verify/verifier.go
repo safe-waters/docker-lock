@@ -16,9 +16,10 @@ import (
 // Verifier verifies that the Lockfile is the same as one that would
 // be generated if a new one were generated.
 type Verifier struct {
-	Generator           generate.IGenerator
-	DockerfileVerifier  diff.IDockerfileDifferentiator
-	ComposefileVerifier diff.IComposefileDifferentiator
+	Generator                    generate.IGenerator
+	DockerfileDifferentiator     diff.IDockerfileDifferentiator
+	ComposefileDifferentiator    diff.IComposefileDifferentiator
+	KubernetesfileDifferentiator diff.IKubernetesfileDifferentiator
 }
 
 // IVerifier provides an interface for Verifiers's exported methods.
@@ -29,17 +30,19 @@ type IVerifier interface {
 // NewVerifier returns a Verifier after validating its fields.
 func NewVerifier(
 	generator generate.IGenerator,
-	dockerfileVerifier diff.IDockerfileDifferentiator,
-	composefileVerifier diff.IComposefileDifferentiator,
+	dockerfileDifferentiator diff.IDockerfileDifferentiator,
+	composefileDifferentiator diff.IComposefileDifferentiator,
+	kubernetesfileDifferentiator diff.IKubernetesfileDifferentiator,
 ) (*Verifier, error) {
 	if generator == nil || reflect.ValueOf(generator).IsNil() {
 		return nil, errors.New("generator cannot be nil")
 	}
 
 	return &Verifier{
-		Generator:           generator,
-		DockerfileVerifier:  dockerfileVerifier,
-		ComposefileVerifier: composefileVerifier,
+		Generator:                    generator,
+		DockerfileDifferentiator:     dockerfileDifferentiator,
+		ComposefileDifferentiator:    composefileDifferentiator,
+		KubernetesfileDifferentiator: kubernetesfileDifferentiator,
 	}, nil
 }
 
@@ -51,10 +54,12 @@ func (v *Verifier) VerifyLockfile(reader io.Reader) error {
 		return errors.New("reader cannot be nil")
 	}
 
-	if (v.DockerfileVerifier == nil ||
-		reflect.ValueOf(v.DockerfileVerifier).IsNil()) &&
-		(v.ComposefileVerifier == nil ||
-			reflect.ValueOf(v.ComposefileVerifier).IsNil()) {
+	if (v.DockerfileDifferentiator == nil ||
+		reflect.ValueOf(v.DockerfileDifferentiator).IsNil()) &&
+		(v.ComposefileDifferentiator == nil ||
+			reflect.ValueOf(v.ComposefileDifferentiator).IsNil()) &&
+		(v.KubernetesfileDifferentiator == nil ||
+			reflect.ValueOf(v.KubernetesfileDifferentiator).IsNil()) {
 		return nil
 	}
 
@@ -80,26 +85,35 @@ func (v *Verifier) VerifyLockfile(reader io.Reader) error {
 
 	var composefileErrCh <-chan error
 
-	if v.DockerfileVerifier != nil &&
-		!reflect.ValueOf(v.DockerfileVerifier).IsNil() {
-		dockerfileErrCh = v.DockerfileVerifier.Differentiate(
+	var kubernetesfileErrCh <-chan error
+
+	if v.DockerfileDifferentiator != nil &&
+		!reflect.ValueOf(v.DockerfileDifferentiator).IsNil() {
+		dockerfileErrCh = v.DockerfileDifferentiator.Differentiate(
 			existingLockfile.DockerfileImages, newLockfile.DockerfileImages,
 			done,
 		)
 	}
 
-	if v.ComposefileVerifier != nil &&
-		!reflect.ValueOf(v.ComposefileVerifier).IsNil() {
-		composefileErrCh = v.ComposefileVerifier.Differentiate(
+	if v.ComposefileDifferentiator != nil &&
+		!reflect.ValueOf(v.ComposefileDifferentiator).IsNil() {
+		composefileErrCh = v.ComposefileDifferentiator.Differentiate(
 			existingLockfile.ComposefileImages, newLockfile.ComposefileImages,
+			done,
+		)
+	}
+
+	if v.KubernetesfileDifferentiator != nil &&
+		!reflect.ValueOf(v.KubernetesfileDifferentiator).IsNil() {
+		kubernetesfileErrCh = v.KubernetesfileDifferentiator.Differentiate(
+			existingLockfile.KubernetesfileImages,
+			newLockfile.KubernetesfileImages,
 			done,
 		)
 	}
 
 	for {
 		select {
-		case <-done:
-			return nil
 		case _, ok := <-dockerfileErrCh:
 			if !ok {
 				dockerfileErrCh = nil
@@ -120,9 +134,21 @@ func (v *Verifier) VerifyLockfile(reader io.Reader) error {
 				ExistingLockfile: &existingLockfile,
 				NewLockfile:      &newLockfile,
 			}
+		case _, ok := <-kubernetesfileErrCh:
+			if !ok {
+				kubernetesfileErrCh = nil
+				break
+			}
+
+			return &DifferentLockfileError{
+				ExistingLockfile: &existingLockfile,
+				NewLockfile:      &newLockfile,
+			}
 		}
 
-		if dockerfileErrCh == nil && composefileErrCh == nil {
+		if dockerfileErrCh == nil &&
+			composefileErrCh == nil &&
+			kubernetesfileErrCh == nil {
 			return nil
 		}
 	}
