@@ -90,7 +90,6 @@ func NewLockfile(anyImages <-chan *AnyImage) (*Lockfile, error) {
 		KubernetesfileImages: kubernetesfileImages,
 	}
 
-	// TODO: sort kubernetesfileImages
 	lockfile.sortImages()
 
 	return lockfile, nil
@@ -124,6 +123,10 @@ func (l *Lockfile) sortImages() {
 	waitGroup.Add(1)
 
 	go l.sortComposefileImages(&waitGroup)
+
+	waitGroup.Add(1)
+
+	go l.sortKubernetesfileImages(&waitGroup)
 
 	waitGroup.Wait()
 }
@@ -165,6 +168,29 @@ func (l *Lockfile) sortComposefileImages(waitGroup *sync.WaitGroup) {
 					return images[i].DockerfilePath < images[j].DockerfilePath
 				default:
 					return images[i].Position < images[j].Position
+				}
+			})
+		}()
+	}
+}
+
+func (l *Lockfile) sortKubernetesfileImages(waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+
+	for _, images := range l.KubernetesfileImages {
+		images := images
+
+		waitGroup.Add(1)
+
+		go func() {
+			defer waitGroup.Done()
+
+			sort.Slice(images, func(i, j int) bool {
+				switch {
+				case images[i].DocPosition != images[j].DocPosition:
+					return images[i].DocPosition < images[j].DocPosition
+				default:
+					return images[i].ImagePosition < images[j].ImagePosition
 				}
 			})
 		}()

@@ -15,7 +15,8 @@ type KubernetesfileImageParser struct{}
 type KubernetesfileImage struct {
 	*Image
 	ContainerName string
-	Position      int    `json:"-"`
+	ImagePosition int    `json:"-"`
+	DocPosition   int    `json:"-"`
 	Path          string `json:"-"`
 	Err           error  `json:"-"`
 }
@@ -81,7 +82,7 @@ func (k *KubernetesfileImageParser) parseFile(
 
 	dec := yaml.NewDecoder(bytes.NewReader(byt))
 
-	for {
+	for docPosition := 0; ; docPosition++ {
 		var doc interface{}
 
 		if err := dec.Decode(&doc); err != nil {
@@ -97,61 +98,68 @@ func (k *KubernetesfileImageParser) parseFile(
 			break
 		}
 
-		parsedImages := k.parseDoc(doc)
-		for _, image := range parsedImages {
-			select {
-			case <-done:
-				return
-			case kubernetesfileImages <- &KubernetesfileImage{
-				Image:    image.Image,
-				Position: image.Position,
-				Path:     path,
-			}:
-			}
-		}
+		waitGroup.Add(1)
+
+		go k.parseDoc(
+			path, doc, kubernetesfileImages, docPosition, done, waitGroup,
+		)
 	}
 }
 
 func (k *KubernetesfileImageParser) parseDoc(
+	path string,
 	doc interface{},
-) []*KubernetesfileImage {
-	var k8sImages []*KubernetesfileImage
+	kubernetesfileImages chan<- *KubernetesfileImage,
+	docPosition int,
+	done <-chan struct{},
+	waitGroup *sync.WaitGroup,
+) {
+	defer waitGroup.Done()
 
-	var position int
+	var imagePosition int
 
-	parseDocRecursive(doc, &k8sImages, &position)
-
-	return k8sImages
+	parseDocRecursive(
+		path, doc, kubernetesfileImages, docPosition, &imagePosition, done,
+	)
 }
 
 func parseDocRecursive(
-	k8sYAML interface{},
-	k8sImages *[]*KubernetesfileImage,
-	position *int,
+	path string,
+	doc interface{},
+	kubernetesfileImages chan<- *KubernetesfileImage,
+	docPosition int,
+	imagePosition *int,
+	done <-chan struct{},
 ) {
-	switch k8sYAML := k8sYAML.(type) {
+	switch k8sYAML := doc.(type) {
 	case map[interface{}]interface{}:
 		var containerName string
 
-		var imageName string
+		var imageLine string
 
-		if name, ok := k8sYAML["name"]; ok {
-			containerName, _ = name.(string)
+		if possibleContainerName, ok := k8sYAML["name"]; ok {
+			containerName, _ = possibleContainerName.(string)
 		}
 
-		if image, ok := k8sYAML["image"]; ok {
-			imageName, _ = image.(string)
+		if possibleImageLine, ok := k8sYAML["image"]; ok {
+			imageLine, _ = possibleImageLine.(string)
 		}
 
-		if containerName != "" && imageName != "" {
-			k8sImage := &KubernetesfileImage{
-				Image:         &Image{Name: imageName},
+		if containerName != "" && imageLine != "" {
+			image := convertImageLineToImage(imageLine)
+
+			select {
+			case <-done:
+			case kubernetesfileImages <- &KubernetesfileImage{
+				Image:         image,
 				ContainerName: containerName,
-				Position:      *position,
+				Path:          path,
+				ImagePosition: *imagePosition,
+				DocPosition:   docPosition,
+			}:
 			}
-			*k8sImages = append(*k8sImages, k8sImage)
 
-			*position++
+			*imagePosition++
 		}
 
 		var keys []string
@@ -165,11 +173,17 @@ func parseDocRecursive(
 		sort.Strings(keys)
 
 		for _, k := range keys {
-			parseDocRecursive(k8sYAML[k], k8sImages, position)
+			parseDocRecursive(
+				path, k8sYAML[k], kubernetesfileImages,
+				docPosition, imagePosition, done,
+			)
 		}
 	case []interface{}:
-		for _, v := range k8sYAML {
-			parseDocRecursive(v, k8sImages, position)
+		for i := range k8sYAML {
+			parseDocRecursive(
+				path, k8sYAML[i], kubernetesfileImages,
+				docPosition, imagePosition, done,
+			)
 		}
 	}
 }
