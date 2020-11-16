@@ -8,13 +8,14 @@ import (
 	"sync"
 
 	"gopkg.in/yaml.v2"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 type KubernetesfileImageParser struct{}
 
 type KubernetesfileImage struct {
 	*Image
-	ContainerName string
+	ContainerName string `json:"container"`
 	ImagePosition int    `json:"-"`
 	DocPosition   int    `json:"-"`
 	Path          string `json:"-"`
@@ -71,6 +72,17 @@ func (k *KubernetesfileImageParser) parseFile(
 	defer waitGroup.Done()
 
 	byt, err := ioutil.ReadFile(path)
+	if err != nil {
+		select {
+		case <-done:
+		case kubernetesfileImages <- &KubernetesfileImage{Err: err}:
+		}
+
+		return
+	}
+
+	// TODO: error is not being thrown, perhaps check type
+	_, _, err = scheme.Codecs.UniversalDeserializer().Decode(byt, nil, nil)
 	if err != nil {
 		select {
 		case <-done:
