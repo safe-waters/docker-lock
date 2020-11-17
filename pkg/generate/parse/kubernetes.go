@@ -81,7 +81,6 @@ func (k *KubernetesfileImageParser) parseFile(
 		return
 	}
 
-	// TODO: error is not being thrown, perhaps check type
 	_, _, err = scheme.Codecs.UniversalDeserializer().Decode(byt, nil, nil)
 	if err != nil {
 		select {
