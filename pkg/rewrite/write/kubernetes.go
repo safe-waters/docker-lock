@@ -100,7 +100,9 @@ func (k *KubernetesfileWriter) writeFile(
 
 	var encodedDocs []interface{}
 
-	for docPosition := 0; ; docPosition++ {
+	var imagePosition int
+
+	for {
 		var doc interface{}
 
 		if err = dec.Decode(&doc); err != nil {
@@ -111,7 +113,8 @@ func (k *KubernetesfileWriter) writeFile(
 			break
 		}
 
-		k.encodeDoc(doc, images)
+		// TODO: here and in parser, use atomic int, get rid of doc position
+		k.encodeDoc(doc, images, &imagePosition)
 		encodedDocs = append(encodedDocs, doc)
 	}
 
@@ -138,6 +141,7 @@ func (k *KubernetesfileWriter) writeFile(
 func (k *KubernetesfileWriter) encodeDoc(
 	doc interface{},
 	images []*parse.KubernetesfileImage,
+	imagePosition *int,
 ) {
 	switch doc := doc.(type) {
 	case map[interface{}]interface{}:
@@ -156,8 +160,10 @@ func (k *KubernetesfileWriter) encodeDoc(
 		if containerName != "" && imageLine != "" {
 			// TODO: use position, and use exclude tags
 			doc["image"] = convertImageToImageLine(
-				images[0].Image, k.ExcludeTags,
+				images[*imagePosition].Image, k.ExcludeTags,
 			)
+
+			*imagePosition++
 		}
 
 		var keys []string
@@ -171,11 +177,11 @@ func (k *KubernetesfileWriter) encodeDoc(
 		sort.Strings(keys)
 
 		for _, key := range keys {
-			k.encodeDoc(doc[key], images)
+			k.encodeDoc(doc[key], images, imagePosition)
 		}
 	case []interface{}:
 		for i := range doc {
-			k.encodeDoc(doc[i], images)
+			k.encodeDoc(doc[i], images, imagePosition)
 		}
 	}
 }
