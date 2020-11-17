@@ -129,12 +129,12 @@ func (k *KubernetesfileImageParser) parseDoc(
 
 	var imagePosition int
 
-	parseDocRecursive(
+	k.parseDocRecursive(
 		path, doc, kubernetesfileImages, docPosition, &imagePosition, done,
 	)
 }
 
-func parseDocRecursive(
+func (k *KubernetesfileImageParser) parseDocRecursive(
 	path string,
 	doc interface{},
 	kubernetesfileImages chan<- *KubernetesfileImage,
@@ -175,23 +175,23 @@ func parseDocRecursive(
 
 		var keys []string
 
-		for k := range doc {
-			if k, ok := k.(string); ok {
+		for key := range doc {
+			if k, ok := key.(string); ok {
 				keys = append(keys, k)
 			}
 		}
 
 		sort.Strings(keys)
 
-		for _, k := range keys {
-			parseDocRecursive(
-				path, doc[k], kubernetesfileImages,
+		for _, key := range keys {
+			k.parseDocRecursive(
+				path, doc[key], kubernetesfileImages,
 				docPosition, imagePosition, done,
 			)
 		}
 	case []interface{}:
 		for i := range doc {
-			parseDocRecursive(
+			k.parseDocRecursive(
 				path, doc[i], kubernetesfileImages,
 				docPosition, imagePosition, done,
 			)

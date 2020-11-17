@@ -73,7 +73,14 @@ func SetupRewriter(flags *Flags) (*rewrite.Rewriter, error) {
 		Directory:        flags.TempDir,
 	}
 
-	writer, err := rewrite.NewWriter(dockerfileWriter, composefileWriter)
+	kubernetesfileWriter := &write.KubernetesfileWriter{
+		ExcludeTags: flags.ExcludeTags,
+		Directory:   flags.TempDir,
+	}
+
+	writer, err := rewrite.NewWriter(
+		dockerfileWriter, composefileWriter, kubernetesfileWriter,
+	)
 	if err != nil {
 		return nil, err
 	}

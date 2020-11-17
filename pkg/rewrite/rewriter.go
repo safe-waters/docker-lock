@@ -54,13 +54,15 @@ func (r *Rewriter) RewriteLockfile(reader io.Reader) error {
 	}
 
 	if len(lockfile.DockerfileImages) == 0 &&
-		len(lockfile.ComposefileImages) == 0 {
+		len(lockfile.ComposefileImages) == 0 &&
+		len(lockfile.KubernetesfileImages) == 0 {
 		return nil
 	}
 
 	anyPathImages := &AnyPathImages{
-		DockerfilePathImages:  lockfile.DockerfileImages,
-		ComposefilePathImages: lockfile.ComposefileImages,
+		DockerfilePathImages:     lockfile.DockerfileImages,
+		ComposefilePathImages:    lockfile.ComposefileImages,
+		KubernetesfilePathImages: lockfile.KubernetesfileImages,
 	}
 
 	anyPathImages, err := r.deduplicateAnyPathImages(anyPathImages)
@@ -161,8 +163,9 @@ func (r *Rewriter) deduplicateAnyPathImages(
 	}
 
 	return &AnyPathImages{
-		DockerfilePathImages:  dockerfilePathImages,
-		ComposefilePathImages: anyPathImages.ComposefilePathImages,
+		DockerfilePathImages:     dockerfilePathImages,
+		ComposefilePathImages:    anyPathImages.ComposefilePathImages,
+		KubernetesfilePathImages: anyPathImages.KubernetesfilePathImages,
 	}, nil
 }
 

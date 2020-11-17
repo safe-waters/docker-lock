@@ -11,14 +11,16 @@ import (
 
 // Writer is used to write files with their image digests.
 type Writer struct {
-	DockerfileWriter  write.IDockerfileWriter
-	ComposefileWriter write.IComposefileWriter
+	DockerfileWriter     write.IDockerfileWriter
+	ComposefileWriter    write.IComposefileWriter
+	KubernetesfileWriter write.IKubernetesfileWriter
 }
 
 // AnyPathImages contains any possible type of path and associated images.
 type AnyPathImages struct {
-	DockerfilePathImages  map[string][]*parse.DockerfileImage
-	ComposefilePathImages map[string][]*parse.ComposefileImage
+	DockerfilePathImages     map[string][]*parse.DockerfileImage
+	ComposefilePathImages    map[string][]*parse.ComposefileImage
+	KubernetesfilePathImages map[string][]*parse.KubernetesfileImage
 }
 
 // IWriter provides an interface for Writer's exported methods.
@@ -33,17 +35,21 @@ type IWriter interface {
 func NewWriter(
 	dockerfileWriter write.IDockerfileWriter,
 	composefileWriter write.IComposefileWriter,
+	kubernetesfileWriter write.IKubernetesfileWriter,
 ) (*Writer, error) {
 	if (dockerfileWriter == nil ||
 		reflect.ValueOf(dockerfileWriter).IsNil()) &&
 		(composefileWriter == nil ||
-			reflect.ValueOf(composefileWriter).IsNil()) {
+			reflect.ValueOf(composefileWriter).IsNil()) &&
+		(kubernetesfileWriter == nil ||
+			reflect.ValueOf(kubernetesfileWriter).IsNil()) {
 		return nil, errors.New("at least one writer must not be nil")
 	}
 
 	return &Writer{
-		DockerfileWriter:  dockerfileWriter,
-		ComposefileWriter: composefileWriter,
+		DockerfileWriter:     dockerfileWriter,
+		ComposefileWriter:    composefileWriter,
+		KubernetesfileWriter: kubernetesfileWriter,
 	}, nil
 }
 
@@ -104,6 +110,32 @@ func (w *Writer) WriteFiles(
 				)
 
 				for writtenPath := range writtenPathsFromComposefiles {
+					select {
+					case <-done:
+						return
+					case writtenPaths <- writtenPath:
+					}
+
+					if writtenPath.Err != nil {
+						return
+					}
+				}
+			}()
+		}
+
+		if w.KubernetesfileWriter != nil &&
+			!reflect.ValueOf(w.KubernetesfileWriter).IsNil() &&
+			len(anyPathImages.KubernetesfilePathImages) != 0 {
+			waitGroup.Add(1)
+
+			go func() {
+				defer waitGroup.Done()
+
+				writtenPathsFromKubernetesfiles := w.KubernetesfileWriter.WriteFiles(
+					anyPathImages.KubernetesfilePathImages, done,
+				)
+
+				for writtenPath := range writtenPathsFromKubernetesfiles {
 					select {
 					case <-done:
 						return
