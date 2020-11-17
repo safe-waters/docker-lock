@@ -133,9 +133,12 @@ services:
 				DockerfileWriter: dockerfileWriter,
 				Directory:        tempDir,
 			}
+			kubernetesfileWriter := &write.KubernetesfileWriter{
+				Directory: tempDir,
+			}
 
 			writer, err := rewrite.NewWriter(
-				dockerfileWriter, composefileWriter,
+				dockerfileWriter, composefileWriter, kubernetesfileWriter,
 			)
 			if err != nil {
 				t.Fatal(err)
