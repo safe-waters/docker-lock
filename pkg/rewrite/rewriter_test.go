@@ -78,6 +78,96 @@ services:
 			},
 		},
 		{
+			Name: "Dockerfile, Composefile, and Kubernetesfile",
+			Contents: [][]byte{
+				[]byte(`FROM golang
+`,
+				),
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+				[]byte(`apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  containers:
+  - name: redis
+    image: redis
+    ports:
+    - containerPort: 80
+`),
+				[]byte(`
+{
+	"dockerfiles": {
+		"Dockerfile": [
+			{
+				"name": "not_used",
+				"tag": "latest",
+				"digest": "not_used"
+			}
+		]
+	},
+	"composefiles": {
+		"docker-compose.yml": [
+			{
+				"name": "golang",
+				"tag": "latest",
+				"digest": "golang",
+				"dockerfile": "Dockerfile",
+				"service": "svc"
+			}
+		]
+	},
+	"kubernetesfiles": {
+		"pod.yaml": [
+			{
+				"name": "redis",
+				"tag": "latest",
+				"digest": "redis",
+				"container": "redis"
+			}
+		]
+	}
+}
+`,
+				),
+			},
+			Expected: [][]byte{
+				[]byte(`FROM golang:latest@sha256:golang
+`,
+				),
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    build: .
+`,
+				),
+				[]byte(`apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  containers:
+  - name: redis
+    image: redis:latest@sha256:redis
+    ports:
+    - containerPort: 80
+`),
+			},
+		},
+		{
 			Name: "Duplicate Services Same Dockerfile Images",
 			Contents: [][]byte{
 				[]byte(`FROM golang
@@ -341,6 +431,15 @@ services:
 				dockerfileImagesWithTempDir[dockerfilePath] = images
 			}
 
+			kubernetesfileImagesWithTempDir := map[string][]*parse.KubernetesfileImage{} // nolint: lll
+
+			for kubernetesfilePath, images := range lockfile.KubernetesfileImages { // nolint: lll
+				uniquePathsToWrite[kubernetesfilePath] = struct{}{}
+
+				kubernetesfilePath = filepath.Join(tempDir, kubernetesfilePath)
+				kubernetesfileImagesWithTempDir[kubernetesfilePath] = images
+			}
+
 			var pathsToWrite []string
 			for path := range uniquePathsToWrite {
 				pathsToWrite = append(pathsToWrite, path)
@@ -363,8 +462,9 @@ services:
 			}
 
 			lockfileWithTempDir := &generate.Lockfile{
-				DockerfileImages:  dockerfileImagesWithTempDir,
-				ComposefileImages: composefileImagesWithTempDir,
+				DockerfileImages:     dockerfileImagesWithTempDir,
+				ComposefileImages:    composefileImagesWithTempDir,
+				KubernetesfileImages: kubernetesfileImagesWithTempDir,
 			}
 
 			lockfileByt, err := json.Marshal(lockfileWithTempDir)

@@ -22,7 +22,7 @@ func TestWriter(t *testing.T) {
 		ShouldFail    bool
 	}{
 		{
-			Name: "Dockerfile And Composefile",
+			Name: "Dockerfile, Composefile, And Kubernetesfile",
 			AnyPathImages: &rewrite.AnyPathImages{
 				DockerfilePathImages: map[string][]*parse.DockerfileImage{
 					"Dockerfile": {
@@ -47,6 +47,18 @@ func TestWriter(t *testing.T) {
 						},
 					},
 				},
+				KubernetesfilePathImages: map[string][]*parse.KubernetesfileImage{ // nolint: lll
+					"pod.yml": {
+						{
+							Image: &parse.Image{
+								Name:   "redis",
+								Tag:    "latest",
+								Digest: "redis",
+							},
+							ContainerName: "redis",
+						},
+					},
+				},
 			},
 			Contents: [][]byte{
 				[]byte(`FROM golang
@@ -60,6 +72,19 @@ services:
     image: busybox
 `,
 				),
+				[]byte(`apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  containers:
+  - name: redis
+    image: redis
+    ports:
+    - containerPort: 80
+`),
 			},
 			Expected: [][]byte{
 				[]byte(`FROM golang:latest@sha256:golang
@@ -73,6 +98,19 @@ services:
     image: busybox:latest@sha256:busybox
 `,
 				),
+				[]byte(`apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  containers:
+  - name: redis
+    image: redis:latest@sha256:redis
+    ports:
+    - containerPort: 80
+`),
 			},
 		},
 	}
@@ -88,8 +126,9 @@ services:
 			uniquePathsToWrite := map[string]struct{}{}
 
 			tempAnyPaths := &rewrite.AnyPathImages{
-				DockerfilePathImages:  map[string][]*parse.DockerfileImage{},
-				ComposefilePathImages: map[string][]*parse.ComposefileImage{},
+				DockerfilePathImages:     map[string][]*parse.DockerfileImage{},
+				ComposefilePathImages:    map[string][]*parse.ComposefileImage{},    // nolint: lll
+				KubernetesfilePathImages: map[string][]*parse.KubernetesfileImage{}, // nolint: lll
 			}
 
 			for composefilePath, images := range test.AnyPathImages.ComposefilePathImages { // nolint: lll
@@ -113,6 +152,13 @@ services:
 
 				dockerfilePath = filepath.Join(tempDir, dockerfilePath)
 				tempAnyPaths.DockerfilePathImages[dockerfilePath] = images
+			}
+
+			for kubernetesfilePath, images := range test.AnyPathImages.KubernetesfilePathImages { // nolint: lll
+				uniquePathsToWrite[kubernetesfilePath] = struct{}{}
+
+				kubernetesfilePath = filepath.Join(tempDir, kubernetesfilePath)
+				tempAnyPaths.KubernetesfilePathImages[kubernetesfilePath] = images // nolint: lll
 			}
 
 			var pathsToWrite []string
