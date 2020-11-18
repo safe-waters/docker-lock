@@ -55,188 +55,148 @@ func TestKubernetesfileDifferentiator(t *testing.T) {
 			},
 			ShouldFail: true,
 		},
-		// {
-		// 	Name: "Different Paths",
-		// 	Existing: map[string][]*parse.ComposefileImage{
-		// 		"docker-compose.yml": {
-		// 			{
-		// 				Image: &parse.Image{
-		// 					Name:   "busybox",
-		// 					Tag:    "busybox",
-		// 					Digest: "busybox",
-		// 				},
-		// 				ServiceName:    "svc",
-		// 				DockerfilePath: "Dockerfile",
-		// 			},
-		// 		},
-		// 	},
-		// 	New: map[string][]*parse.ComposefileImage{
-		// 		"docker-compose1.yml": {
-		// 			{
-		// 				Image: &parse.Image{
-		// 					Name:   "busybox",
-		// 					Tag:    "busybox",
-		// 					Digest: "busybox",
-		// 				},
-		// 				ServiceName:    "svc",
-		// 				DockerfilePath: "Dockerfile",
-		// 			},
-		// 		},
-		// 	},
-		// 	ShouldFail: true,
-		// },
-		// {
-		// 	Name: "Different Images",
-		// 	Existing: map[string][]*parse.ComposefileImage{
-		// 		"docker-compose.yml": {
-		// 			{
-		// 				Image: &parse.Image{
-		// 					Name:   "busybox",
-		// 					Tag:    "busybox",
-		// 					Digest: "busybox",
-		// 				},
-		// 				ServiceName:    "svc",
-		// 				DockerfilePath: "Dockerfile",
-		// 			},
-		// 		},
-		// 	},
-		// 	New: map[string][]*parse.ComposefileImage{
-		// 		"docker-compose.yml": {
-		// 			{
-		// 				Image: &parse.Image{
-		// 					Name:   "busybox",
-		// 					Tag:    "notbusybox",
-		// 					Digest: "busybox",
-		// 				},
-		// 				ServiceName:    "svc",
-		// 				DockerfilePath: "Dockerfile",
-		// 			},
-		// 		},
-		// 	},
-		// 	ShouldFail: true,
-		// },
-		// {
-		// 	Name: "Different Service Names",
-		// 	Existing: map[string][]*parse.ComposefileImage{
-		// 		"docker-compose.yml": {
-		// 			{
-		// 				Image: &parse.Image{
-		// 					Name:   "busybox",
-		// 					Tag:    "busybox",
-		// 					Digest: "busybox",
-		// 				},
-		// 				ServiceName:    "svc1",
-		// 				DockerfilePath: "Dockerfile",
-		// 			},
-		// 		},
-		// 	},
-		// 	New: map[string][]*parse.ComposefileImage{
-		// 		"docker-compose.yml": {
-		// 			{
-		// 				Image: &parse.Image{
-		// 					Name:   "busybox",
-		// 					Tag:    "busybox",
-		// 					Digest: "busybox",
-		// 				},
-		// 				ServiceName:    "svc",
-		// 				DockerfilePath: "Dockerfile",
-		// 			},
-		// 		},
-		// 	},
-		// 	ShouldFail: true,
-		// },
-		// {
-		// 	Name: "Different Dockerfile Paths",
-		// 	Existing: map[string][]*parse.ComposefileImage{
-		// 		"docker-compose.yml": {
-		// 			{
-		// 				Image: &parse.Image{
-		// 					Name:   "busybox",
-		// 					Tag:    "busybox",
-		// 					Digest: "busybox",
-		// 				},
-		// 				ServiceName:    "svc",
-		// 				DockerfilePath: "Dockerfile1",
-		// 			},
-		// 		},
-		// 	},
-		// 	New: map[string][]*parse.ComposefileImage{
-		// 		"docker-compose.yml": {
-		// 			{
-		// 				Image: &parse.Image{
-		// 					Name:   "busybox",
-		// 					Tag:    "busybox",
-		// 					Digest: "busybox",
-		// 				},
-		// 				ServiceName:    "svc",
-		// 				DockerfilePath: "Dockerfile",
-		// 			},
-		// 		},
-		// 	},
-		// 	ShouldFail: true,
-		// },
-		// {
-		// 	Name: "Exclude Tags",
-		// 	Existing: map[string][]*parse.ComposefileImage{
-		// 		"docker-compose.yml": {
-		// 			{
-		// 				Image: &parse.Image{
-		// 					Name:   "busybox",
-		// 					Tag:    "busybox",
-		// 					Digest: "busybox",
-		// 				},
-		// 				ServiceName:    "svc",
-		// 				DockerfilePath: "Dockerfile",
-		// 			},
-		// 		},
-		// 	},
-		// 	New: map[string][]*parse.ComposefileImage{
-		// 		"docker-compose.yml": {
-		// 			{
-		// 				Image: &parse.Image{
-		// 					Name:   "busybox",
-		// 					Tag:    "notbusybox",
-		// 					Digest: "busybox",
-		// 				},
-		// 				ServiceName:    "svc",
-		// 				DockerfilePath: "Dockerfile",
-		// 			},
-		// 		},
-		// 	},
-		// 	ExcludeTags: true,
-		// },
-		// {
-		// 	Name: "Nil",
-		// },
-		// {
-		// 	Name: "Normal",
-		// 	Existing: map[string][]*parse.ComposefileImage{
-		// 		"docker-compose.yml": {
-		// 			{
-		// 				Image: &parse.Image{
-		// 					Name:   "busybox",
-		// 					Tag:    "busybox",
-		// 					Digest: "busybox",
-		// 				},
-		// 				ServiceName:    "svc",
-		// 				DockerfilePath: "Dockerfile",
-		// 			},
-		// 		},
-		// 	},
-		// 	New: map[string][]*parse.ComposefileImage{
-		// 		"docker-compose.yml": {
-		// 			{
-		// 				Image: &parse.Image{
-		// 					Name:   "busybox",
-		// 					Tag:    "busybox",
-		// 					Digest: "busybox",
-		// 				},
-		// 				ServiceName:    "svc",
-		// 				DockerfilePath: "Dockerfile",
-		// 			},
-		// 		},
-		// 	},
-		// },
+		{
+			Name: "Different Paths",
+			Existing: map[string][]*parse.KubernetesfileImage{
+				"pod.yml": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "busybox",
+							Digest: "busybox",
+						},
+						ContainerName: "svc",
+					},
+				},
+			},
+			New: map[string][]*parse.KubernetesfileImage{
+				"pod1.yml": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "busybox",
+							Digest: "busybox",
+						},
+						ContainerName: "svc",
+					},
+				},
+			},
+			ShouldFail: true,
+		},
+		{
+			Name: "Different Images",
+			Existing: map[string][]*parse.KubernetesfileImage{
+				"pod.yml": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "busybox",
+							Digest: "busybox",
+						},
+						ContainerName: "svc",
+					},
+				},
+			},
+			New: map[string][]*parse.KubernetesfileImage{
+				"pod.yml": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "notbusybox",
+							Digest: "busybox",
+						},
+						ContainerName: "svc",
+					},
+				},
+			},
+			ShouldFail: true,
+		},
+		{
+			Name: "Different Container Names",
+			Existing: map[string][]*parse.KubernetesfileImage{
+				"pod.yml": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "busybox",
+							Digest: "busybox",
+						},
+						ContainerName: "svc1",
+					},
+				},
+			},
+			New: map[string][]*parse.KubernetesfileImage{
+				"pod.yml": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "busybox",
+							Digest: "busybox",
+						},
+						ContainerName: "svc",
+					},
+				},
+			},
+			ShouldFail: true,
+		},
+		{
+			Name: "Exclude Tags",
+			Existing: map[string][]*parse.KubernetesfileImage{
+				"pod.yml": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "busybox",
+							Digest: "busybox",
+						},
+						ContainerName: "svc",
+					},
+				},
+			},
+			New: map[string][]*parse.KubernetesfileImage{
+				"pod.yml": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "notbusybox",
+							Digest: "busybox",
+						},
+						ContainerName: "svc",
+					},
+				},
+			},
+			ExcludeTags: true,
+		},
+		{
+			Name: "Nil",
+		},
+		{
+			Name: "Normal",
+			Existing: map[string][]*parse.KubernetesfileImage{
+				"pod.yml": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "busybox",
+							Digest: "busybox",
+						},
+						ContainerName: "svc",
+					},
+				},
+			},
+			New: map[string][]*parse.KubernetesfileImage{
+				"pod.yml": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "busybox",
+							Digest: "busybox",
+						},
+						ContainerName: "svc",
+					},
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
