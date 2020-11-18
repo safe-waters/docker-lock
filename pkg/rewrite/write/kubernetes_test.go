@@ -82,6 +82,149 @@ spec:
 `),
 			},
 		},
+		{
+			Name: "Multiple Docs",
+			Contents: [][]byte{
+				[]byte(`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test
+  name: test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      containers:
+      - name: golang
+        image: golang
+        ports:
+        - containerPort: 80
+      - name: python
+        image: python
+        ports:
+        - containerPort: 81
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test
+  name: test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      containers:
+      - name: redis
+        image: redis
+        ports:
+        - containerPort: 80
+      - image: bash
+        name: bash
+`),
+			},
+			PathImages: map[string][]*parse.KubernetesfileImage{
+				"deployment.yaml": {
+					{
+						Image: &parse.Image{
+							Name:   "golang",
+							Tag:    "latest",
+							Digest: "golang",
+						},
+						ContainerName: "golang",
+					},
+					{
+						Image: &parse.Image{
+							Name:   "python",
+							Tag:    "latest",
+							Digest: "python",
+						},
+						ContainerName: "python",
+					},
+					{
+						Image: &parse.Image{
+							Name:   "redis",
+							Tag:    "latest",
+							Digest: "redis",
+						},
+						ContainerName: "redis",
+					},
+					{
+						Image: &parse.Image{
+							Name:   "bash",
+							Tag:    "latest",
+							Digest: "bash",
+						},
+						ContainerName: "bash",
+					},
+				},
+			},
+			Expected: [][]byte{
+				[]byte(`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test
+  name: test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      containers:
+      - name: golang
+        image: golang:latest@sha256:golang
+        ports:
+        - containerPort: 80
+      - name: python
+        image: python:latest@sha256:python
+        ports:
+        - containerPort: 81
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test
+  name: test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      containers:
+      - name: redis
+        image: redis:latest@sha256:redis
+        ports:
+        - containerPort: 80
+      - image: bash:latest@sha256:bash
+        name: bash
+`),
+			},
+		},
 		// 		{
 		// 			Name: "Scratch",
 		// 			Contents: [][]byte{
