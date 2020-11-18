@@ -77,6 +77,41 @@ services:
 			ShouldFail: true,
 		},
 		{
+			Name: "Kubernetesfile Diff",
+			Contents: [][]byte{
+				[]byte(`
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  containers:
+  - name: redis
+    image: redis
+    ports:
+    - containerPort: 80
+`),
+				[]byte(`
+{
+	"kubernetesfiles": {
+		"pod.yaml": [
+			{
+			"name": "busybox",
+			"tag": "latest",
+			"digest": "busybox",
+			"container": "busybox"
+			}
+		]
+	}
+}
+`,
+				),
+			},
+			ShouldFail: true,
+		},
+		{
 			Name: "Normal",
 			Contents: [][]byte{
 				[]byte(`
@@ -181,6 +216,17 @@ services:
 				dockerfileImagesWithTempDir[dockerfilePath] = images
 			}
 
+			kubernetesfileImagesWithTempDir := map[string][]*parse.KubernetesfileImage{} // nolint: lll
+
+			for kubernetesfilePath, images := range lockfile.KubernetesfileImages { // nolint: lll
+				uniquePathsToWrite[kubernetesfilePath] = struct{}{}
+
+				kubernetesfilePath = filepath.ToSlash(
+					filepath.Join(tempDir, kubernetesfilePath),
+				)
+				kubernetesfileImagesWithTempDir[kubernetesfilePath] = images
+			}
+
 			var pathsToWrite []string
 			for path := range uniquePathsToWrite {
 				pathsToWrite = append(pathsToWrite, path)
@@ -189,8 +235,9 @@ services:
 			pathsToWrite = append(pathsToWrite, "docker-lock.json")
 
 			lockfileWithTempDir := &generate.Lockfile{
-				DockerfileImages:  dockerfileImagesWithTempDir,
-				ComposefileImages: composefileImagesWithTempDir,
+				DockerfileImages:     dockerfileImagesWithTempDir,
+				ComposefileImages:    composefileImagesWithTempDir,
+				KubernetesfileImages: kubernetesfileImagesWithTempDir,
 			}
 
 			lockfileWithTempDirByt, err := json.Marshal(lockfileWithTempDir)
