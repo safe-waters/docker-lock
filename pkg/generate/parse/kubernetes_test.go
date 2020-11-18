@@ -57,189 +57,132 @@ spec:
 				},
 			},
 		},
-		// 		{
-		// 			Name:            "Digest",
-		// 			DockerfilePaths: []string{"Dockerfile"},
-		// 			DockerfileContents: [][]byte{
-		// 				[]byte(`
-		// FROM ubuntu@sha256:bae015c28bc7
-		// `),
-		// 			},
-		// 			Expected: []*parse.DockerfileImage{
-		// 				{
-		// 					Image: &parse.Image{
-		// 						Name:   "ubuntu",
-		// 						Digest: "bae015c28bc7",
-		// 					},
-		// 					Position: 0,
-		// 					Path:     "Dockerfile",
-		// 				},
-		// 			},
-		// 		},
-		// 		{
-		// 			Name:            "Flag",
-		// 			DockerfilePaths: []string{"Dockerfile"},
-		// 			DockerfileContents: [][]byte{
-		// 				[]byte(`
-		// FROM --platform=$BUILDPLATFORM ubuntu@sha256:bae015c28bc7
-		// `),
-		// 			},
-		// 			Expected: []*parse.DockerfileImage{
-		// 				{
-		// 					Image: &parse.Image{
-		// 						Name:   "ubuntu",
-		// 						Digest: "bae015c28bc7",
-		// 					},
-		// 					Position: 0,
-		// 					Path:     "Dockerfile",
-		// 				},
-		// 			},
-		// 		},
-		// 		{
-		// 			Name:            "Tag And Digest",
-		// 			DockerfilePaths: []string{"Dockerfile"},
-		// 			DockerfileContents: [][]byte{
-		// 				[]byte(`
-		// FROM ubuntu:bionic@sha256:bae015c28bc7
-		// `),
-		// 			},
-		// 			Expected: []*parse.DockerfileImage{
-		// 				{
-		// 					Image: &parse.Image{
-		// 						Name:   "ubuntu",
-		// 						Tag:    "bionic",
-		// 						Digest: "bae015c28bc7",
-		// 					},
-		// 					Position: 0,
-		// 					Path:     "Dockerfile",
-		// 				},
-		// 			},
-		// 		},
-		// 		{
-		// 			Name:            "Port, Tag, And Digest",
-		// 			DockerfilePaths: []string{"Dockerfile"},
-		// 			DockerfileContents: [][]byte{
-		// 				[]byte(`
-		// FROM localhost:5000/ubuntu:bionic@sha256:bae015c28bc7
-		// `),
-		// 			},
-		// 			Expected: []*parse.DockerfileImage{
-		// 				{
-		// 					Image: &parse.Image{
-		// 						Name:   "localhost:5000/ubuntu",
-		// 						Tag:    "bionic",
-		// 						Digest: "bae015c28bc7",
-		// 					},
-		// 					Position: 0,
-		// 					Path:     "Dockerfile",
-		// 				},
-		// 			},
-		// 		},
-		// 		{
-		// 			Name:            "Local Arg",
-		// 			DockerfilePaths: []string{"Dockerfile"},
-		// 			DockerfileContents: [][]byte{
-		// 				[]byte(`
-		// ARG IMAGE=busybox
-		// FROM ${IMAGE}
-		// ARG IMAGE=ubuntu
-		// FROM ${IMAGE}
-		// `),
-		// 			},
-		// 			Expected: []*parse.DockerfileImage{
-		// 				{
-		// 					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
-		// 					Position: 0,
-		// 					Path:     "Dockerfile",
-		// 				},
-		// 				{
-		// 					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
-		// 					Position: 1,
-		// 					Path:     "Dockerfile",
-		// 				},
-		// 			},
-		// 		},
-		// 		{
-		// 			Name:            "Build Stage",
-		// 			DockerfilePaths: []string{"Dockerfile"},
-		// 			DockerfileContents: [][]byte{
-		// 				[]byte(`
-		// FROM busybox AS busy
-		// FROM busy as anotherbusy
-		// FROM ubuntu as worker
-		// `),
-		// 			},
-		// 			Expected: []*parse.DockerfileImage{
-		// 				{
-		// 					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
-		// 					Position: 0,
-		// 					Path:     "Dockerfile",
-		// 				},
-		// 				{
-		// 					Image:    &parse.Image{Name: "ubuntu", Tag: "latest"},
-		// 					Position: 1,
-		// 					Path:     "Dockerfile",
-		// 				},
-		// 			},
-		// 		},
-		// 		{
-		// 			Name:            "Multiple Files",
-		// 			DockerfilePaths: []string{"Dockerfile-one", "Dockerfile-two"},
-		// 			DockerfileContents: [][]byte{
-		// 				[]byte(`
-		// FROM busybox
-		// FROM ubuntu
-		// `),
-		// 				[]byte(`
-		// FROM ubuntu
-		// FROM busybox
-		// `),
-		// 			},
-		// 			Expected: []*parse.DockerfileImage{
-		// 				{
-		// 					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
-		// 					Position: 0,
-		// 					Path:     "Dockerfile-one",
-		// 				},
-		// 				{
-		// 					Image:    &parse.Image{Name: "ubuntu", Tag: "latest"},
-		// 					Position: 1,
-		// 					Path:     "Dockerfile-one",
-		// 				},
-
-		// 				{
-		// 					Image:    &parse.Image{Name: "ubuntu", Tag: "latest"},
-		// 					Position: 0,
-		// 					Path:     "Dockerfile-two",
-		// 				},
-		// 				{
-		// 					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
-		// 					Position: 1,
-		// 					Path:     "Dockerfile-two",
-		// 				},
-		// 			},
-		// 		},
-		// 		{
-		// 			Name:            "Invalid Arg",
-		// 			DockerfilePaths: []string{"Dockerfile"},
-		// 			DockerfileContents: [][]byte{
-		// 				[]byte(`
-		// ARG
-		// FROM busybox
-		// `),
-		// 			},
-		// 			ShouldFail: true,
-		// 		},
-		// 		{
-		// 			Name:            "Invalid From",
-		// 			DockerfilePaths: []string{"Dockerfile"},
-		// 			DockerfileContents: [][]byte{
-		// 				[]byte(`
-		// FROM
-		// `),
-		// 			},
-		// 			ShouldFail: true,
-		// 		},
+		{
+			Name:                "Doc Position",
+			KubernetesfilePaths: []string{"pod.yaml"},
+			KubernetesfileContents: [][]byte{
+				[]byte(`apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  containers:
+  - name: busybox
+    image: busybox
+    ports:
+    - containerPort: 80
+  - name: golang
+    image: golang
+    ports:
+    - containerPort: 88
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  containers:
+  - name: redis
+    image: redis:1.0@sha256:123
+    ports:
+    - containerPort: 80
+  - name: bash
+    image: bash:v1
+    ports:
+    - containerPort: 88
+`),
+			},
+			Expected: []*parse.KubernetesfileImage{
+				{
+					Image:         &parse.Image{Name: "busybox", Tag: "latest"},
+					ImagePosition: 0,
+					ContainerName: "busybox",
+					Path:          "pod.yaml",
+				},
+				{
+					Image:         &parse.Image{Name: "golang", Tag: "latest"},
+					ImagePosition: 1,
+					ContainerName: "golang",
+					Path:          "pod.yaml",
+				},
+				{
+					Image: &parse.Image{
+						Name:   "redis",
+						Tag:    "1.0",
+						Digest: "123",
+					},
+					ImagePosition: 0,
+					DocPosition:   1,
+					ContainerName: "redis",
+					Path:          "pod.yaml",
+				},
+				{
+					Image:         &parse.Image{Name: "bash", Tag: "v1"},
+					ImagePosition: 1,
+					DocPosition:   1,
+					ContainerName: "bash",
+					Path:          "pod.yaml",
+				},
+			},
+		},
+		{
+			Name:                "Multiple Files",
+			KubernetesfilePaths: []string{"deployment.yaml", "pod.yaml"},
+			KubernetesfileContents: [][]byte{
+				[]byte(`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: nginx-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        ports:
+        - containerPort: 80
+`),
+				[]byte(`---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  containers:
+  - name: busybox
+    image: busybox
+    ports:
+    - containerPort: 80
+`),
+			},
+			Expected: []*parse.KubernetesfileImage{
+				{
+					Image:         &parse.Image{Name: "nginx", Tag: "latest"},
+					ContainerName: "nginx",
+					Path:          "deployment.yaml",
+				},
+				{
+					Image:         &parse.Image{Name: "busybox", Tag: "latest"},
+					ContainerName: "busybox",
+					Path:          "pod.yaml",
+				},
+			},
+		},
 	}
 
 	for _, test := range tests { // nolint: dupl
