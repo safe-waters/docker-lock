@@ -112,8 +112,17 @@ func (k *KubernetesfileWriter) writeFile(
 			break
 		}
 
-		k.encodeDoc(doc, images, &imagePosition)
+		if err = k.encodeDoc(path, doc, images, &imagePosition); err != nil {
+			return "", err
+		}
+
 		encodedDocs = append(encodedDocs, doc)
+	}
+
+	if imagePosition < len(images) {
+		return "", fmt.Errorf(
+			"fewer images exist in '%s' than asked to rewrite", path,
+		)
 	}
 
 	replacer := strings.NewReplacer("/", "-", "\\", "-")
@@ -137,10 +146,11 @@ func (k *KubernetesfileWriter) writeFile(
 }
 
 func (k *KubernetesfileWriter) encodeDoc(
+	path string,
 	doc interface{},
 	images []*parse.KubernetesfileImage,
 	imagePosition *int,
-) {
+) error {
 	switch doc := doc.(type) {
 	case yaml.MapSlice:
 		nameIndex := -1
@@ -158,6 +168,12 @@ func (k *KubernetesfileWriter) encodeDoc(
 		}
 
 		if nameIndex != -1 && imageLineIndex != -1 {
+			if *imagePosition >= len(images) {
+				return fmt.Errorf(
+					"more images exist in '%s' than in the Lockfile", path,
+				)
+			}
+
 			doc[imageLineIndex].Value = convertImageToImageLine(
 				images[*imagePosition].Image, k.ExcludeTags,
 			)
@@ -166,11 +182,21 @@ func (k *KubernetesfileWriter) encodeDoc(
 		}
 
 		for _, item := range doc {
-			k.encodeDoc(item.Value, images, imagePosition)
+			if err := k.encodeDoc(
+				path, item.Value, images, imagePosition,
+			); err != nil {
+				return err
+			}
 		}
 	case []interface{}:
 		for _, doc := range doc {
-			k.encodeDoc(doc, images, imagePosition)
+			if err := k.encodeDoc(
+				path, doc, images, imagePosition,
+			); err != nil {
+				return err
+			}
 		}
 	}
+
+	return nil
 }

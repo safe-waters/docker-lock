@@ -548,51 +548,88 @@ spec:
 			},
 			ExcludeTags: true,
 		},
-		// 		{
-		// 			Name: "Fewer Images In Dockerfile",
-		// 			Contents: [][]byte{
-		// 				[]byte(`FROM busybox`),
-		// 			},
-		// 			PathImages: map[string][]*parse.DockerfileImage{
-		// 				"Dockerfile": {
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "busybox",
-		// 							Tag:    "latest",
-		// 							Digest: "busybox",
-		// 						},
-		// 					},
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "redis",
-		// 							Tag:    "latest",
-		// 							Digest: "redis",
-		// 						},
-		// 					},
-		// 				},
-		// 			},
-		// 			ShouldFail: true,
-		// 		},
-		// 		{
-		// 			Name: "More Images In Dockerfile",
-		// 			Contents: [][]byte{
-		// 				[]byte(`FROM busybox
-		// FROM redis
-		// `),
-		// 			},
-		// 			PathImages: map[string][]*parse.DockerfileImage{
-		// 				"Dockerfile": {
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "busybox",
-		// 							Tag:    "latest",
-		// 							Digest: "busybox",
-		// 						},
-		// 					},
-		// 				},
-		// 			},
-		// 			ShouldFail: true,
-		// 		},
+		{
+			Name: "Fewer Images In Kubernetesfile",
+			Contents: [][]byte{
+				[]byte(`apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  containers:
+  - name: busybox
+    image: busybox
+    ports:
+    - containerPort: 80
+  - name: golang
+    image: golang
+    ports:
+    - containerPort: 88
+`),
+			},
+			PathImages: map[string][]*parse.KubernetesfileImage{
+				"pod.yaml": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "latest",
+							Digest: "busybox",
+						},
+					},
+					{
+						Image: &parse.Image{
+							Name:   "golang",
+							Tag:    "latest",
+							Digest: "golang",
+						},
+					},
+					{
+						Image: &parse.Image{
+							Name:   "extra",
+							Tag:    "latest",
+							Digest: "extra",
+						},
+					},
+				},
+			},
+			ShouldFail: true,
+		},
+		{
+			Name: "More Images In Kubernetesfile",
+			Contents: [][]byte{
+				[]byte(`apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  containers:
+  - name: busybox
+    image: busybox
+    ports:
+    - containerPort: 80
+  - name: golang
+    image: golang
+    ports:
+    - containerPort: 88
+`),
+			},
+			PathImages: map[string][]*parse.KubernetesfileImage{
+				"pod.yaml": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "latest",
+							Digest: "busybox",
+						},
+					},
+				},
+			},
+			ShouldFail: true,
+		},
 	}
 
 	for _, test := range tests { // nolint: dupl
