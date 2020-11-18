@@ -38,7 +38,7 @@ type IDockerfileWriter interface {
 
 // WriteFiles writes new Dockerfiles given the paths of the original Dockerfiles
 // and new images that should replace the exsting ones.
-func (d *DockerfileWriter) WriteFiles(
+func (d *DockerfileWriter) WriteFiles( // nolint: dupl
 	pathImages map[string][]*parse.DockerfileImage,
 	done <-chan struct{},
 ) <-chan *WrittenPath {

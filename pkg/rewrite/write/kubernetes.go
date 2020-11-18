@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"sort"
 	"strings"
 	"sync"
 
@@ -26,7 +25,7 @@ type IKubernetesfileWriter interface {
 	) <-chan *WrittenPath
 }
 
-func (k *KubernetesfileWriter) WriteFiles(
+func (k *KubernetesfileWriter) WriteFiles( // nolint: dupl
 	pathImages map[string][]*parse.KubernetesfileImage,
 	done <-chan struct{},
 ) <-chan *WrittenPath {
@@ -103,7 +102,7 @@ func (k *KubernetesfileWriter) writeFile(
 	var imagePosition int
 
 	for {
-		var doc interface{}
+		var doc yaml.MapSlice
 
 		if err = dec.Decode(&doc); err != nil {
 			if err != io.EOF {
@@ -113,7 +112,6 @@ func (k *KubernetesfileWriter) writeFile(
 			break
 		}
 
-		// TODO: here and in parser, use atomic int, get rid of doc position
 		k.encodeDoc(doc, images, &imagePosition)
 		encodedDocs = append(encodedDocs, doc)
 	}
@@ -144,44 +142,35 @@ func (k *KubernetesfileWriter) encodeDoc(
 	imagePosition *int,
 ) {
 	switch doc := doc.(type) {
-	case map[interface{}]interface{}:
-		var containerName string
+	case yaml.MapSlice:
+		nameIndex := -1
+		imageLineIndex := -1
 
-		var imageLine string
+		for i, item := range doc {
+			key, _ := item.Key.(string)
 
-		if possibleContainerName, ok := doc["name"]; ok {
-			containerName, _ = possibleContainerName.(string)
+			switch key {
+			case "name":
+				nameIndex = i
+			case "image":
+				imageLineIndex = i
+			}
 		}
 
-		if possibleImageLine, ok := doc["image"]; ok {
-			imageLine, _ = possibleImageLine.(string)
-		}
-
-		if containerName != "" && imageLine != "" {
-			// TODO: use position, and use exclude tags
-			doc["image"] = convertImageToImageLine(
+		if nameIndex != -1 && imageLineIndex != -1 {
+			doc[imageLineIndex].Value = convertImageToImageLine(
 				images[*imagePosition].Image, k.ExcludeTags,
 			)
 
 			*imagePosition++
 		}
 
-		var keys []string
-
-		for key := range doc {
-			if k, ok := key.(string); ok {
-				keys = append(keys, k)
-			}
-		}
-
-		sort.Strings(keys)
-
-		for _, key := range keys {
-			k.encodeDoc(doc[key], images, imagePosition)
+		for _, item := range doc {
+			k.encodeDoc(item.Value, images, imagePosition)
 		}
 	case []interface{}:
-		for i := range doc {
-			k.encodeDoc(doc[i], images, imagePosition)
+		for _, doc := range doc {
+			k.encodeDoc(doc, images, imagePosition)
 		}
 	}
 }

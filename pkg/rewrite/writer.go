@@ -131,7 +131,7 @@ func (w *Writer) WriteFiles(
 			go func() {
 				defer waitGroup.Done()
 
-				writtenPathsFromKubernetesfiles := w.KubernetesfileWriter.WriteFiles(
+				writtenPathsFromKubernetesfiles := w.KubernetesfileWriter.WriteFiles( // nolint: lll
 					anyPathImages.KubernetesfilePathImages, done,
 				)
 
