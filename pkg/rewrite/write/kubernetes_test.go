@@ -225,216 +225,329 @@ spec:
 `),
 			},
 		},
-		// 		{
-		// 			Name: "Scratch",
-		// 			Contents: [][]byte{
-		// 				[]byte(`FROM scratch`),
-		// 			},
-		// 			PathImages: map[string][]*parse.DockerfileImage{
-		// 				"Dockerfile": {
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "scratch",
-		// 							Tag:    "",
-		// 							Digest: "",
-		// 						},
-		// 					},
-		// 				},
-		// 			},
-		// 			Expected: [][]byte{
-		// 				[]byte(`FROM scratch
-		// `),
-		// 			},
-		// 		},
-		// 		{
-		// 			Name: "Multiple Dockerfiles",
-		// 			Contents: [][]byte{
-		// 				[]byte(`FROM busybox
-		// FROM redis
-		// FROM golang
-		// `),
-		// 				[]byte(`FROM golang
-		// FROM busybox
-		// FROM redis
-		// `),
-		// 			},
-		// 			PathImages: map[string][]*parse.DockerfileImage{
-		// 				"Dockerfile-1": {
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "busybox",
-		// 							Tag:    "latest",
-		// 							Digest: "busybox-1",
-		// 						},
-		// 					},
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "redis",
-		// 							Tag:    "latest",
-		// 							Digest: "redis-1",
-		// 						},
-		// 					},
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "golang",
-		// 							Tag:    "latest",
-		// 							Digest: "golang-1",
-		// 						},
-		// 					},
-		// 				},
-		// 				"Dockerfile-2": {
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "golang",
-		// 							Tag:    "latest",
-		// 							Digest: "golang-2",
-		// 						},
-		// 					},
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "busybox",
-		// 							Tag:    "latest",
-		// 							Digest: "busybox-2",
-		// 						},
-		// 					},
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "redis",
-		// 							Tag:    "latest",
-		// 							Digest: "redis-2",
-		// 						},
-		// 					},
-		// 				},
-		// 			},
-		// 			Expected: [][]byte{
-		// 				[]byte(`FROM busybox:latest@sha256:busybox-1
-		// FROM redis:latest@sha256:redis-1
-		// FROM golang:latest@sha256:golang-1
-		// `),
-		// 				[]byte(`FROM golang:latest@sha256:golang-2
-		// FROM busybox:latest@sha256:busybox-2
-		// FROM redis:latest@sha256:redis-2
-		// `),
-		// 			},
-		// 		},
-		// 		{
-		// 			Name: "Exclude Tags",
-		// 			Contents: [][]byte{
-		// 				[]byte(`FROM busybox
-		// FROM redis
-		// FROM golang
-		// `),
-		// 			},
-		// 			ExcludeTags: true,
-		// 			PathImages: map[string][]*parse.DockerfileImage{
-		// 				"Dockerfile": {
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "busybox",
-		// 							Tag:    "latest",
-		// 							Digest: "busybox",
-		// 						},
-		// 					},
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "redis",
-		// 							Tag:    "latest",
-		// 							Digest: "redis",
-		// 						},
-		// 					},
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "golang",
-		// 							Tag:    "latest",
-		// 							Digest: "golang",
-		// 						},
-		// 					},
-		// 				},
-		// 			},
-		// 			Expected: [][]byte{
-		// 				[]byte(`FROM busybox@sha256:busybox
-		// FROM redis@sha256:redis
-		// FROM golang@sha256:golang
-		// `),
-		// 			},
-		// 		},
-		// 		{
-		// 			Name: "Stages",
-		// 			Contents: [][]byte{
-		// 				[]byte(`FROM busybox AS base
-		// FROM redis
-		// FROM base
-		// FROM golang
-		// `),
-		// 			},
-		// 			PathImages: map[string][]*parse.DockerfileImage{
-		// 				"Dockerfile": {
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "busybox",
-		// 							Tag:    "latest",
-		// 							Digest: "busybox",
-		// 						},
-		// 					},
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "redis",
-		// 							Tag:    "latest",
-		// 							Digest: "redis",
-		// 						},
-		// 					},
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "golang",
-		// 							Tag:    "latest",
-		// 							Digest: "golang",
-		// 						},
-		// 					},
-		// 				},
-		// 			},
-		// 			Expected: [][]byte{
-		// 				[]byte(`FROM busybox:latest@sha256:busybox AS base
-		// FROM redis:latest@sha256:redis
-		// FROM base
-		// FROM golang:latest@sha256:golang
-		// `),
-		// 			},
-		// 		},
-		// 		{
-		// 			Name: "Platform",
-		// 			Contents: [][]byte{
-		// 				[]byte(`FROM --platform=$BUILDPLATFORM busybox \
-		// AS base
-		// FROM --platform=$BUILDPLATFORM redis
-		// FROM --platform=$BUILDPLATFORM base AS anotherbase
-		// `),
-		// 			},
-		// 			PathImages: map[string][]*parse.DockerfileImage{
-		// 				"Dockerfile": {
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "busybox",
-		// 							Tag:    "latest",
-		// 							Digest: "busybox",
-		// 						},
-		// 					},
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "redis",
-		// 							Tag:    "latest",
-		// 							Digest: "redis",
-		// 						},
-		// 					},
-		// 				},
-		// 			},
-		// 			Expected: [][]byte{
-		// 				// nolint: lll
-		// 				[]byte(`FROM --platform=$BUILDPLATFORM busybox:latest@sha256:busybox AS base
-		// FROM --platform=$BUILDPLATFORM redis:latest@sha256:redis
-		// FROM --platform=$BUILDPLATFORM base AS anotherbase
-		// `),
-		// 			},
-		// 		},
+		{
+			Name: "Multiple Files",
+			Contents: [][]byte{
+				[]byte(`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test
+  name: test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      containers:
+      - name: golang
+        image: golang
+        ports:
+        - containerPort: 80
+      - name: python
+        image: python
+        ports:
+        - containerPort: 81
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test
+  name: test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      containers:
+      - name: redis
+        image: redis
+        ports:
+        - containerPort: 80
+      - image: bash
+        name: bash
+`),
+				[]byte(`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test
+  name: test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      containers:
+      - name: busybox
+        image: busybox
+        ports:
+        - containerPort: 80
+      - name: java
+        image: java
+        ports:
+        - containerPort: 81
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test
+  name: test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      containers:
+      - name: alpine
+        image: alpine
+        ports:
+        - containerPort: 80
+      - image: ruby
+        name: ruby
+`),
+			},
+			PathImages: map[string][]*parse.KubernetesfileImage{
+				"deployment.yaml": {
+					{
+						Image: &parse.Image{
+							Name:   "golang",
+							Tag:    "latest",
+							Digest: "golang",
+						},
+						ContainerName: "golang",
+					},
+					{
+						Image: &parse.Image{
+							Name:   "python",
+							Tag:    "latest",
+							Digest: "python",
+						},
+						ContainerName: "python",
+					},
+					{
+						Image: &parse.Image{
+							Name:   "redis",
+							Tag:    "latest",
+							Digest: "redis",
+						},
+						ContainerName: "redis",
+					},
+					{
+						Image: &parse.Image{
+							Name:   "bash",
+							Tag:    "latest",
+							Digest: "bash",
+						},
+						ContainerName: "bash",
+					},
+				},
+				"deployment1.yaml": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "latest",
+							Digest: "busybox",
+						},
+						ContainerName: "busybox",
+					},
+					{
+						Image: &parse.Image{
+							Name:   "java",
+							Tag:    "latest",
+							Digest: "java",
+						},
+						ContainerName: "java",
+					},
+					{
+						Image: &parse.Image{
+							Name:   "alpine",
+							Tag:    "latest",
+							Digest: "alpine",
+						},
+						ContainerName: "alpine",
+					},
+					{
+						Image: &parse.Image{
+							Name:   "ruby",
+							Tag:    "latest",
+							Digest: "ruby",
+						},
+						ContainerName: "ruby",
+					},
+				},
+			},
+			Expected: [][]byte{
+				[]byte(`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test
+  name: test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      containers:
+      - name: golang
+        image: golang:latest@sha256:golang
+        ports:
+        - containerPort: 80
+      - name: python
+        image: python:latest@sha256:python
+        ports:
+        - containerPort: 81
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test
+  name: test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      containers:
+      - name: redis
+        image: redis:latest@sha256:redis
+        ports:
+        - containerPort: 80
+      - image: bash:latest@sha256:bash
+        name: bash
+`),
+				[]byte(`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test
+  name: test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      containers:
+      - name: busybox
+        image: busybox:latest@sha256:busybox
+        ports:
+        - containerPort: 80
+      - name: java
+        image: java:latest@sha256:java
+        ports:
+        - containerPort: 81
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test
+  name: test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      containers:
+      - name: alpine
+        image: alpine:latest@sha256:alpine
+        ports:
+        - containerPort: 80
+      - image: ruby:latest@sha256:ruby
+        name: ruby
+`),
+			},
+		},
+		{
+			Name: "Exclude Tags",
+			Contents: [][]byte{
+				[]byte(`apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  containers:
+  - name: busybox
+    image: busybox
+    ports:
+    - containerPort: 80
+`),
+			},
+			PathImages: map[string][]*parse.KubernetesfileImage{
+				"pod.yaml": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "latest",
+							Digest: "busybox",
+						},
+						ContainerName: "busybox",
+					},
+				},
+			},
+			Expected: [][]byte{
+				[]byte(`apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  containers:
+  - name: busybox
+    image: busybox@sha256:busybox
+    ports:
+    - containerPort: 80
+`),
+			},
+			ExcludeTags: true,
+		},
 		// 		{
 		// 			Name: "Fewer Images In Dockerfile",
 		// 			Contents: [][]byte{
@@ -480,45 +593,9 @@ spec:
 		// 			},
 		// 			ShouldFail: true,
 		// 		},
-		// 		{
-		// 			Name: "Only From",
-		// 			Contents: [][]byte{
-		// 				[]byte(`FROM`),
-		// 			},
-		// 			PathImages: map[string][]*parse.DockerfileImage{
-		// 				"Dockerfile": {
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "busybox",
-		// 							Tag:    "latest",
-		// 							Digest: "busybox",
-		// 						},
-		// 					},
-		// 				},
-		// 			},
-		// 			ShouldFail: true,
-		// 		},
-		// 		{
-		// 			Name: "Only Platform",
-		// 			Contents: [][]byte{
-		// 				[]byte(`FROM --platform=$BUILDTARGET`),
-		// 			},
-		// 			PathImages: map[string][]*parse.DockerfileImage{
-		// 				"Dockerfile": {
-		// 					{
-		// 						Image: &parse.Image{
-		// 							Name:   "busybox",
-		// 							Tag:    "latest",
-		// 							Digest: "busybox",
-		// 						},
-		// 					},
-		// 				},
-		// 			},
-		// 			ShouldFail: true,
-		// 		},
 	}
 
-	for _, test := range tests {
+	for _, test := range tests { // nolint: dupl
 		test := test
 
 		t.Run(test.Name, func(t *testing.T) {
