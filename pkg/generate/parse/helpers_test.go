@@ -28,6 +28,15 @@ type ComposefileImageWithoutStructTags struct {
 	Err            error
 }
 
+type KubernetesfileImageWithoutStructTags struct {
+	*parse.Image
+	ContainerName string
+	ImagePosition int
+	DocPosition   int
+	Path          string
+	Err           error
+}
+
 func assertDockerfileImagesEqual(
 	t *testing.T,
 	expected []*parse.DockerfileImage,
@@ -41,6 +50,30 @@ func assertDockerfileImagesEqual(
 		)
 
 		gotWithoutStructTags := copyDockerfileImagesToDockerfileImagesWithoutStructTags( // nolint: lll
+			t, got,
+		)
+
+		t.Fatalf(
+			"expected %+v, got %+v",
+			jsonPrettyPrint(t, expectedWithoutStructTags),
+			jsonPrettyPrint(t, gotWithoutStructTags),
+		)
+	}
+}
+
+func assertKubernetesfileImagesEqual(
+	t *testing.T,
+	expected []*parse.KubernetesfileImage,
+	got []*parse.KubernetesfileImage,
+) {
+	t.Helper()
+
+	if !reflect.DeepEqual(expected, got) {
+		expectedWithoutStructTags := copyKubernetesfileImagesToKubernetesfileImagesWithoutStructTags( // nolint: lll
+			t, expected,
+		)
+
+		gotWithoutStructTags := copyKubernetesfileImagesToKubernetesfileImagesWithoutStructTags( // nolint: lll
 			t, got,
 		)
 
@@ -190,6 +223,31 @@ func copyComposefileImagesToComposefileImagesWithoutStructTags(
 	return composefileImagesWithoutStructTags
 }
 
+func copyKubernetesfileImagesToKubernetesfileImagesWithoutStructTags(
+	t *testing.T,
+	kubernetesfileImages []*parse.KubernetesfileImage,
+) []*KubernetesfileImageWithoutStructTags {
+	t.Helper()
+
+	kubernetesfileImagesWithoutStructTags := make(
+		[]*KubernetesfileImageWithoutStructTags, len(kubernetesfileImages),
+	)
+
+	for i, image := range kubernetesfileImages {
+		kubernetesfileImagesWithoutStructTags[i] =
+			&KubernetesfileImageWithoutStructTags{
+				Image:         image.Image,
+				ContainerName: image.ContainerName,
+				ImagePosition: image.ImagePosition,
+				DocPosition:   image.DocPosition,
+				Path:          image.Path,
+				Err:           image.Err,
+			}
+	}
+
+	return kubernetesfileImagesWithoutStructTags
+}
+
 func jsonPrettyPrint(t *testing.T, i interface{}) string {
 	t.Helper()
 
@@ -213,6 +271,24 @@ func sortDockerfileImageParserResults(
 			return results[i].Path < results[j].Path
 		default:
 			return results[i].Position < results[j].Position
+		}
+	})
+}
+
+func sortKubernetesfileImageParserResults(
+	t *testing.T,
+	results []*parse.KubernetesfileImage,
+) {
+	t.Helper()
+
+	sort.Slice(results, func(i, j int) bool {
+		switch {
+		case results[i].Path != results[j].Path:
+			return results[i].Path < results[j].Path
+		case results[i].DocPosition != results[j].DocPosition:
+			return results[i].DocPosition < results[j].DocPosition
+		default:
+			return results[i].ImagePosition < results[j].ImagePosition
 		}
 	})
 }

@@ -249,7 +249,7 @@ FROM
 		},
 	}
 
-	for _, test := range tests {
+	for _, test := range tests { // nolint: dupl
 		test := test
 
 		t.Run(test.Name, func(t *testing.T) {
