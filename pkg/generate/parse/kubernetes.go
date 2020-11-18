@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
-	"sort"
 	"sync"
 
 	"gopkg.in/yaml.v2"
@@ -94,7 +93,7 @@ func (k *KubernetesfileImageParser) parseFile(
 	dec := yaml.NewDecoder(bytes.NewReader(byt))
 
 	for docPosition := 0; ; docPosition++ {
-		var doc interface{}
+		var doc yaml.MapSlice
 
 		if err := dec.Decode(&doc); err != nil {
 			if err != io.EOF {
@@ -143,27 +142,31 @@ func (k *KubernetesfileImageParser) parseDocRecursive(
 	done <-chan struct{},
 ) {
 	switch doc := doc.(type) {
-	case map[interface{}]interface{}:
-		var containerName string
+	case yaml.MapSlice:
+		var name string
 
 		var imageLine string
 
-		if possibleContainerName, ok := doc["name"]; ok {
-			containerName, _ = possibleContainerName.(string)
+		for _, item := range doc {
+			key, _ := item.Key.(string)
+			val, _ := item.Value.(string)
+
+			switch key {
+			case "name":
+				name = val
+			case "image":
+				imageLine = val
+			}
 		}
 
-		if possibleImageLine, ok := doc["image"]; ok {
-			imageLine, _ = possibleImageLine.(string)
-		}
-
-		if containerName != "" && imageLine != "" {
+		if name != "" && imageLine != "" {
 			image := convertImageLineToImage(imageLine)
 
 			select {
 			case <-done:
 			case kubernetesfileImages <- &KubernetesfileImage{
 				Image:         image,
-				ContainerName: containerName,
+				ContainerName: name,
 				Path:          path,
 				ImagePosition: *imagePosition,
 				DocPosition:   docPosition,
@@ -173,26 +176,16 @@ func (k *KubernetesfileImageParser) parseDocRecursive(
 			*imagePosition++
 		}
 
-		var keys []string
-
-		for key := range doc {
-			if k, ok := key.(string); ok {
-				keys = append(keys, k)
-			}
-		}
-
-		sort.Strings(keys)
-
-		for _, key := range keys {
+		for _, item := range doc {
 			k.parseDocRecursive(
-				path, doc[key], kubernetesfileImages,
+				path, item.Value, kubernetesfileImages,
 				docPosition, imagePosition, done,
 			)
 		}
 	case []interface{}:
-		for i := range doc {
+		for _, doc := range doc {
 			k.parseDocRecursive(
-				path, doc[i], kubernetesfileImages,
+				path, doc, kubernetesfileImages,
 				docPosition, imagePosition, done,
 			)
 		}
