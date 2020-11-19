@@ -13,17 +13,20 @@ func TestImageParser(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		Name                string
-		DockerfilePaths     []string
-		ComposefilePaths    []string
-		ComposefileContents [][]byte
-		DockerfileContents  [][]byte
-		Expected            []*generate.AnyImage
+		Name                   string
+		DockerfilePaths        []string
+		ComposefilePaths       []string
+		KubernetesfilePaths    []string
+		ComposefileContents    [][]byte
+		DockerfileContents     [][]byte
+		KubernetesfileContents [][]byte
+		Expected               []*generate.AnyImage
 	}{
 		{
-			Name:             "Dockerfiles And Composefiles",
-			DockerfilePaths:  []string{"Dockerfile"},
-			ComposefilePaths: []string{"docker-compose.yml"},
+			Name:                "Dockerfiles, Composefiles, And Kubernetesfiles", // nolint: lll
+			DockerfilePaths:     []string{"Dockerfile"},
+			ComposefilePaths:    []string{"docker-compose.yml"},
+			KubernetesfilePaths: []string{"pod.yml"},
 			DockerfileContents: [][]byte{
 				[]byte(`
 FROM ubuntu:bionic
@@ -38,6 +41,22 @@ services:
     image: busybox
   anothersvc:
     image: golang
+`),
+			},
+			KubernetesfileContents: [][]byte{
+				[]byte(`
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  containers:
+  - name: redis
+    image: redis
+    ports:
+    - containerPort: 80
 `),
 			},
 			Expected: []*generate.AnyImage{
@@ -77,6 +96,16 @@ services:
 						ServiceName: "anothersvc",
 					},
 				},
+				{
+					KubernetesfileImage: &parse.KubernetesfileImage{
+						Image: &parse.Image{
+							Name: "redis",
+							Tag:  "latest",
+						},
+						ContainerName: "redis",
+						Path:          "pod.yml",
+					},
+				},
 			},
 		},
 	}
@@ -96,16 +125,25 @@ services:
 			composefilePaths := writeFilesToTempDir(
 				t, tempDir, test.ComposefilePaths, test.ComposefileContents,
 			)
+			kubernetesfilePaths := writeFilesToTempDir(
+				t, tempDir, test.KubernetesfilePaths,
+				test.KubernetesfileContents,
+			)
 
 			anyPaths := make(
 				chan *generate.AnyPath,
-				len(dockerfilePaths)+len(composefilePaths),
+				len(dockerfilePaths)+
+					len(composefilePaths)+
+					len(kubernetesfilePaths),
 			)
 			for _, path := range dockerfilePaths {
 				anyPaths <- &generate.AnyPath{DockerfilePath: path}
 			}
 			for _, path := range composefilePaths {
 				anyPaths <- &generate.AnyPath{ComposefilePath: path}
+			}
+			for _, path := range kubernetesfilePaths {
+				anyPaths <- &generate.AnyPath{KubernetesfilePath: path}
 			}
 			close(anyPaths)
 
@@ -120,9 +158,12 @@ services:
 				t.Fatal(err)
 			}
 
+			kubernetesfileImageParser := &parse.KubernetesfileImageParser{}
+
 			imageParser := &generate.ImageParser{
-				DockerfileImageParser:  dockerfileImageParser,
-				ComposefileImageParser: composefileImageParser,
+				DockerfileImageParser:     dockerfileImageParser,
+				ComposefileImageParser:    composefileImageParser,
+				KubernetesfileImageParser: kubernetesfileImageParser,
 			}
 			anyImages := imageParser.ParseFiles(anyPaths, done)
 
@@ -146,6 +187,10 @@ services:
 				case anyImage.ComposefileImage != nil:
 					anyImage.ComposefileImage.Path = filepath.Join(
 						tempDir, anyImage.ComposefileImage.Path,
+					)
+				case anyImage.KubernetesfileImage != nil:
+					anyImage.KubernetesfileImage.Path = filepath.Join(
+						tempDir, anyImage.KubernetesfileImage.Path,
 					)
 				}
 			}

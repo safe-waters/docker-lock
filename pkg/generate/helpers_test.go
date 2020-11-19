@@ -40,14 +40,24 @@ type ComposefileImageWithoutStructTags struct {
 	Err            error
 }
 
+type KubernetesfileImageWithoutStructTags struct {
+	*parse.Image
+	ContainerName string
+	ImagePosition int
+	DocPosition   int
+	Path          string
+	Err           error
+}
+
 type LockfileWithoutStructTags struct {
 	DockerfileImages  map[string][]*DockerfileImageWithoutStructTags
 	ComposefileImages map[string][]*ComposefileImageWithoutStructTags
 }
 
 type AnyImageWithoutStructTags struct {
-	DockerfileImage  *DockerfileImageWithoutStructTags
-	ComposefileImage *ComposefileImageWithoutStructTags
+	DockerfileImage     *DockerfileImageWithoutStructTags
+	ComposefileImage    *ComposefileImageWithoutStructTags
+	KubernetesfileImage *KubernetesfileImageWithoutStructTags
 }
 
 func assertAnyPathsEqual(
@@ -229,6 +239,31 @@ func copyComposefileImagesToComposefileImagesWithoutStructTags(
 	return composefileImagesWithoutStructTags
 }
 
+func copyKubernetesfileImagesToKubernetesfileImagesWithoutStructTags(
+	t *testing.T,
+	kubernetesfileImages []*parse.KubernetesfileImage,
+) []*KubernetesfileImageWithoutStructTags {
+	t.Helper()
+
+	kubernetesfileImagesWithoutStructTags := make(
+		[]*KubernetesfileImageWithoutStructTags, len(kubernetesfileImages),
+	)
+
+	for i, image := range kubernetesfileImages {
+		kubernetesfileImagesWithoutStructTags[i] =
+			&KubernetesfileImageWithoutStructTags{
+				Image:         image.Image,
+				ContainerName: image.ContainerName,
+				ImagePosition: image.ImagePosition,
+				DocPosition:   image.DocPosition,
+				Path:          image.Path,
+				Err:           image.Err,
+			}
+	}
+
+	return kubernetesfileImagesWithoutStructTags
+}
+
 func copyAnyImagesToAnyImagesWithoutStructTags(
 	t *testing.T,
 	anyImages []*generate.AnyImage,
@@ -236,6 +271,8 @@ func copyAnyImagesToAnyImagesWithoutStructTags(
 	var dockerfileImages []*parse.DockerfileImage
 
 	var composefileImages []*parse.ComposefileImage
+
+	var kubernetesfileImages []*parse.KubernetesfileImage
 
 	for _, anyImage := range anyImages {
 		switch {
@@ -248,6 +285,11 @@ func copyAnyImagesToAnyImagesWithoutStructTags(
 			composefileImages = append(
 				composefileImages, anyImage.ComposefileImage,
 			)
+
+		case anyImage.KubernetesfileImage != nil:
+			kubernetesfileImages = append(
+				kubernetesfileImages, anyImage.KubernetesfileImage,
+			)
 		}
 	}
 
@@ -257,10 +299,13 @@ func copyAnyImagesToAnyImagesWithoutStructTags(
 	composefileImagesWithoutStructTags := copyComposefileImagesToComposefileImagesWithoutStructTags( // nolint: lll
 		t, composefileImages,
 	)
+	kubernetesfileImagesWithoutStructTags := copyKubernetesfileImagesToKubernetesfileImagesWithoutStructTags( // nolint: lll
+		t, kubernetesfileImages,
+	)
 
 	anyImagesWithoutStructTags := make(
 		[]*AnyImageWithoutStructTags,
-		len(dockerfileImages)+len(composefileImages),
+		len(dockerfileImages)+len(composefileImages)+len(kubernetesfileImages),
 	)
 
 	var i int
@@ -275,6 +320,13 @@ func copyAnyImagesToAnyImagesWithoutStructTags(
 	for _, composefileImage := range composefileImagesWithoutStructTags {
 		anyImagesWithoutStructTags[i] = &AnyImageWithoutStructTags{
 			ComposefileImage: composefileImage,
+		}
+		i++
+	}
+
+	for _, kubernetesfileImage := range kubernetesfileImagesWithoutStructTags {
+		anyImagesWithoutStructTags[i] = &AnyImageWithoutStructTags{
+			KubernetesfileImage: kubernetesfileImage,
 		}
 		i++
 	}
@@ -547,6 +599,8 @@ func sortAnyImages(
 
 	var composefileImages []*parse.ComposefileImage
 
+	var kubernetesfileImages []*parse.KubernetesfileImage
+
 	for _, anyImage := range anyImages {
 		switch {
 		case anyImage.DockerfileImage != nil:
@@ -556,6 +610,10 @@ func sortAnyImages(
 		case anyImage.ComposefileImage != nil:
 			composefileImages = append(
 				composefileImages, anyImage.ComposefileImage,
+			)
+		case anyImage.KubernetesfileImage != nil:
+			kubernetesfileImages = append(
+				kubernetesfileImages, anyImage.KubernetesfileImage,
 			)
 		}
 	}
@@ -583,8 +641,21 @@ func sortAnyImages(
 		}
 	})
 
+	sort.Slice(kubernetesfileImages, func(i, j int) bool {
+		// nolint: lll
+		switch {
+		case kubernetesfileImages[i].Path != kubernetesfileImages[j].Path:
+			return kubernetesfileImages[i].Path < kubernetesfileImages[j].Path
+		case kubernetesfileImages[i].DocPosition != kubernetesfileImages[j].DocPosition:
+			return kubernetesfileImages[i].DocPosition < kubernetesfileImages[j].DocPosition
+		default:
+			return kubernetesfileImages[i].ImagePosition < kubernetesfileImages[j].ImagePosition
+		}
+	})
+
 	sortedAnyImages := make(
-		[]*generate.AnyImage, len(dockerfileImages)+len(composefileImages),
+		[]*generate.AnyImage,
+		len(dockerfileImages)+len(composefileImages)+len(kubernetesfileImages),
 	)
 
 	var i int
@@ -600,6 +671,14 @@ func sortAnyImages(
 	for _, composefileImage := range composefileImages {
 		sortedAnyImages[i] = &generate.AnyImage{
 			ComposefileImage: composefileImage,
+		}
+
+		i++
+	}
+
+	for _, kubernetesfileImage := range kubernetesfileImages {
+		sortedAnyImages[i] = &generate.AnyImage{
+			KubernetesfileImage: kubernetesfileImage,
 		}
 
 		i++
