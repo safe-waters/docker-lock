@@ -200,6 +200,10 @@ func ensureFlagsNotNil(flags *Flags) error {
 		return errors.New("flags.ComposefileFlags cannot be nil")
 	}
 
+	if flags.KubernetesfileFlags == nil {
+		return errors.New("flags.KubernetesfileFlags cannot be nil")
+	}
+
 	if flags.FlagsWithSharedValues == nil {
 		return errors.New("flags.FlagsWithSharedValues cannot be nil")
 	}
