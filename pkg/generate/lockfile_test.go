@@ -151,12 +151,41 @@ func TestLockfile(t *testing.T) {
 			},
 		},
 		{
+			Name: "Only Kubernetesfile Images",
+			AnyImages: []*generate.AnyImage{
+				{
+					KubernetesfileImage: &parse.KubernetesfileImage{
+						Image: &parse.Image{
+							Name: "busybox",
+							Tag:  "latest",
+						},
+						ContainerName: "busybox",
+						Path:          "pod.yml",
+					},
+				},
+			},
+			Expected: &generate.Lockfile{
+				KubernetesfileImages: map[string][]*parse.KubernetesfileImage{
+					"pod.yml": {
+						{
+							Image: &parse.Image{
+								Name: "busybox",
+								Tag:  "latest",
+							},
+							ContainerName: "busybox",
+							Path:          "pod.yml",
+						},
+					},
+				},
+			},
+		},
+		{
 			Name: "Sorted Images",
 			AnyImages: []*generate.AnyImage{
 				{
 					DockerfileImage: &parse.DockerfileImage{
 						Image: &parse.Image{
-							Name: "busybox",
+							Name: "golang",
 							Tag:  "latest",
 						},
 						Position: 1,
@@ -166,13 +195,37 @@ func TestLockfile(t *testing.T) {
 				{
 					ComposefileImage: &parse.ComposefileImage{
 						Image: &parse.Image{
-							Name: "busybox",
+							Name: "bash",
 							Tag:  "latest",
 						},
 						DockerfilePath: "Dockerfile",
 						Position:       1,
 						ServiceName:    "svc",
 						Path:           "docker-compose.yml",
+					},
+				},
+				{
+					KubernetesfileImage: &parse.KubernetesfileImage{
+						Image: &parse.Image{
+							Name: "busybox",
+							Tag:  "latest",
+						},
+						DocPosition:   1,
+						ImagePosition: 0,
+						ContainerName: "busybox",
+						Path:          "pod.yml",
+					},
+				},
+				{
+					KubernetesfileImage: &parse.KubernetesfileImage{
+						Image: &parse.Image{
+							Name: "golang",
+							Tag:  "latest",
+						},
+						DocPosition:   0,
+						ImagePosition: 1,
+						ContainerName: "golang",
+						Path:          "pod.yml",
 					},
 				},
 				{
@@ -188,6 +241,18 @@ func TestLockfile(t *testing.T) {
 					},
 				},
 				{
+					KubernetesfileImage: &parse.KubernetesfileImage{
+						Image: &parse.Image{
+							Name: "golang",
+							Tag:  "latest",
+						},
+						DocPosition:   1,
+						ImagePosition: 1,
+						ContainerName: "golang",
+						Path:          "pod.yml",
+					},
+				},
+				{
 					DockerfileImage: &parse.DockerfileImage{
 						Image: &parse.Image{
 							Name: "busybox",
@@ -195,6 +260,18 @@ func TestLockfile(t *testing.T) {
 						},
 						Position: 0,
 						Path:     "Dockerfile",
+					},
+				},
+				{
+					KubernetesfileImage: &parse.KubernetesfileImage{
+						Image: &parse.Image{
+							Name: "redis",
+							Tag:  "latest",
+						},
+						DocPosition:   0,
+						ImagePosition: 0,
+						ContainerName: "redis",
+						Path:          "pod.yml",
 					},
 				},
 			},
@@ -211,7 +288,7 @@ func TestLockfile(t *testing.T) {
 						},
 						{
 							Image: &parse.Image{
-								Name: "busybox",
+								Name: "golang",
 								Tag:  "latest",
 							},
 							Position: 1,
@@ -233,13 +310,57 @@ func TestLockfile(t *testing.T) {
 						},
 						{
 							Image: &parse.Image{
-								Name: "busybox",
+								Name: "bash",
 								Tag:  "latest",
 							},
 							DockerfilePath: "Dockerfile",
 							Position:       1,
 							ServiceName:    "svc",
 							Path:           "docker-compose.yml",
+						},
+					},
+				},
+				KubernetesfileImages: map[string][]*parse.KubernetesfileImage{
+					"pod.yml": {
+						{
+							Image: &parse.Image{
+								Name: "redis",
+								Tag:  "latest",
+							},
+							DocPosition:   0,
+							ImagePosition: 0,
+							ContainerName: "redis",
+							Path:          "pod.yml",
+						},
+						{
+							Image: &parse.Image{
+								Name: "golang",
+								Tag:  "latest",
+							},
+							DocPosition:   0,
+							ImagePosition: 1,
+							ContainerName: "golang",
+							Path:          "pod.yml",
+						},
+						{
+							Image: &parse.Image{
+								Name: "busybox",
+								Tag:  "latest",
+							},
+							DocPosition:   1,
+							ImagePosition: 0,
+							ContainerName: "busybox",
+							Path:          "pod.yml",
+						},
+						{
+							Image: &parse.Image{
+								Name: "golang",
+								Tag:  "latest",
+							},
+							DocPosition:   1,
+							ImagePosition: 1,
+							ContainerName: "golang",
+							Path:          "pod.yml",
 						},
 					},
 				},
