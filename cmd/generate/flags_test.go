@@ -229,6 +229,18 @@ func TestFlags(t *testing.T) {
 			ShouldFail: true,
 		},
 		{
+			Name: "Kubernetesfile Absolute Paths",
+			Expected: &generate.Flags{
+				FlagsWithSharedValues: &generate.FlagsWithSharedValues{},
+				DockerfileFlags:       &generate.FlagsWithSharedNames{},
+				ComposefileFlags:      &generate.FlagsWithSharedNames{},
+				KubernetesfileFlags: &generate.FlagsWithSharedNames{
+					ManualPaths: []string{getAbsPath(t)},
+				},
+			},
+			ShouldFail: true,
+		},
+		{
 			Name: "Normal",
 			Expected: &generate.Flags{
 				FlagsWithSharedValues: &generate.FlagsWithSharedValues{
