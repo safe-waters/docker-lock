@@ -20,7 +20,7 @@ func TestImageDigestUpdater(t *testing.T) {
 		Expected                []*generate.AnyImage
 	}{
 		{
-			Name: "Dockerfiles And Composefiles",
+			Name: "Dockerfiles, Composefiles, And Kubernetesfiles",
 			AnyImages: []*generate.AnyImage{
 				{
 					DockerfileImage: &parse.DockerfileImage{
@@ -85,6 +85,29 @@ func TestImageDigestUpdater(t *testing.T) {
 						Position:    1,
 						Path:        "docker-compose.yml",
 						ServiceName: "svc",
+					},
+				},
+				{
+					KubernetesfileImage: &parse.KubernetesfileImage{
+						Image: &parse.Image{
+							Name: "busybox",
+							Tag:  "latest",
+						},
+						ContainerName: "busybox",
+						ImagePosition: 1,
+						Path:          "pod.yml",
+					},
+				},
+				{
+					KubernetesfileImage: &parse.KubernetesfileImage{
+						Image: &parse.Image{
+							Name:   "golang",
+							Tag:    "latest",
+							Digest: golangLatestSHA,
+						},
+						ContainerName: "golang",
+						ImagePosition: 0,
+						Path:          "pod.yml",
 					},
 				},
 			},
@@ -156,6 +179,30 @@ func TestImageDigestUpdater(t *testing.T) {
 						Position:    1,
 						Path:        "docker-compose.yml",
 						ServiceName: "svc",
+					},
+				},
+				{
+					KubernetesfileImage: &parse.KubernetesfileImage{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "latest",
+							Digest: busyboxLatestSHA,
+						},
+						ContainerName: "busybox",
+						ImagePosition: 1,
+						Path:          "pod.yml",
+					},
+				},
+				{
+					KubernetesfileImage: &parse.KubernetesfileImage{
+						Image: &parse.Image{
+							Name:   "golang",
+							Tag:    "latest",
+							Digest: golangLatestSHA,
+						},
+						ContainerName: "golang",
+						ImagePosition: 0,
+						Path:          "pod.yml",
 					},
 				},
 			},
