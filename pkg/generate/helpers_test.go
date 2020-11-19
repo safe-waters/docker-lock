@@ -50,8 +50,9 @@ type KubernetesfileImageWithoutStructTags struct {
 }
 
 type LockfileWithoutStructTags struct {
-	DockerfileImages  map[string][]*DockerfileImageWithoutStructTags
-	ComposefileImages map[string][]*ComposefileImageWithoutStructTags
+	DockerfileImages     map[string][]*DockerfileImageWithoutStructTags
+	ComposefileImages    map[string][]*ComposefileImageWithoutStructTags
+	KubernetesfileImages map[string][]*KubernetesfileImageWithoutStructTags
 }
 
 type AnyImageWithoutStructTags struct {
@@ -341,8 +342,9 @@ func copyLockfileToLockfileWithoutStructTags(
 	t.Helper()
 
 	lockfileWithoutStructTags := &LockfileWithoutStructTags{
-		ComposefileImages: map[string][]*ComposefileImageWithoutStructTags{},
-		DockerfileImages:  map[string][]*DockerfileImageWithoutStructTags{},
+		ComposefileImages:    map[string][]*ComposefileImageWithoutStructTags{},
+		DockerfileImages:     map[string][]*DockerfileImageWithoutStructTags{},
+		KubernetesfileImages: map[string][]*KubernetesfileImageWithoutStructTags{}, // nolint: lll
 	}
 
 	for p := range lockfile.DockerfileImages {
@@ -354,6 +356,12 @@ func copyLockfileToLockfileWithoutStructTags(
 	for p := range lockfile.ComposefileImages {
 		lockfileWithoutStructTags.ComposefileImages[p] = copyComposefileImagesToComposefileImagesWithoutStructTags( // nolint: lll
 			t, lockfile.ComposefileImages[p],
+		)
+	}
+
+	for p := range lockfile.KubernetesfileImages {
+		lockfileWithoutStructTags.KubernetesfileImages[p] = copyKubernetesfileImagesToKubernetesfileImagesWithoutStructTags( // nolint: lll
+			t, lockfile.KubernetesfileImages[p],
 		)
 	}
 

@@ -42,6 +42,16 @@ func TestLockfile(t *testing.T) {
 						Path:           "docker-compose.yml",
 					},
 				},
+				{
+					KubernetesfileImage: &parse.KubernetesfileImage{
+						Image: &parse.Image{
+							Name: "busybox",
+							Tag:  "latest",
+						},
+						ContainerName: "busybox",
+						Path:          "pod.yml",
+					},
+				},
 			},
 			Expected: &generate.Lockfile{
 				DockerfileImages: map[string][]*parse.DockerfileImage{
@@ -65,6 +75,18 @@ func TestLockfile(t *testing.T) {
 							DockerfilePath: "Dockerfile",
 							ServiceName:    "svc",
 							Path:           "docker-compose.yml",
+						},
+					},
+				},
+				KubernetesfileImages: map[string][]*parse.KubernetesfileImage{
+					"pod.yml": {
+						{
+							Image: &parse.Image{
+								Name: "busybox",
+								Tag:  "latest",
+							},
+							ContainerName: "busybox",
+							Path:          "pod.yml",
 						},
 					},
 				},
