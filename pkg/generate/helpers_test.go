@@ -467,6 +467,10 @@ func makePathCollector(
 	manualComposefilePaths []string,
 	composefileGlobs []string,
 	composefileRecursive bool,
+	defaultKubernetesfilePaths []string,
+	manualKubernetesfilePaths []string,
+	kubernetesfileGlobs []string,
+	kubernetesfileRecursive bool,
 	shouldFail bool,
 ) *generate.PathCollector {
 	t.Helper()
@@ -479,10 +483,15 @@ func makePathCollector(
 		t, baseDir, defaultComposefilePaths, manualComposefilePaths,
 		composefileGlobs, composefileRecursive, shouldFail,
 	)
+	kubernetesfileCollector := makeCollectPathCollector(
+		t, baseDir, defaultKubernetesfilePaths, manualKubernetesfilePaths,
+		kubernetesfileGlobs, kubernetesfileRecursive, shouldFail,
+	)
 
 	return &generate.PathCollector{
-		DockerfileCollector:  dockerfileCollector,
-		ComposefileCollector: composefileCollector,
+		DockerfileCollector:     dockerfileCollector,
+		ComposefileCollector:    composefileCollector,
+		KubernetesfileCollector: kubernetesfileCollector,
 	}
 }
 
@@ -591,8 +600,10 @@ func sortAnyPaths(
 		switch {
 		case anyPaths[i].DockerfilePath != anyPaths[j].DockerfilePath:
 			return anyPaths[i].DockerfilePath < anyPaths[j].DockerfilePath
-		default:
+		case anyPaths[i].ComposefilePath != anyPaths[j].ComposefilePath:
 			return anyPaths[i].ComposefilePath < anyPaths[j].ComposefilePath
+		default:
+			return anyPaths[i].KubernetesfilePath < anyPaths[j].KubernetesfilePath // nolint: lll
 		}
 	})
 }

@@ -19,18 +19,24 @@ func TestPathCollector(t *testing.T) {
 		PathsToCreate []string
 	}{
 		{
-			Name: "Dockerfiles And Composefiles",
+			Name: "Dockerfiles, Composefiles And Kubernetesfiles",
 			PathCollector: makePathCollector(
 				t, "", []string{"Dockerfile"}, nil, nil, false,
-				[]string{"docker-compose.yml"}, nil, nil, false, false,
+				[]string{"docker-compose.yml"}, nil, nil, false,
+				[]string{"pod.yml"}, nil, nil, false, false,
 			),
-			PathsToCreate: []string{"Dockerfile", "docker-compose.yml"},
+			PathsToCreate: []string{
+				"Dockerfile", "docker-compose.yml", "pod.yml",
+			},
 			Expected: []*generate.AnyPath{
 				{
 					DockerfilePath: "Dockerfile",
 				},
 				{
 					ComposefilePath: "docker-compose.yml",
+				},
+				{
+					KubernetesfilePath: "pod.yml",
 				},
 			},
 		},
@@ -45,14 +51,18 @@ func TestPathCollector(t *testing.T) {
 			tempDir := makeTempDir(t, "")
 			defer os.RemoveAll(tempDir)
 
-			dockerfileCollector := test.PathCollector.DockerfileCollector.(*collect.PathCollector)   // nolint: lll
-			composefileCollector := test.PathCollector.ComposefileCollector.(*collect.PathCollector) // nolint: lll
+			dockerfileCollector := test.PathCollector.DockerfileCollector.(*collect.PathCollector)         // nolint: lll
+			composefileCollector := test.PathCollector.ComposefileCollector.(*collect.PathCollector)       // nolint: lll
+			kubernetesfileCollector := test.PathCollector.KubernetesfileCollector.(*collect.PathCollector) // nolint: lll
 
 			addTempDirToStringSlices(
 				t, dockerfileCollector, tempDir,
 			)
 			addTempDirToStringSlices(
 				t, composefileCollector, tempDir,
+			)
+			addTempDirToStringSlices(
+				t, kubernetesfileCollector, tempDir,
 			)
 
 			pathsToCreateContents := make([][]byte, len(test.PathsToCreate))
@@ -80,6 +90,10 @@ func TestPathCollector(t *testing.T) {
 				case anyPath.ComposefilePath != "":
 					anyPath.ComposefilePath = filepath.Join(
 						tempDir, anyPath.ComposefilePath,
+					)
+				case anyPath.KubernetesfilePath != "":
+					anyPath.KubernetesfilePath = filepath.Join(
+						tempDir, anyPath.KubernetesfilePath,
 					)
 				}
 			}
