@@ -81,5 +81,15 @@
 				"service": "web"
 			}
 		]
+	},
+	"kubernetesfiles": {
+		"pod.yml": [
+			{
+				"name": "dockerlocktestaccount/golang",
+				"tag": "latest",
+				"digest": "0978cc067eb3f53901c00b70a024f182baa371bdfe7f35f3d64e56cab2471c4d",
+				"container": "golang"
+			}
+		]
 	}
 }

@@ -12,5 +12,15 @@
 				"digest": "2e70e9c81838224b5311970dbf7ed16802fbfe19e7a70b3cbfa3d7522aa285b4"
 			}
 		]
+	},
+	"kubernetesfiles": {
+		"web/deployment.yaml": [
+			{
+				"name": "dockerlocktestaccount/python",
+				"tag": "latest",
+				"digest": "8c86ff78615ca1cd9468ebea06e0cfc2c487f05e588346b14e37b2fa183552b8",
+				"container": "python"
+			}
+		]
 	}
 }

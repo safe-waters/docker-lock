@@ -7,5 +7,15 @@
 				"digest": "dd97a3fe6d721c5cf03abac0f50e2848dc583f7c4e41bf39102ceb42edfd1808"
 			}
 		]
+	},
+	"kubernetesfiles": {
+		"pod.yml": [
+			{
+				"name": "dockerlocktestaccount/golang",
+				"tag": "latest",
+				"digest": "0978cc067eb3f53901c00b70a024f182baa371bdfe7f35f3d64e56cab2471c4d",
+				"container": "golang"
+			}
+		]
 	}
 }
