@@ -109,6 +109,7 @@ function run_rewrite_verify_tests() {
     diff_files docker-compose.yml docker-compose-rewrite.yml
     diff_files web/Dockerfile web/Dockerfile-rewrite
     diff_files database/Dockerfile database/Dockerfile-rewrite
+    diff_files pod.yml pod-rewrite.yml
 
     echo "--exclude-tags"
     docker lock rewrite --tempdir . --exclude-tags
@@ -116,6 +117,7 @@ function run_rewrite_verify_tests() {
     diff_files docker-compose.yml docker-compose-rewrite-exclude-tags.yml
     diff_files web/Dockerfile web/Dockerfile-rewrite-exclude-tags
     diff_files database/Dockerfile database/Dockerfile-rewrite-exclude-tags
+    diff_files pod.yml pod-rewrite-exclude-tags.yml
 
     echo "------ PASSED REWRITE/VERIFY TESTS ------"
 }
