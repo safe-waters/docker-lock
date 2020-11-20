@@ -8,8 +8,9 @@
 
 `docker-lock` is a cli tool that automates managing image digests by tracking
 them in a separate Lockfile (think package-lock.json or Pipfile.lock). With
-`docker-lock`, you can refer to images in Dockerfiles or 
-`docker-compose` v3 files by mutable tags (as in `python:3.6`) yet receive the same 
+`docker-lock`, you can refer to images in **Dockerfiles**,
+**docker-compose V3 files**, and **Kubernetes manifests** by
+mutable tags (as in `python:3.6`) yet receive the same 
 benefits as if you had specified immutable digests (as in `python:3.6@sha256:25a189a536ae4d7c77dd5d0929da73057b85555d6b6f8a66bfbcc1a7a7de094b`).
 
 > Note: If you are unsure about the differences between tags and digests,
@@ -18,12 +19,13 @@ refer to this [quick summary](./docs/tutorials/tags-vs-digests.md).
 `docker-lock` ships with 3 commands that take you from development 
 to production:
 
-* `docker lock generate` finds base images in your Dockerfiles and `docker-compose`
-files and generates a Lockfile containing digests that correspond to their tags.
+* `docker lock generate` finds images in your Dockerfiles,
+`docker-compose` files, and `Kubernetes` manifests and generates
+a Lockfile containing digests that correspond to their tags.
 * `docker lock verify` lets you know if there are more recent digests 
 than those last recorded in the Lockfile.
-* `docker lock rewrite` rewrites Dockerfiles and `docker-compose` files 
-to include digests.
+* `docker lock rewrite` rewrites Dockerfiles, `docker-compose` files,
+and `Kubernetes` manifests to include digests.
 
 `docker-lock` ships with support for [Docker Hub](https://hub.docker.com/),
 [Azure Container Registry](https://azure.microsoft.com/en-us/services/container-registry/),
@@ -37,9 +39,10 @@ container registry.
 [cli-plugin](https://github.com/docker/cli/issues/1534) for `docker` so `lock`
 can be used as subcommand of `docker` as in `docker lock`. However,
 `docker-lock` does not require `docker` at all. Instead, it can be called
-manually as in `docker-lock lock`. This is especially convenient if the proper
-version of `docker` is unavailable or you would prefer to use another
-container technology such as [podman](https://podman.io/).
+manually as a standalone executable as in `docker-lock lock`. 
+This is especially convenient if the proper version of `docker` is unavailable
+or you would prefer to use another container technology such as
+[podman](https://podman.io/).
 
 # Demo
 Consider a project with a multi-stage build Dockerfile at its root:

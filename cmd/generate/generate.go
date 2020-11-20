@@ -65,13 +65,13 @@ func NewGenerateCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 		"base-dir", ".", "Top level directory to collect files from",
 	)
 	generateCmd.Flags().StringSlice(
-		"dockerfiles", []string{}, "Path to Dockerfiles",
+		"dockerfiles", []string{}, "Paths to Dockerfiles",
 	)
 	generateCmd.Flags().StringSlice(
-		"composefiles", []string{}, "Path to docker-compose files",
+		"composefiles", []string{}, "Paths to docker-compose files",
 	)
 	generateCmd.Flags().StringSlice(
-		"kubernetesfiles", []string{}, "Path to kubernetes files",
+		"kubernetesfiles", []string{}, "Paths to kubernetes files",
 	)
 	generateCmd.Flags().String(
 		"lockfile-name", "docker-lock.json",
