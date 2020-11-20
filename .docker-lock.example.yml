@@ -15,9 +15,15 @@ generate:
   dockerfile-recursive: false
   dockerfiles:
     - Dockerfile
+  kubernetesfile-globs:
+    - '**/Dockerfile'
+  kubernetesfile-recursive: false
+  kubernetesfiles:
+    - Dockerfile
   env-file: .env
   exclude-all-composefiles: false
   exclude-all-dockerfiles: true
+  exclude-all-kubernetesfiles: false
   ignore-missing-digests: false
   lockfile-name: docker-lock.json
 
