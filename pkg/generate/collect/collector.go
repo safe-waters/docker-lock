@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-// PathCollector gathers Dockerfile and docker-compose file paths.
+// PathCollector gathers files for processing.
 type PathCollector struct {
 	BaseDir      string
 	DefaultPaths []string

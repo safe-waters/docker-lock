@@ -9,7 +9,7 @@ import (
 	"github.com/safe-waters/docker-lock/pkg/generate/update"
 )
 
-// ImageDigestUpdater contains an ImageDigestUpdater for all Images.
+// ImageDigestUpdater contains an ImageDigestUpdater for all images.
 type ImageDigestUpdater struct {
 	ImageDigestUpdater   update.IImageDigestUpdater
 	IgnoreMissingDigests bool
@@ -40,7 +40,7 @@ func NewImageDigestUpdater(
 	}, nil
 }
 
-// UpdateDigests updates digests for DockerfileImages and ComposefileImages.
+// UpdateDigests updates images with the most recent digests from registries.
 func (i *ImageDigestUpdater) UpdateDigests(
 	anyImages <-chan *AnyImage,
 	done <-chan struct{},

@@ -7,8 +7,7 @@ import (
 	"github.com/safe-waters/docker-lock/pkg/generate/collect"
 )
 
-// PathCollector contains PathCollectors for Dockerfiles
-// and docker-compose files.
+// PathCollector contains PathCollectors for all files.
 type PathCollector struct {
 	DockerfileCollector     collect.IPathCollector
 	ComposefileCollector    collect.IPathCollector

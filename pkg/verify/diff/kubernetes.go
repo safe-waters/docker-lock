@@ -7,6 +7,8 @@ import (
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 )
 
+// IKubernetesfileDifferentiator provides an interface for diffing
+// Kubernetesfiles.
 type IKubernetesfileDifferentiator interface {
 	Differentiate(
 		existingPathImages map[string][]*parse.KubernetesfileImage,
@@ -15,10 +17,13 @@ type IKubernetesfileDifferentiator interface {
 	) <-chan error
 }
 
+// KubernetesfileDifferentiator provides methods for diffing Kubernetes
+// Path Images.
 type KubernetesfileDifferentiator struct {
 	ExcludeTags bool
 }
 
+// Differentiate diffs Kubernetesfile Path Images.
 func (k *KubernetesfileDifferentiator) Differentiate(
 	existingPathImages map[string][]*parse.KubernetesfileImage,
 	newPathImages map[string][]*parse.KubernetesfileImage,

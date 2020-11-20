@@ -10,8 +10,11 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
+// KubernetesfileImageParser extracts image values from Kubernetesfiles.
 type KubernetesfileImageParser struct{}
 
+// KubernetesfileImage annotates an image with data about the
+// Kubernetesfile from which it was parsed.
 type KubernetesfileImage struct {
 	*Image
 	ContainerName string `json:"container"`
@@ -21,6 +24,8 @@ type KubernetesfileImage struct {
 	Err           error  `json:"-"`
 }
 
+// IKubernetesfileImageParser provides an interface for
+// KubernetesfileImageParser's exported methods.
 type IKubernetesfileImageParser interface {
 	ParseFiles(
 		paths <-chan string,
@@ -28,6 +33,7 @@ type IKubernetesfileImageParser interface {
 	) <-chan *KubernetesfileImage
 }
 
+// ParseFiles reads Kubernetesfiles to parse all images.
 func (k *KubernetesfileImageParser) ParseFiles(
 	paths <-chan string,
 	done <-chan struct{},

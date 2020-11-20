@@ -8,7 +8,7 @@ import (
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 )
 
-// ImageParser contains ImageParsers for Dockerfiles and docker-compose files.
+// ImageParser contains ImageParsers for all files.
 type ImageParser struct {
 	DockerfileImageParser     parse.IDockerfileImageParser
 	ComposefileImageParser    parse.IComposefileImageParser
@@ -29,7 +29,7 @@ type AnyImage struct {
 	Err                 error
 }
 
-// ParseFiles parses Dockerfiles and docker-compose files for Images.
+// ParseFiles parses all files for Images.
 func (i *ImageParser) ParseFiles(
 	anyPaths <-chan *AnyPath,
 	done <-chan struct{},

@@ -20,8 +20,7 @@ type Lockfile struct {
 	KubernetesfileImages map[string][]*parse.KubernetesfileImage `json:"kubernetesfiles,omitempty"` // nolint: lll
 }
 
-// NewLockfile sorts DockerfileImages and Composefile images and
-// returns a Lockfile.
+// NewLockfile sorts images and returns a Lockfile.
 func NewLockfile(anyImages <-chan *AnyImage) (*Lockfile, error) {
 	if anyImages == nil {
 		return &Lockfile{}, nil

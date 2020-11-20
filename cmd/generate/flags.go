@@ -100,8 +100,7 @@ func NewFlagsWithSharedNames(
 	}, nil
 }
 
-// NewFlags returns Flags used by Generator for Dockerfiles
-// and docker-compose files.
+// NewFlags returns Flags used by Generator.
 func NewFlags(
 	baseDir string,
 	lockfileName string,

@@ -102,8 +102,6 @@ func bindPFlags(cmd *cobra.Command, flagNames []string) error {
 	return nil
 }
 
-// parseFlags gets values from the command and uses them to
-// create Flags.
 func parseFlags() (*Flags, error) {
 	lockfileName := viper.GetString(
 		fmt.Sprintf("%s.%s", namespace, "lockfile-name"),

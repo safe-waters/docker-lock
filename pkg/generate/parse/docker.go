@@ -31,7 +31,7 @@ type IDockerfileImageParser interface {
 	) <-chan *DockerfileImage
 }
 
-// ParseFiles reads a Dockerfile to parse all images in FROM instructions.
+// ParseFiles reads Dockerfiles to parse all images in FROM instructions.
 func (d *DockerfileImageParser) ParseFiles(
 	paths <-chan string,
 	done <-chan struct{},

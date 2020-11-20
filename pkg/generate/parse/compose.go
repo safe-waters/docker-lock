@@ -53,8 +53,7 @@ func NewComposefileImageParser(
 	}, nil
 }
 
-// ParseFiles reads docker-compose YAML to parse all images
-// referenced services.
+// ParseFiles reads docker-compose YAML to parse all images.
 func (c *ComposefileImageParser) ParseFiles(
 	paths <-chan string,
 	done <-chan struct{},

@@ -1,9 +1,10 @@
 // Package main is a cli tool that automates managing image digests
 // by tracking them in a separate Lockfile
 // (think package-lock.json or Pipfile.lock) - with docker-lock,
-// you can refer to images in Dockerfiles or docker-compose files by
-// mutable tags (as in python:3.6) yet receive the same benefits as if you
-// had specified immutable digests (as in python:3.6@sha256:25a189a536ae4d...).
+// you can refer to images in Dockerfiles, docker-compose files,
+// and Kubernetes manifests by mutable tags (as in python:3.6)
+// yet receive the same benefits as if you had specified immutable
+// digests (as in python:3.6@sha256:25a189a536ae4d...).
 package main
 
 import (
@@ -79,9 +80,6 @@ func execute() error {
 	return dockerCmd.Execute()
 }
 
-// initViper reads configuration values for docker-lock from a config
-// file, if it exists. Otherwise, docker-lock will fall back to command line
-// flags.
 func initViper() error {
 	const cfgFilePrefix = ".docker-lock"
 
