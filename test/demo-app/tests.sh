@@ -94,7 +94,7 @@ function run_generate_verify_tests() {
     diff_files docker-lock-kubernetesfile-globs.json docker-lock-kubernetesfile-globs-test.json
 
     echo "--ignore-missing-digests"
-    docker lock generate --ignore-missing-digests --dockerfiles "private/Dockerfile-errors" --lockfile-name docker-lock-ignore-missing-digests.json
+    docker lock generate --ignore-missing-digests --dockerfiles "private/Dockerfile-errors" --lockfile-name docker-lock-ignore-missing-digests-test.json
     docker lock verify --ignore-missing-digests --lockfile-name docker-lock-ignore-missing-digests-test.json
     diff_files docker-lock-ignore-missing-digests.json docker-lock-ignore-missing-digests-test.json
     echo "------ PASSED GENERATE/VERIFY TESTS ------"
