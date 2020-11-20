@@ -21,7 +21,7 @@ func TestGenerator(t *testing.T) {
 		ShouldFail bool
 	}{
 		{
-			Name: "Normal Dockerfiles and Composefiles",
+			Name: "Normal Dockerfiles, Composefiles, And Kubernetesfiles",
 			Flags: makeFlags(
 				t, "testdata/success", "docker-lock.json", "", ".env", false,
 				[]string{"nocompose/Dockerfile"}, nil, nil, nil, nil, nil,
@@ -67,17 +67,28 @@ func TestGenerator(t *testing.T) {
 						},
 					},
 				},
+				KubernetesfileImages: map[string][]*parse.KubernetesfileImage{
+					"testdata/success/pod.yml": {
+						{
+							Image: &parse.Image{
+								Name:   "busybox",
+								Tag:    "latest",
+								Digest: busyboxLatestSHA,
+							},
+							ContainerName: "busybox",
+						},
+					},
+				},
 			},
 		},
 		{
-			Name: "Exclude Dockerfiles",
+			Name: "Exclude All Except Composefiles",
 			Flags: makeFlags(
 				t, "testdata/success", "docker-lock.json", "", ".env", false,
 				[]string{"nocompose/Dockerfile"}, nil, nil, nil, nil, nil,
-				false, false, false, true, false, false,
+				false, false, false, true, false, true,
 			),
 			Expected: &generate.Lockfile{
-				DockerfileImages: nil,
 				ComposefileImages: map[string][]*parse.ComposefileImage{
 					"testdata/success/docker-compose.yml": {
 						{
@@ -102,12 +113,34 @@ func TestGenerator(t *testing.T) {
 			},
 		},
 		{
-			Name: "Exclude Composefiles",
+			Name: "Exclude All Except Kubernetesfiles",
+			Flags: makeFlags(
+				t, "testdata/success", "docker-lock.json", "", ".env", false,
+				[]string{"nocompose/Dockerfile"}, nil, nil, nil, nil, nil,
+				false, false, false, true, true, false,
+			),
+			Expected: &generate.Lockfile{
+				KubernetesfileImages: map[string][]*parse.KubernetesfileImage{
+					"testdata/success/pod.yml": {
+						{
+							Image: &parse.Image{
+								Name:   "busybox",
+								Tag:    "latest",
+								Digest: busyboxLatestSHA,
+							},
+							ContainerName: "busybox",
+						},
+					},
+				},
+			},
+		},
+		{
+			Name: "Exclude All Except Dockerfiles",
 			Flags: makeFlags(
 				t, "testdata/success", "docker-lock.json", "", ".env", false,
 				[]string{"nocompose/Dockerfile"},
 				[]string{"docker-compose.yml"}, nil, nil, nil, nil,
-				false, false, false, false, true, false,
+				false, false, false, false, true, true,
 			),
 			Expected: &generate.Lockfile{
 				DockerfileImages: map[string][]*parse.DockerfileImage{
