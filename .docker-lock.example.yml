@@ -16,10 +16,10 @@ generate:
   dockerfiles:
     - Dockerfile
   kubernetesfile-globs:
-    - '**/Dockerfile'
+    - '**/pod.yml'
   kubernetesfile-recursive: false
   kubernetesfiles:
-    - Dockerfile
+    - deployment.yml
   env-file: .env
   exclude-all-composefiles: false
   exclude-all-dockerfiles: true
