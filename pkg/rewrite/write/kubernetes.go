@@ -13,11 +13,14 @@ import (
 	"k8s.io/client-go/deprecated/scheme"
 )
 
+// KubernetesfileWriter contains information for writing new Kubernetesfiles.
 type KubernetesfileWriter struct {
 	ExcludeTags bool
 	Directory   string
 }
 
+// IKubernetesfileWriter provides an interface for KubernetesfileWriter's
+// exported methods.
 type IKubernetesfileWriter interface {
 	WriteFiles(
 		pathImages map[string][]*parse.KubernetesfileImage,
@@ -25,6 +28,9 @@ type IKubernetesfileWriter interface {
 	) <-chan *WrittenPath
 }
 
+// WriteFiles writes new Kubernetesfiles given the paths of the
+// original Kubernetesfiles and new images that should replace
+// the exsting ones.
 func (k *KubernetesfileWriter) WriteFiles( // nolint: dupl
 	pathImages map[string][]*parse.KubernetesfileImage,
 	done <-chan struct{},
