@@ -79,7 +79,7 @@ function run_generate_verify_tests() {
     diff_files docker-lock-kubernetesfile-recursive.json docker-lock-kubernetesfile-recursive-test.json
 
     echo "--dockerfile-globs"
-    docker lock generate --dockerfile-globs 'web/*','database/*' --lockfile-name docker-lock-dockerfile-globs-test.json
+    docker lock generate --dockerfile-globs 'web/Docker*','database/Docker*' --lockfile-name docker-lock-dockerfile-globs-test.json
     docker lock verify --lockfile-name docker-lock-dockerfile-globs-test.json
     diff_files docker-lock-dockerfile-globs.json docker-lock-dockerfile-globs-test.json
 
