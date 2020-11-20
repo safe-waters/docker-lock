@@ -56,7 +56,9 @@ func DefaultPathCollector(flags *Flags) (generate.IPathCollector, error) {
 		kubernetesfileCollector, err = collect.NewPathCollector(
 			flags.FlagsWithSharedValues.BaseDir,
 			[]string{
-				"deployment.yml", "deployment.yaml", "pod.yml", "pod.yaml",
+				"deployment.yml", "deployment.yaml",
+				"pod.yml", "pod.yaml",
+				"job.yml", "job.yaml",
 			},
 			flags.KubernetesfileFlags.ManualPaths,
 			flags.KubernetesfileFlags.Globs,
