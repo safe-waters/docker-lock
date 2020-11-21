@@ -154,8 +154,9 @@ $ docker run -v "%USERPROFILE%\.docker\config.json":/.docker/config.json:ro -v "
 `docker-lock` supports a variety of command line flags to customize behavior.
 
 For instance, by default, `docker-lock` looks for files named `Dockerfile`,
-`docker-compose.yaml`, and `docker-compose.yml` in the directory from which
-the command is run. However, you may want `docker-lock` to find all
+`docker-compose.yaml`, `docker-compose.yml`, `pod.yml`, `pod.yaml`,
+`deployment.yml`, `deployment.yaml`, `job.yml`, and `job.yaml` in the directory
+from which the command is run. However, you may want `docker-lock` to find all
 `Dockerfiles` in your project.
 
 To do so, you could specify the command line flag, `--dockerfile-recursive`,
