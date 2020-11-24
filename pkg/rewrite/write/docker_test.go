@@ -27,7 +27,6 @@ func TestDockerfileWriter(t *testing.T) {
 				[]byte(`FROM busybox
 COPY . .
 FROM redis:latest
-# comment
 FROM golang:latest@sha256:12345
 `),
 			},
@@ -61,6 +60,46 @@ FROM golang:latest@sha256:12345
 COPY . .
 FROM redis:latest@sha256:redis
 FROM golang:latest@sha256:golang
+`),
+			},
+		},
+		{
+			Name: "Comments and newlines",
+			Contents: [][]byte{
+				[]byte(`FROM busybox
+
+
+COPY . .
+# my comment
+RUN echo
+
+# cannot distinguish where newlines are
+
+RUN touch foo
+`),
+			},
+			PathImages: map[string][]*parse.DockerfileImage{
+				"Dockerfile": {
+					{
+						Image: &parse.Image{
+							Name:   "busybox",
+							Tag:    "latest",
+							Digest: "busybox",
+						},
+					},
+				},
+			},
+			Expected: [][]byte{
+				[]byte(`FROM busybox:latest@sha256:busybox
+
+
+COPY . .
+# my comment
+RUN echo
+
+
+# cannot distinguish where newlines are
+RUN touch foo
 `),
 			},
 		},
