@@ -115,8 +115,10 @@ func (d *DockerfileWriter) writeFile(
 
 	const maxNumFields = 3
 
-	var outputBuffer bytes.Buffer
-	var lastEndLine int = 0
+	var (
+		outputBuffer bytes.Buffer
+		lastEndLine  int
+	)
 
 	for _, child := range loadedDockerfile.AST.Children {
 		outputLine := child.Original
@@ -164,13 +166,16 @@ func (d *DockerfileWriter) writeFile(
 
 		expectedLineNo := lastEndLine + len(child.PrevComment) + 1
 		if expectedLineNo != child.StartLine {
-			outputBuffer.WriteString(strings.Repeat("\n", child.StartLine-expectedLineNo))
+			newlines := strings.Repeat("\n", child.StartLine-expectedLineNo)
+			outputBuffer.WriteString(newlines)
 		}
+
 		lastEndLine = child.EndLine
 
 		for _, comment := range child.PrevComment {
 			fmt.Fprintf(&outputBuffer, "# %s\n", comment)
 		}
+
 		outputBuffer.WriteString(fmt.Sprintf("%s\n", outputLine))
 	}
 
