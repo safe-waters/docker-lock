@@ -1,13 +1,4 @@
 {
-	"dockerfiles": {
-		"Dockerfile": [
-			{
-				"name": "dockerlocktestaccount/busybox",
-				"tag": "latest",
-				"digest": "dd97a3fe6d721c5cf03abac0f50e2848dc583f7c4e41bf39102ceb42edfd1808"
-			}
-		]
-	},
 	"composefiles": {
 		"docker-compose-1.yml": [
 			{
@@ -79,6 +70,15 @@
 				"digest": "2e70e9c81838224b5311970dbf7ed16802fbfe19e7a70b3cbfa3d7522aa285b4",
 				"dockerfile": "web/Dockerfile",
 				"service": "web"
+			}
+		]
+	},
+	"dockerfiles": {
+		"Dockerfile": [
+			{
+				"name": "dockerlocktestaccount/busybox",
+				"tag": "latest",
+				"digest": "dd97a3fe6d721c5cf03abac0f50e2848dc583f7c4e41bf39102ceb42edfd1808"
 			}
 		]
 	},
