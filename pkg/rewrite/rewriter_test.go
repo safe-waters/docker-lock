@@ -8,8 +8,8 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/safe-waters/docker-lock/pkg/generate"
-	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/internal/testutils"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 
 	cmd_rewrite "github.com/safe-waters/docker-lock/cmd/rewrite"
 )
@@ -393,10 +393,10 @@ services:
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := makeTempDirInCurrentDir(t)
+			tempDir := testutils.MakeTempDirInCurrentDir(t)
 			defer os.RemoveAll(tempDir)
 
-			var lockfile generate.Lockfile
+			var lockfile map[kind.Kind]map[string][]interface{}
 			if err := json.Unmarshal(
 				test.Contents[len(test.Contents)-1], &lockfile,
 			); err != nil {
@@ -405,14 +405,16 @@ services:
 
 			uniquePathsToWrite := map[string]struct{}{}
 
-			composefileImagesWithTempDir := map[string][]*parse.ComposefileImage{} // nolint: lll
+			composefileImagesWithTempDir := map[string][]interface{}{}
 
-			for composefilePath, images := range lockfile.ComposefileImages {
+			for composefilePath, images := range lockfile[kind.Composefile] {
 				for _, image := range images {
-					if image.DockerfilePath != "" {
-						uniquePathsToWrite[image.DockerfilePath] = struct{}{}
-						image.DockerfilePath = filepath.Join(
-							tempDir, image.DockerfilePath,
+					image := image.(map[string]interface{})
+					if image["dockerfile"] != nil {
+						dockerfilePath := image["dockerfile"].(string)
+						uniquePathsToWrite[dockerfilePath] = struct{}{}
+						image["dockerfile"] = filepath.Join(
+							tempDir, dockerfilePath,
 						)
 					}
 				}
@@ -422,18 +424,18 @@ services:
 				composefileImagesWithTempDir[composefilePath] = images
 			}
 
-			dockerfileImagesWithTempDir := map[string][]*parse.DockerfileImage{}
+			dockerfileImagesWithTempDir := map[string][]interface{}{}
 
-			for dockerfilePath, images := range lockfile.DockerfileImages {
+			for dockerfilePath, images := range lockfile[kind.Dockerfile] {
 				uniquePathsToWrite[dockerfilePath] = struct{}{}
 
 				dockerfilePath = filepath.Join(tempDir, dockerfilePath)
 				dockerfileImagesWithTempDir[dockerfilePath] = images
 			}
 
-			kubernetesfileImagesWithTempDir := map[string][]*parse.KubernetesfileImage{} // nolint: lll
+			kubernetesfileImagesWithTempDir := map[string][]interface{}{}
 
-			for kubernetesfilePath, images := range lockfile.KubernetesfileImages { // nolint: lll
+			for kubernetesfilePath, images := range lockfile[kind.Kubernetesfile] { // nolint: lll
 				uniquePathsToWrite[kubernetesfilePath] = struct{}{}
 
 				kubernetesfilePath = filepath.Join(tempDir, kubernetesfilePath)
@@ -447,7 +449,7 @@ services:
 
 			sort.Strings(pathsToWrite)
 
-			got := writeFilesToTempDir(
+			got := testutils.WriteFilesToTempDir(
 				t, tempDir, pathsToWrite, test.Contents[:len(test.Contents)-1],
 			)
 
@@ -461,10 +463,10 @@ services:
 				t.Fatal(err)
 			}
 
-			lockfileWithTempDir := &generate.Lockfile{
-				DockerfileImages:     dockerfileImagesWithTempDir,
-				ComposefileImages:    composefileImagesWithTempDir,
-				KubernetesfileImages: kubernetesfileImagesWithTempDir,
+			lockfileWithTempDir := map[kind.Kind]map[string][]interface{}{
+				kind.Dockerfile:     dockerfileImagesWithTempDir,
+				kind.Composefile:    composefileImagesWithTempDir,
+				kind.Kubernetesfile: kubernetesfileImagesWithTempDir,
 			}
 
 			lockfileByt, err := json.Marshal(lockfileWithTempDir)
@@ -487,7 +489,7 @@ services:
 				t.Fatal(err)
 			}
 
-			assertWrittenFiles(t, test.Expected, got)
+			testutils.AssertWrittenFilesEqual(t, test.Expected, got)
 		})
 	}
 }

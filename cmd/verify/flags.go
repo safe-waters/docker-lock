@@ -6,7 +6,8 @@ import (
 	"strings"
 )
 
-// Flags are all possible flags to initialize a Verifier.
+// Flags holds all command line options for Dockerfiles, Composefiles,
+// and Kubernetesfiles.
 type Flags struct {
 	LockfileName         string
 	ConfigPath           string
@@ -15,7 +16,10 @@ type Flags struct {
 	ExcludeTags          bool
 }
 
-// NewFlags returns Flags after validating its fields.
+// NewFlags returns Flags for Dockerfiles, Composefiles, and Kubernetesfiles,
+// after validating their fields.
+//
+// lockfileName may not contain slashes.
 func NewFlags(
 	lockfileName string,
 	configPath string,

@@ -1,50 +1,45 @@
 package generate
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
 
+	"github.com/safe-waters/docker-lock/pkg/generate/collect"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 )
 
-// ImageParser contains ImageParsers for all files.
-type ImageParser struct {
-	DockerfileImageParser     parse.IDockerfileImageParser
-	ComposefileImageParser    parse.IComposefileImageParser
-	KubernetesfileImageParser parse.IKubernetesfileImageParser
+type imageParser struct {
+	parsers map[kind.Kind]parse.IImageParser
 }
 
-// IImageParser provides an interface for Parser's exported methods,
-// which are used by Generator.
-type IImageParser interface {
-	ParseFiles(anyPaths <-chan *AnyPath, done <-chan struct{}) <-chan *AnyImage
-}
+// NewImageParser creates an IImageParser from IImageParsers for different
+// kinds of images. At least one parser must be non nil, otherwise there would
+// no way to parse images.
+func NewImageParser(parsers ...parse.IImageParser) (IImageParser, error) {
+	kindParser := map[kind.Kind]parse.IImageParser{}
 
-// AnyImage contains any possible type of parser.
-type AnyImage struct {
-	DockerfileImage     *parse.DockerfileImage
-	ComposefileImage    *parse.ComposefileImage
-	KubernetesfileImage *parse.KubernetesfileImage
-	Err                 error
-}
-
-// ParseFiles parses all files for Images.
-func (i *ImageParser) ParseFiles(
-	anyPaths <-chan *AnyPath,
-	done <-chan struct{},
-) <-chan *AnyImage {
-	if ((i.DockerfileImageParser == nil ||
-		reflect.ValueOf(i.DockerfileImageParser).IsNil()) &&
-		(i.ComposefileImageParser == nil ||
-			reflect.ValueOf(i.ComposefileImageParser).IsNil())) &&
-		(i.KubernetesfileImageParser == nil ||
-			reflect.ValueOf(i.KubernetesfileImageParser).IsNil()) ||
-		anyPaths == nil {
-		return nil
+	for _, parser := range parsers {
+		if parser != nil && !reflect.ValueOf(parser).IsNil() {
+			kindParser[parser.Kind()] = parser
+		}
 	}
 
-	anyImages := make(chan *AnyImage)
+	if len(kindParser) == 0 {
+		return nil, errors.New("non nil parsers must be greater than 0")
+	}
+
+	return &imageParser{parsers: kindParser}, nil
+}
+
+// ParseFiles parses all images from paths.
+func (i *imageParser) ParseFiles(
+	paths <-chan collect.IPath,
+	done <-chan struct{},
+) <-chan parse.IImage {
+	images := make(chan parse.IImage)
 
 	var waitGroup sync.WaitGroup
 
@@ -53,208 +48,81 @@ func (i *ImageParser) ParseFiles(
 	go func() {
 		defer waitGroup.Done()
 
-		dockerfilePaths := make(chan string)
-		composefilePaths := make(chan string)
-		kubernetesfilePaths := make(chan string)
+		kindPaths := map[kind.Kind]chan collect.IPath{}
 
-		var pathsWaitGroup sync.WaitGroup
+		for kind := range i.parsers {
+			kindPaths[kind] = make(chan collect.IPath)
+		}
 
-		pathsWaitGroup.Add(1)
+		var kindPathsWaitGroup sync.WaitGroup
 
-		go func() {
-			defer pathsWaitGroup.Done()
+		for path := range paths {
+			path := path
 
-			for anyPath := range anyPaths {
-				if anyPath.Err != nil {
+			kindPathsWaitGroup.Add(1)
+
+			go func() {
+				defer kindPathsWaitGroup.Done()
+
+				if path.Err() != nil {
 					select {
 					case <-done:
-					case anyImages <- &AnyImage{Err: anyPath.Err}:
+					case images <- parse.NewImage(
+						path.Kind(), "", "", "", nil, path.Err(),
+					):
 					}
 
 					return
 				}
 
-				switch {
-				case anyPath.DockerfilePath != "":
-					if i.DockerfileImageParser == nil ||
-						reflect.ValueOf(i.DockerfileImageParser).IsNil() {
-						select {
-						case <-done:
-						case anyImages <- &AnyImage{
-							Err: fmt.Errorf(
-								"dockerfile %s found, but its parser is nil",
-								anyPath.DockerfilePath,
-							),
-						}:
-						}
-
-						return
-					}
-
+				if _, ok := kindPaths[path.Kind()]; !ok {
 					select {
 					case <-done:
-						return
-					case dockerfilePaths <- anyPath.DockerfilePath:
-					}
-				case anyPath.ComposefilePath != "":
-					if i.ComposefileImageParser == nil ||
-						reflect.ValueOf(i.ComposefileImageParser).IsNil() {
-						select {
-						case <-done:
-						case anyImages <- &AnyImage{
-							Err: fmt.Errorf(
-								"composefile %s found, but its parser is nil",
-								anyPath.ComposefilePath,
-							),
-						}:
-						}
-
-						return
+					case images <- parse.NewImage(
+						path.Kind(), "", "", "", nil,
+						fmt.Errorf(
+							"kind %s does not have a parser defined",
+							path.Kind(),
+						),
+					):
 					}
 
-					select {
-					case <-done:
-						return
-					case composefilePaths <- anyPath.ComposefilePath:
-					}
-				case anyPath.KubernetesfilePath != "":
-					if i.KubernetesfileImageParser == nil ||
-						reflect.ValueOf(i.KubernetesfileImageParser).IsNil() {
-						select {
-						case <-done:
-						case anyImages <- &AnyImage{
-							Err: fmt.Errorf(
-								"k8s file %s found, but its parser is nil",
-								anyPath.KubernetesfilePath,
-							),
-						}:
-						}
-
-						return
-					}
-
-					select {
-					case <-done:
-						return
-					case kubernetesfilePaths <- anyPath.KubernetesfilePath:
-					}
+					return
 				}
+
+				select {
+				case <-done:
+				case kindPaths[path.Kind()] <- path:
+				}
+			}()
+		}
+
+		go func() {
+			kindPathsWaitGroup.Wait()
+
+			for _, paths := range kindPaths {
+				close(paths)
 			}
 		}()
 
-		go func() {
-			pathsWaitGroup.Wait()
+		for kind, paths := range kindPaths {
+			kind := kind
+			paths := paths
 
-			close(dockerfilePaths)
-			close(composefilePaths)
-			close(kubernetesfilePaths)
-		}()
-
-		var dockerfileImages <-chan *parse.DockerfileImage
-
-		var composefileImages <-chan *parse.ComposefileImage
-
-		var kubernetesfileImages <-chan *parse.KubernetesfileImage
-
-		if i.DockerfileImageParser != nil &&
-			!reflect.ValueOf(i.DockerfileImageParser).IsNil() {
-			dockerfileImages = i.DockerfileImageParser.ParseFiles(
-				dockerfilePaths, done,
-			)
-		}
-
-		if i.ComposefileImageParser != nil &&
-			!reflect.ValueOf(i.ComposefileImageParser).IsNil() {
-			composefileImages = i.ComposefileImageParser.ParseFiles(
-				composefilePaths, done,
-			)
-		}
-
-		if i.KubernetesfileImageParser != nil &&
-			!reflect.ValueOf(i.KubernetesfileImageParser).IsNil() {
-			kubernetesfileImages = i.KubernetesfileImageParser.ParseFiles(
-				kubernetesfilePaths, done,
-			)
-		}
-
-		if dockerfileImages != nil {
 			waitGroup.Add(1)
 
 			go func() {
 				defer waitGroup.Done()
 
-				for dockerfileImage := range dockerfileImages {
-					if dockerfileImage.Err != nil {
-						select {
-						case <-done:
-						case anyImages <- &AnyImage{Err: dockerfileImage.Err}:
-						}
-
-						return
-					}
-
+				for image := range i.parsers[kind].ParseFiles(paths, done) {
 					select {
 					case <-done:
 						return
-					case anyImages <- &AnyImage{
-						DockerfileImage: dockerfileImage,
-					}:
-					}
-				}
-			}()
-		}
-
-		if composefileImages != nil {
-			waitGroup.Add(1)
-
-			go func() {
-				defer waitGroup.Done()
-
-				for composefileImage := range composefileImages {
-					if composefileImage.Err != nil {
-						select {
-						case <-done:
-						case anyImages <- &AnyImage{Err: composefileImage.Err}:
-						}
-
-						return
+					case images <- image:
 					}
 
-					select {
-					case <-done:
+					if image.Err() != nil {
 						return
-					case anyImages <- &AnyImage{
-						ComposefileImage: composefileImage,
-					}:
-					}
-				}
-			}()
-		}
-
-		if kubernetesfileImages != nil {
-			waitGroup.Add(1)
-
-			go func() {
-				defer waitGroup.Done()
-
-				for kubernetesfileImage := range kubernetesfileImages {
-					if kubernetesfileImage.Err != nil {
-						select {
-						case <-done:
-						case anyImages <- &AnyImage{
-							Err: kubernetesfileImage.Err,
-						}:
-						}
-
-						return
-					}
-
-					select {
-					case <-done:
-						return
-					case anyImages <- &AnyImage{
-						KubernetesfileImage: kubernetesfileImage,
-					}:
 					}
 				}
 			}()
@@ -263,8 +131,8 @@ func (i *ImageParser) ParseFiles(
 
 	go func() {
 		waitGroup.Wait()
-		close(anyImages)
+		close(images)
 	}()
 
-	return anyImages
+	return images
 }

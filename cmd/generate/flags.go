@@ -8,7 +8,7 @@ import (
 )
 
 // FlagsWithSharedValues represents flags whose values
-// are the same for DockerfileParser and ComposefileParser.
+// are the same for Dockerfiles, Composefiles and Kubernetesfiles.
 type FlagsWithSharedValues struct {
 	BaseDir              string
 	LockfileName         string
@@ -18,7 +18,7 @@ type FlagsWithSharedValues struct {
 }
 
 // FlagsWithSharedNames represents flags whose values
-// differ for DockerfileParser and ComposefileParser.
+// differ for Dockerfiles, Composefiles, and Kubernetesfiles.
 type FlagsWithSharedNames struct {
 	ManualPaths  []string
 	Globs        []string
@@ -26,8 +26,8 @@ type FlagsWithSharedNames struct {
 	ExcludePaths bool
 }
 
-// Flags holds all values needed for the components that
-// comprise a Generator.
+// Flags holds all command line options for Dockerfiles, Composefiles,
+// and Kubernetesfiles.
 type Flags struct {
 	FlagsWithSharedValues *FlagsWithSharedValues
 	DockerfileFlags       *FlagsWithSharedNames
@@ -35,8 +35,13 @@ type Flags struct {
 	KubernetesfileFlags   *FlagsWithSharedNames
 }
 
-// NewFlagsWithSharedValues returns NewFlagsWithSharedValues after
-// validating its fields.
+// NewFlagsWithSharedValues returns Flags that are shared among Dockerfiles,
+// Composefiles, and Kubernetesfiles, after validating its fields.
+//
+// baseDir must be the current working directory or a sub directory.
+// Absolute paths are not supported.
+//
+// lockfileName may not contain slashes.
 func NewFlagsWithSharedValues(
 	baseDir string,
 	lockfileName string,
@@ -65,8 +70,16 @@ func NewFlagsWithSharedValues(
 	}, nil
 }
 
-// NewFlagsWithSharedNames returns NewFlagsWithSharedNames after
+// NewFlagsWithSharedNames returns Flags whose values differ
+// between Dockerfiles, Composefiles, and Kubernetesfiles, after
 // validating its fields.
+//
+// baseDir must be the current working directory or a sub directory.
+//
+// manualPaths and globs must be in the current working directory or
+// in a sub directory.
+//
+// Absolute paths are not supported.
 func NewFlagsWithSharedNames(
 	baseDir string,
 	manualPaths []string,
@@ -100,7 +113,9 @@ func NewFlagsWithSharedNames(
 	}, nil
 }
 
-// NewFlags returns Flags used by Generator.
+// NewFlags returns Flags for Dockerfiles, Composefiles, and Kubernetesfiles,
+// subject to the validation logic in NewFlagsWithSharedNames and
+// NewFlagsWithSharedValues.
 func NewFlags(
 	baseDir string,
 	lockfileName string,

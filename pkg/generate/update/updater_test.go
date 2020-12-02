@@ -4,9 +4,11 @@ import (
 	"testing"
 
 	cmd_generate "github.com/safe-waters/docker-lock/cmd/generate"
+	"github.com/safe-waters/docker-lock/internal/testutils"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 	"github.com/safe-waters/docker-lock/pkg/generate/update"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 )
 
 func TestImageDigestUpdater(t *testing.T) {
@@ -14,43 +16,39 @@ func TestImageDigestUpdater(t *testing.T) {
 
 	tests := []struct {
 		Name                    string
-		Images                  []*parse.Image
+		Images                  []parse.IImage
 		ExpectedNumNetworkCalls uint64
-		ExpectedImages          []*parse.Image
+		ExpectedImages          []parse.IImage
 	}{
 		{
 			Name: "Image Without Digest",
-			Images: []*parse.Image{
-				{
-					Name: "busybox",
-					Tag:  "latest",
-				},
+			Images: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "busybox", "latest", "", nil, nil,
+				),
 			},
 			ExpectedNumNetworkCalls: 1,
-			ExpectedImages: []*parse.Image{
-				{
-					Name:   "busybox",
-					Tag:    "latest",
-					Digest: busyboxLatestSHA,
-				},
+			ExpectedImages: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "busybox", "latest",
+					testutils.BusyboxLatestSHA, nil, nil,
+				),
 			},
 		},
 		{
 			Name: "Image With Digest",
-			Images: []*parse.Image{
-				{
-					Name:   "busybox",
-					Tag:    "latest",
-					Digest: busyboxLatestSHA,
-				},
+			Images: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "busybox", "latest",
+					testutils.BusyboxLatestSHA, nil, nil,
+				),
 			},
 			ExpectedNumNetworkCalls: 0,
-			ExpectedImages: []*parse.Image{
-				{
-					Name:   "busybox",
-					Tag:    "latest",
-					Digest: busyboxLatestSHA,
-				},
+			ExpectedImages: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "busybox", "latest",
+					testutils.BusyboxLatestSHA, nil, nil,
+				),
 			},
 		},
 	}
@@ -63,7 +61,7 @@ func TestImageDigestUpdater(t *testing.T) {
 
 			var gotNumNetworkCalls uint64
 
-			server := mockServer(t, &gotNumNetworkCalls)
+			server := testutils.MakeMockServer(t, &gotNumNetworkCalls)
 			defer server.Close()
 
 			client := &registry.HTTPClient{
@@ -79,14 +77,15 @@ func TestImageDigestUpdater(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			updater, err := update.NewImageDigestUpdater(wrapperManager)
+			updater, err := update.NewImageDigestUpdater(wrapperManager, false)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			done := make(chan struct{})
+			defer close(done)
 
-			images := make(chan *parse.Image, len(test.Images))
+			images := make(chan parse.IImage, len(test.Images))
 
 			for _, image := range test.Images {
 				images <- image
@@ -95,20 +94,20 @@ func TestImageDigestUpdater(t *testing.T) {
 
 			updatedImages := updater.UpdateDigests(images, done)
 
-			var gotImages []*parse.Image
+			var got []parse.IImage
 
-			for updatedImage := range updatedImages {
-				if updatedImage.Err != nil {
-					t.Fatal(updatedImage.Err)
+			for image := range updatedImages {
+				if image.Err() != nil {
+					t.Fatal(image.Err())
 				}
-				gotImages = append(gotImages, updatedImage.Image)
+				got = append(got, image)
 			}
 
-			assertImagesEqual(
-				t, test.ExpectedImages, gotImages,
+			testutils.AssertImagesEqual(
+				t, test.ExpectedImages, got,
 			)
 
-			assertNumNetworkCallsEqual(
+			testutils.AssertNumNetworkCallsEqual(
 				t, test.ExpectedNumNetworkCalls, gotNumNetworkCalls,
 			)
 		})

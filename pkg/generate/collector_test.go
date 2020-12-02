@@ -3,10 +3,13 @@ package generate_test
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
+	"github.com/safe-waters/docker-lock/internal/testutils"
 	"github.com/safe-waters/docker-lock/pkg/generate"
 	"github.com/safe-waters/docker-lock/pkg/generate/collect"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 )
 
 func TestPathCollector(t *testing.T) {
@@ -14,30 +17,18 @@ func TestPathCollector(t *testing.T) {
 
 	tests := []struct {
 		Name          string
-		PathCollector *generate.PathCollector
-		Expected      []*generate.AnyPath
+		Expected      []collect.IPath
 		PathsToCreate []string
 	}{
 		{
 			Name: "Dockerfiles, Composefiles And Kubernetesfiles",
-			PathCollector: makePathCollector(
-				t, "", []string{"Dockerfile"}, nil, nil, false,
-				[]string{"docker-compose.yml"}, nil, nil, false,
-				[]string{"pod.yml"}, nil, nil, false, false,
-			),
 			PathsToCreate: []string{
 				"Dockerfile", "docker-compose.yml", "pod.yml",
 			},
-			Expected: []*generate.AnyPath{
-				{
-					DockerfilePath: "Dockerfile",
-				},
-				{
-					ComposefilePath: "docker-compose.yml",
-				},
-				{
-					KubernetesfilePath: "pod.yml",
-				},
+			Expected: []collect.IPath{
+				collect.NewPath(kind.Dockerfile, "Dockerfile", nil),
+				collect.NewPath(kind.Composefile, "docker-compose.yml", nil),
+				collect.NewPath(kind.Kubernetesfile, "pod.yml", nil),
 			},
 		},
 	}
@@ -48,60 +39,74 @@ func TestPathCollector(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := makeTempDir(t, "")
+			tempDir := testutils.MakeTempDirInCurrentDir(t)
 			defer os.RemoveAll(tempDir)
 
-			dockerfileCollector := test.PathCollector.DockerfileCollector.(*collect.PathCollector)         // nolint: lll
-			composefileCollector := test.PathCollector.ComposefileCollector.(*collect.PathCollector)       // nolint: lll
-			kubernetesfileCollector := test.PathCollector.KubernetesfileCollector.(*collect.PathCollector) // nolint: lll
-
-			addTempDirToStringSlices(
-				t, dockerfileCollector, tempDir,
-			)
-			addTempDirToStringSlices(
-				t, composefileCollector, tempDir,
-			)
-			addTempDirToStringSlices(
-				t, kubernetesfileCollector, tempDir,
-			)
+			var expected []collect.IPath
 
 			pathsToCreateContents := make([][]byte, len(test.PathsToCreate))
-			writeFilesToTempDir(
+			testutils.WriteFilesToTempDir(
 				t, tempDir, test.PathsToCreate, pathsToCreateContents,
 			)
 
-			var got []*generate.AnyPath
+			for _, path := range test.Expected {
+				expected = append(
+					expected, collect.NewPath(
+						path.Kind(), filepath.Join(tempDir, path.Val()), nil,
+					),
+				)
+			}
+
+			dockerfileCollector, err := collect.NewPathCollector(
+				kind.Dockerfile, tempDir, []string{"Dockerfile"},
+				nil, nil, false,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			composefileCollector, err := collect.NewPathCollector(
+				kind.Composefile, tempDir, []string{"docker-compose.yml"},
+				nil, nil, false,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			kubernetesfileCollector, err := collect.NewPathCollector(
+				kind.Kubernetesfile, tempDir, []string{"pod.yml"},
+				nil, nil, false,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			collector, err := generate.NewPathCollector(
+				dockerfileCollector, composefileCollector,
+				kubernetesfileCollector,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var got []collect.IPath
 
 			done := make(chan struct{})
-			for anyPath := range test.PathCollector.CollectPaths(done) {
-				if anyPath.Err != nil {
-					close(done)
-					t.Fatal(anyPath.Err)
+			defer close(done)
+
+			for path := range collector.CollectPaths(done) {
+				if path.Err() != nil {
+					t.Fatal(path.Err())
 				}
-				got = append(got, anyPath)
+				got = append(got, path)
 			}
 
-			for _, anyPath := range test.Expected {
-				switch {
-				case anyPath.DockerfilePath != "":
-					anyPath.DockerfilePath = filepath.Join(
-						tempDir, anyPath.DockerfilePath,
-					)
-				case anyPath.ComposefilePath != "":
-					anyPath.ComposefilePath = filepath.Join(
-						tempDir, anyPath.ComposefilePath,
-					)
-				case anyPath.KubernetesfilePath != "":
-					anyPath.KubernetesfilePath = filepath.Join(
-						tempDir, anyPath.KubernetesfilePath,
-					)
-				}
+			testutils.SortPaths(t, expected)
+			testutils.SortPaths(t, got)
+
+			if !reflect.DeepEqual(expected, got) {
+				t.Fatalf("expected %v, got %v", test.Expected, got)
 			}
-
-			sortAnyPaths(t, test.Expected)
-			sortAnyPaths(t, got)
-
-			assertAnyPathsEqual(t, test.Expected, got)
 		})
 	}
 }

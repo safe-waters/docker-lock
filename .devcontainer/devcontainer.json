@@ -11,16 +11,29 @@
 		"seccomp=unconfined",
 		// map host docker daemon into container for sibling containers
 		"-v",
-		"/var/run/docker.sock:/var/run/docker.sock"
+		"/var/run/docker.sock:/var/run/docker.sock",
 	],
 	"settings": {
+		// General settings
 		"files.eol": "\n",
 		"terminal.integrated.shell.linux": "/bin/bash",
+		// Go settings
 		"go.lintTool": "golangci-lint",
 		"go.lintFlags": [
 			"--fast"
 		],
-		// Go recommended settings with modules: https://github.com/golang/scripts/blob/master/gopls/doc/vscode.md#vscode
+		"vim.insertModeKeyBindings": [
+			{
+				"before": [
+					"j",
+					"j"
+				],
+				"after": [
+					"<Esc>"
+				]
+			}
+		],
+		// Go recommended settings with modules: https://github.com/golang/tools/blob/master/gopls/doc/vscode.md#vscode
 		"go.useLanguageServer": true,
 		"[go]": {
 			"editor.formatOnSave": true,
@@ -39,9 +52,18 @@
 		"gopls": {
 			// Add parameter placeholders when completing a function.
 			"usePlaceholders": true,
+		},
+		// Python settings
+		"python.pythonPath": "/usr/bin/python",
+		"python.formatting.blackPath": "/usr/local/bin/black",
+		"python.formatting.provider": "black",
+		"[python]": {
+			"editor.formatOnSave": true,
 		}
 	},
 	"extensions": [
-		"golang.go"
+		"golang.go",
+		"ms-python.python",
+		"vscodevim.vim",
 	]
 }

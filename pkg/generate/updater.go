@@ -1,55 +1,32 @@
 package generate
 
 import (
-	"errors"
-	"reflect"
 	"sync"
 
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 	"github.com/safe-waters/docker-lock/pkg/generate/update"
 )
 
-// ImageDigestUpdater contains an ImageDigestUpdater for all images.
-type ImageDigestUpdater struct {
-	ImageDigestUpdater   update.IImageDigestUpdater
-	IgnoreMissingDigests bool
+type imageDigestUpdater struct {
+	updater update.IImageDigestUpdater
 }
 
-// IImageDigestUpdater provides an interface for ImageDigestUpdater's exported
-// methods, which are used by Generator.
-type IImageDigestUpdater interface {
-	UpdateDigests(
-		anyImages <-chan *AnyImage, done <-chan struct{},
-	) <-chan *AnyImage
-}
-
-// NewImageDigestUpdater returns an ImageDigestUpdater after validating its
-// fields.
+// NewImageDigestUpdater creates an IImageDigestUpdater from an
+// IImageDigestUpdater.
 func NewImageDigestUpdater(
-	imageDigestUpdater update.IImageDigestUpdater,
-	ignoreMissingDigests bool,
-) (*ImageDigestUpdater, error) {
-	if imageDigestUpdater == nil ||
-		reflect.ValueOf(imageDigestUpdater).IsNil() {
-		return nil, errors.New("imageDigestUpdater cannot be nil")
-	}
-
-	return &ImageDigestUpdater{
-		ImageDigestUpdater:   imageDigestUpdater,
-		IgnoreMissingDigests: ignoreMissingDigests,
+	updater update.IImageDigestUpdater,
+) (IImageDigestUpdater, error) {
+	return &imageDigestUpdater{
+		updater: updater,
 	}, nil
 }
 
 // UpdateDigests updates images with the most recent digests from registries.
-func (i *ImageDigestUpdater) UpdateDigests(
-	anyImages <-chan *AnyImage,
+func (i *imageDigestUpdater) UpdateDigests(
+	images <-chan parse.IImage,
 	done <-chan struct{},
-) <-chan *AnyImage {
-	if anyImages == nil {
-		return nil
-	}
-
-	updatedAnyImages := make(chan *AnyImage)
+) <-chan parse.IImage {
+	updatedImages := make(chan parse.IImage)
 
 	var waitGroup sync.WaitGroup
 
@@ -58,8 +35,8 @@ func (i *ImageDigestUpdater) UpdateDigests(
 	go func() {
 		defer waitGroup.Done()
 
-		imagesWithoutDigests := make(chan *parse.Image)
-		digestsToUpdate := map[parse.Image][]*AnyImage{}
+		imagesWithoutDigests := make(chan parse.IImage)
+		digestsToUpdate := map[string][]parse.IImage{}
 
 		var imagesWithoutDigestsWaitGroup sync.WaitGroup
 
@@ -68,86 +45,33 @@ func (i *ImageDigestUpdater) UpdateDigests(
 		go func() {
 			defer imagesWithoutDigestsWaitGroup.Done()
 
-			for anyImage := range anyImages {
-				if anyImage.Err != nil {
+			for image := range images {
+				if image.Err() != nil {
 					select {
 					case <-done:
-					case updatedAnyImages <- anyImage:
+					case updatedImages <- image:
 					}
 
 					return
 				}
 
-				switch {
-				case anyImage.DockerfileImage != nil:
-					if anyImage.DockerfileImage.Image.Digest != "" {
+				if image.Digest() == "" {
+					key := image.Name() + image.Tag()
+					if _, ok := digestsToUpdate[key]; !ok {
 						select {
 						case <-done:
 							return
-						case updatedAnyImages <- anyImage:
-						}
-
-						continue
-					}
-
-					if _, ok := digestsToUpdate[*anyImage.DockerfileImage.Image]; !ok { // nolint: lll
-						select {
-						case <-done:
-							return
-						case imagesWithoutDigests <- anyImage.DockerfileImage.Image: // nolint: lll
+						case imagesWithoutDigests <- image:
 						}
 					}
 
-					digestsToUpdate[*anyImage.DockerfileImage.Image] = append(
-						digestsToUpdate[*anyImage.DockerfileImage.Image],
-						anyImage,
-					)
-				case anyImage.ComposefileImage != nil:
-					if anyImage.ComposefileImage.Image.Digest != "" {
-						select {
-						case <-done:
-							return
-						case updatedAnyImages <- anyImage:
-						}
-
-						continue
+					digestsToUpdate[key] = append(digestsToUpdate[key], image)
+				} else {
+					select {
+					case <-done:
+						return
+					case updatedImages <- image:
 					}
-
-					if _, ok := digestsToUpdate[*anyImage.ComposefileImage.Image]; !ok { // nolint: lll
-						select {
-						case <-done:
-							return
-						case imagesWithoutDigests <- anyImage.ComposefileImage.Image: // nolint: lll
-						}
-					}
-
-					digestsToUpdate[*anyImage.ComposefileImage.Image] = append(
-						digestsToUpdate[*anyImage.ComposefileImage.Image],
-						anyImage,
-					)
-				case anyImage.KubernetesfileImage != nil:
-					if anyImage.KubernetesfileImage.Image.Digest != "" {
-						select {
-						case <-done:
-							return
-						case updatedAnyImages <- anyImage:
-						}
-
-						continue
-					}
-
-					if _, ok := digestsToUpdate[*anyImage.KubernetesfileImage.Image]; !ok { // nolint: lll
-						select {
-						case <-done:
-							return
-						case imagesWithoutDigests <- anyImage.KubernetesfileImage.Image: // nolint: lll
-						}
-					}
-
-					digestsToUpdate[*anyImage.KubernetesfileImage.Image] = append( // nolint: lll
-						digestsToUpdate[*anyImage.KubernetesfileImage.Image],
-						anyImage,
-					)
 				}
 			}
 		}()
@@ -157,42 +81,33 @@ func (i *ImageDigestUpdater) UpdateDigests(
 			close(imagesWithoutDigests)
 		}()
 
-		var allUpdatedImages []*parse.Image
+		var allUpdatedImages []parse.IImage
 
-		updatedImages := i.ImageDigestUpdater.UpdateDigests(
+		for updatedImage := range i.updater.UpdateDigests(
 			imagesWithoutDigests, done,
-		)
-
-		for updatedImage := range updatedImages {
-			if updatedImage.Err != nil && !i.IgnoreMissingDigests {
+		) {
+			if updatedImage.Err() != nil {
 				select {
 				case <-done:
-				case updatedAnyImages <- &AnyImage{Err: updatedImage.Err}:
+				case updatedImages <- updatedImage:
 				}
 
 				return
 			}
 
-			allUpdatedImages = append(allUpdatedImages, updatedImage.Image)
+			allUpdatedImages = append(allUpdatedImages, updatedImage)
 		}
 
 		for _, updatedImage := range allUpdatedImages {
-			key := parse.Image{Name: updatedImage.Name, Tag: updatedImage.Tag}
+			key := updatedImage.Name() + updatedImage.Tag()
 
-			for _, anyImage := range digestsToUpdate[key] {
-				switch {
-				case anyImage.DockerfileImage != nil:
-					anyImage.DockerfileImage.Digest = updatedImage.Digest
-				case anyImage.ComposefileImage != nil:
-					anyImage.ComposefileImage.Digest = updatedImage.Digest
-				case anyImage.KubernetesfileImage != nil:
-					anyImage.KubernetesfileImage.Digest = updatedImage.Digest
-				}
+			for _, image := range digestsToUpdate[key] {
+				image.SetDigest(updatedImage.Digest())
 
 				select {
 				case <-done:
 					return
-				case updatedAnyImages <- anyImage:
+				case updatedImages <- image:
 				}
 			}
 		}
@@ -200,8 +115,8 @@ func (i *ImageDigestUpdater) UpdateDigests(
 
 	go func() {
 		waitGroup.Wait()
-		close(updatedAnyImages)
+		close(updatedImages)
 	}()
 
-	return updatedAnyImages
+	return updatedImages
 }

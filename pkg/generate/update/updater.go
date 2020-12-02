@@ -1,4 +1,3 @@
-// Package update provides functionality to update images with digests.
 package update
 
 import (
@@ -9,51 +8,36 @@ import (
 	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 )
 
-// ImageDigestUpdater uses a WrapperManager to update Images with their most
-// recent digests from their registries.
-type ImageDigestUpdater struct {
-	WrapperManager *registry.WrapperManager
+type imageDigestUpdater struct {
+	wrapperManager       *registry.WrapperManager
+	ignoreMissingDigests bool
 }
 
-// IImageDigestUpdater provides an interface for ImageDigestUpdater's
-// exported methods.
-type IImageDigestUpdater interface {
-	UpdateDigests(
-		images <-chan *parse.Image,
-		done <-chan struct{},
-	) <-chan *UpdatedImage
-}
-
-// UpdatedImage contains an Image with its updated digest.
-type UpdatedImage struct {
-	Image *parse.Image
-	Err   error
-}
-
-// NewImageDigestUpdater returns an ImageDigestUpdater after validating its
-// fields.
+// NewImageDigestUpdater returns an IImageDigestUpdater after validating its
+// fields. wrapperManager cannot be nil as it is responsible for querying
+// registries for digests.
 func NewImageDigestUpdater(
 	wrapperManager *registry.WrapperManager,
-) (*ImageDigestUpdater, error) {
+	ignoreMissingDigests bool,
+) (IImageDigestUpdater, error) {
 	if wrapperManager == nil {
 		return nil, errors.New("wrapperManager cannot be nil")
 	}
 
-	return &ImageDigestUpdater{WrapperManager: wrapperManager}, nil
+	return &imageDigestUpdater{
+		wrapperManager:       wrapperManager,
+		ignoreMissingDigests: ignoreMissingDigests,
+	}, nil
 }
 
 // UpdateDigests queries registries for digests of images that do not
 // already specify their digests. It updates images with those
 // digests.
-func (i *ImageDigestUpdater) UpdateDigests(
-	images <-chan *parse.Image,
+func (i *imageDigestUpdater) UpdateDigests(
+	images <-chan parse.IImage,
 	done <-chan struct{},
-) <-chan *UpdatedImage {
-	if images == nil {
-		return nil
-	}
-
-	updatedImages := make(chan *UpdatedImage)
+) <-chan parse.IImage {
+	updatedImages := make(chan parse.IImage)
 
 	var waitGroup sync.WaitGroup
 
@@ -70,22 +54,24 @@ func (i *ImageDigestUpdater) UpdateDigests(
 			go func() {
 				defer waitGroup.Done()
 
-				if image.Digest != "" {
+				if image.Err() != nil || image.Digest() != "" {
 					select {
 					case <-done:
-					case updatedImages <- &UpdatedImage{Image: image}:
+					case updatedImages <- image:
 					}
 
 					return
 				}
 
-				wrapper := i.WrapperManager.Wrapper(image.Name)
+				wrapper := i.wrapperManager.Wrapper(image.Name())
 
-				digest, err := wrapper.Digest(image.Name, image.Tag)
-				if err != nil {
+				digest, err := wrapper.Digest(image.Name(), image.Tag())
+				if err != nil && !i.ignoreMissingDigests {
 					select {
 					case <-done:
-					case updatedImages <- &UpdatedImage{Image: image, Err: err}:
+					case updatedImages <- parse.NewImage(
+						image.Kind(), "", "", "", nil, err,
+					):
 					}
 
 					return
@@ -94,13 +80,10 @@ func (i *ImageDigestUpdater) UpdateDigests(
 				select {
 				case <-done:
 					return
-				case updatedImages <- &UpdatedImage{
-					Image: &parse.Image{
-						Name:   image.Name,
-						Tag:    image.Tag,
-						Digest: digest,
-					},
-				}:
+				case updatedImages <- parse.NewImage(
+					image.Kind(), image.Name(), image.Tag(),
+					digest, image.Metadata(), nil,
+				):
 				}
 			}()
 		}

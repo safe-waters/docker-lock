@@ -4,10 +4,12 @@ import (
 	"testing"
 
 	cmd_generate "github.com/safe-waters/docker-lock/cmd/generate"
+	"github.com/safe-waters/docker-lock/internal/testutils"
 	"github.com/safe-waters/docker-lock/pkg/generate"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 	"github.com/safe-waters/docker-lock/pkg/generate/update"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 )
 
 func TestImageDigestUpdater(t *testing.T) {
@@ -15,196 +17,125 @@ func TestImageDigestUpdater(t *testing.T) {
 
 	tests := []struct {
 		Name                    string
-		AnyImages               []*generate.AnyImage
+		Images                  []parse.IImage
 		ExpectedNumNetworkCalls uint64
-		Expected                []*generate.AnyImage
+		Expected                []parse.IImage
 	}{
 		{
 			Name: "Dockerfiles, Composefiles, And Kubernetesfiles",
-			AnyImages: []*generate.AnyImage{
-				{
-					DockerfileImage: &parse.DockerfileImage{
-						Image: &parse.Image{
-							Name: "redis",
-							Tag:  "latest",
-						},
-						Position: 0,
-						Path:     "Dockerfile",
-					},
-				},
-				{
-					DockerfileImage: &parse.DockerfileImage{
-						Image: &parse.Image{
-							Name:   "redis",
-							Tag:    "latest",
-							Digest: redisLatestSHA,
-						},
-						Position: 2,
-						Path:     "Dockerfile",
-					},
-				},
-				{
-					DockerfileImage: &parse.DockerfileImage{
-						Image: &parse.Image{
-							Name: "busybox",
-							Tag:  "latest",
-						},
-						Position: 1,
-						Path:     "Dockerfile",
-					},
-				},
-				{
-					ComposefileImage: &parse.ComposefileImage{
-						Image: &parse.Image{
-							Name: "busybox",
-							Tag:  "latest",
-						},
-						Position:    0,
-						Path:        "docker-compose.yml",
-						ServiceName: "svc",
-					},
-				},
-				{
-					ComposefileImage: &parse.ComposefileImage{
-						Image: &parse.Image{
-							Name: "golang",
-							Tag:  "latest",
-						},
-						Position:    0,
-						Path:        "docker-compose.yml",
-						ServiceName: "anothersvc",
-					},
-				},
-				{
-					ComposefileImage: &parse.ComposefileImage{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: busyboxLatestSHA,
-						},
-						Position:    1,
-						Path:        "docker-compose.yml",
-						ServiceName: "svc",
-					},
-				},
-				{
-					KubernetesfileImage: &parse.KubernetesfileImage{
-						Image: &parse.Image{
-							Name: "busybox",
-							Tag:  "latest",
-						},
-						ContainerName: "busybox",
-						ImagePosition: 1,
-						Path:          "pod.yml",
-					},
-				},
-				{
-					KubernetesfileImage: &parse.KubernetesfileImage{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: golangLatestSHA,
-						},
-						ContainerName: "golang",
-						ImagePosition: 0,
-						Path:          "pod.yml",
-					},
-				},
+			Images: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "redis", "latest", "",
+					map[string]interface{}{
+						"position": 0,
+						"path":     "Dockerfile",
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Dockerfile, "redis", "latest",
+					testutils.RedisLatestSHA, map[string]interface{}{
+						"position": 2,
+						"path":     "Dockerfile",
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Dockerfile, "busybox", "latest", "",
+					map[string]interface{}{
+						"position": 1,
+						"path":     "Dockerfile",
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"position":    0,
+						"path":        "docker-compose.yml",
+						"serviceName": "svc",
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Composefile, "golang", "latest", "",
+					map[string]interface{}{
+						"position":    0,
+						"path":        "docker-compose.yml",
+						"serviceName": "anothersvc",
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Kubernetesfile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":          "pod.yml",
+						"containerName": "busybox",
+						"docPosition":   0,
+						"imagePosition": 1,
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Kubernetesfile, "golang", "latest",
+					testutils.GolangLatestSHA, map[string]interface{}{
+						"path":          "pod.yml",
+						"containerName": "golang",
+						"docPosition":   0,
+						"imagePosition": 0,
+					}, nil,
+				),
 			},
-			Expected: []*generate.AnyImage{
-				{
-					DockerfileImage: &parse.DockerfileImage{
-						Image: &parse.Image{
-							Name:   "redis",
-							Tag:    "latest",
-							Digest: redisLatestSHA,
-						},
-						Position: 0,
-						Path:     "Dockerfile",
-					},
-				},
-				{
-					DockerfileImage: &parse.DockerfileImage{
-						Image: &parse.Image{
-							Name:   "redis",
-							Tag:    "latest",
-							Digest: redisLatestSHA,
-						},
-						Position: 2,
-						Path:     "Dockerfile",
-					},
-				},
-				{
-					DockerfileImage: &parse.DockerfileImage{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: busyboxLatestSHA,
-						},
-						Position: 1,
-						Path:     "Dockerfile",
-					},
-				},
-				{
-					ComposefileImage: &parse.ComposefileImage{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: busyboxLatestSHA,
-						},
-						Position:    0,
-						Path:        "docker-compose.yml",
-						ServiceName: "svc",
-					},
-				},
-				{
-					ComposefileImage: &parse.ComposefileImage{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: golangLatestSHA,
-						},
-						Position:    0,
-						Path:        "docker-compose.yml",
-						ServiceName: "anothersvc",
-					},
-				},
-				{
-					ComposefileImage: &parse.ComposefileImage{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: busyboxLatestSHA,
-						},
-						Position:    1,
-						Path:        "docker-compose.yml",
-						ServiceName: "svc",
-					},
-				},
-				{
-					KubernetesfileImage: &parse.KubernetesfileImage{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: busyboxLatestSHA,
-						},
-						ContainerName: "busybox",
-						ImagePosition: 1,
-						Path:          "pod.yml",
-					},
-				},
-				{
-					KubernetesfileImage: &parse.KubernetesfileImage{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: golangLatestSHA,
-						},
-						ContainerName: "golang",
-						ImagePosition: 0,
-						Path:          "pod.yml",
-					},
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "redis", "latest",
+					testutils.RedisLatestSHA, map[string]interface{}{
+						"position": 0,
+						"path":     "Dockerfile",
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Dockerfile, "redis", "latest",
+					testutils.RedisLatestSHA, map[string]interface{}{
+						"position": 2,
+						"path":     "Dockerfile",
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Dockerfile, "busybox", "latest",
+					testutils.BusyboxLatestSHA, map[string]interface{}{
+						"position": 1,
+						"path":     "Dockerfile",
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest",
+					testutils.BusyboxLatestSHA, map[string]interface{}{
+						"position":    0,
+						"path":        "docker-compose.yml",
+						"serviceName": "svc",
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Composefile, "golang", "latest",
+					testutils.GolangLatestSHA, map[string]interface{}{
+						"position":    0,
+						"path":        "docker-compose.yml",
+						"serviceName": "anothersvc",
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Kubernetesfile, "busybox", "latest",
+					testutils.BusyboxLatestSHA, map[string]interface{}{
+						"path":          "pod.yml",
+						"containerName": "busybox",
+						"docPosition":   0,
+						"imagePosition": 1,
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Kubernetesfile, "golang", "latest",
+					testutils.GolangLatestSHA, map[string]interface{}{
+						"path":          "pod.yml",
+						"containerName": "golang",
+						"docPosition":   0,
+						"imagePosition": 0,
+					}, nil,
+				),
 			},
 			ExpectedNumNetworkCalls: 3,
 		},
@@ -218,7 +149,7 @@ func TestImageDigestUpdater(t *testing.T) {
 
 			var gotNumNetworkCalls uint64
 
-			server := mockServer(t, &gotNumNetworkCalls)
+			server := testutils.MakeMockServer(t, &gotNumNetworkCalls)
 			defer server.Close()
 
 			client := &registry.HTTPClient{
@@ -234,43 +165,45 @@ func TestImageDigestUpdater(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			innerUpdater, err := update.NewImageDigestUpdater(wrapperManager)
+			innerUpdater, err := update.NewImageDigestUpdater(
+				wrapperManager, false,
+			)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			updater, err := generate.NewImageDigestUpdater(innerUpdater, false)
+			updater, err := generate.NewImageDigestUpdater(innerUpdater)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			done := make(chan struct{})
+			defer close(done)
 
-			anyImages := make(chan *generate.AnyImage, len(test.AnyImages))
+			imagesToUpdate := make(chan parse.IImage, len(test.Images))
 
-			for _, anyImage := range test.AnyImages {
-				anyImages <- anyImage
+			for _, anyImage := range test.Images {
+				imagesToUpdate <- anyImage
 			}
-			close(anyImages)
+			close(imagesToUpdate)
 
-			updatedImages := updater.UpdateDigests(anyImages, done)
+			updatedImages := updater.UpdateDigests(imagesToUpdate, done)
 
-			var got []*generate.AnyImage
+			var got []parse.IImage
 
-			for updatedImage := range updatedImages {
-				if updatedImage.Err != nil {
-					t.Fatal(updatedImage.Err)
+			for image := range updatedImages {
+				if image.Err() != nil {
+					t.Fatal(image.Err())
 				}
 
-				got = append(got, updatedImage)
+				got = append(got, image)
 			}
 
-			sortedExpected := sortAnyImages(t, test.Expected)
-			sortedGot := sortAnyImages(t, got)
+			testutils.SortImages(t, test.Expected)
+			testutils.SortImages(t, got)
 
-			assertAnyImagesEqual(t, sortedExpected, sortedGot)
-
-			assertNumNetworkCallsEqual(
+			testutils.AssertImagesEqual(t, test.Expected, got)
+			testutils.AssertNumNetworkCallsEqual(
 				t, test.ExpectedNumNetworkCalls, gotNumNetworkCalls,
 			)
 		})

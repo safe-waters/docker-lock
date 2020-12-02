@@ -3,7 +3,6 @@ package diff_test
 import (
 	"testing"
 
-	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 	"github.com/safe-waters/docker-lock/pkg/verify/diff"
 )
 
@@ -12,151 +11,81 @@ func TestDockerfileDifferentiator(t *testing.T) {
 
 	tests := []struct {
 		Name        string
-		Existing    map[string][]*parse.DockerfileImage
-		New         map[string][]*parse.DockerfileImage
+		Existing    map[string]interface{}
+		New         map[string]interface{}
 		ExcludeTags bool
 		ShouldFail  bool
 	}{
 		{
-			Name: "Different Number Of Paths",
-			Existing: map[string][]*parse.DockerfileImage{
-				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-					},
-				},
-				"Dockerfile1": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-					},
-				},
+			Name: "Different Name",
+			Existing: map[string]interface{}{
+				"name":   "busybox",
+				"tag":    "latest",
+				"digest": "busybox",
 			},
-			New: map[string][]*parse.DockerfileImage{
-				"Dockerfile1": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-					},
-				},
+			New: map[string]interface{}{
+				"name":   "redis",
+				"tag":    "latest",
+				"digest": "busybox",
 			},
 			ShouldFail: true,
 		},
 		{
-			Name: "Different Paths",
-			Existing: map[string][]*parse.DockerfileImage{
-				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-					},
-				},
+			Name: "Different Tag",
+			Existing: map[string]interface{}{
+				"name":   "busybox",
+				"tag":    "latest",
+				"digest": "busybox",
 			},
-			New: map[string][]*parse.DockerfileImage{
-				"Dockerfile1": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-					},
-				},
+			New: map[string]interface{}{
+				"name":   "busybox",
+				"tag":    "busybox",
+				"digest": "busybox",
 			},
 			ShouldFail: true,
 		},
 		{
-			Name: "Different Images",
-			Existing: map[string][]*parse.DockerfileImage{
-				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-					},
-				},
+			Name: "Different Digest",
+			Existing: map[string]interface{}{
+				"name":   "busybox",
+				"tag":    "latest",
+				"digest": "busybox",
 			},
-			New: map[string][]*parse.DockerfileImage{
-				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "notbusybox",
-							Digest: "busybox",
-						},
-					},
-				},
+			New: map[string]interface{}{
+				"name":   "busybox",
+				"tag":    "latest",
+				"digest": "unknown",
 			},
 			ShouldFail: true,
 		},
 		{
 			Name: "Exclude Tags",
-			Existing: map[string][]*parse.DockerfileImage{
-				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-					},
-				},
+			Existing: map[string]interface{}{
+				"name":   "busybox",
+				"tag":    "latest",
+				"digest": "busybox",
 			},
-			New: map[string][]*parse.DockerfileImage{
-				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "notbusybox",
-							Digest: "busybox",
-						},
-					},
-				},
+			New: map[string]interface{}{
+				"name":   "busybox",
+				"tag":    "unknown",
+				"digest": "busybox",
 			},
 			ExcludeTags: true,
-		},
-		{
-			Name: "Nil",
+			ShouldFail:  false,
 		},
 		{
 			Name: "Normal",
-			Existing: map[string][]*parse.DockerfileImage{
-				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-					},
-				},
+			Existing: map[string]interface{}{
+				"name":   "busybox",
+				"tag":    "latest",
+				"digest": "busybox",
 			},
-			New: map[string][]*parse.DockerfileImage{
-				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-					},
-				},
+			New: map[string]interface{}{
+				"name":   "busybox",
+				"tag":    "latest",
+				"digest": "busybox",
 			},
+			ShouldFail: false,
 		},
 	}
 
@@ -166,20 +95,8 @@ func TestDockerfileDifferentiator(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			differentiator := &diff.DockerfileDifferentiator{
-				ExcludeTags: test.ExcludeTags,
-			}
-
-			done := make(chan struct{})
-			defer close(done)
-
-			errCh := differentiator.Differentiate(
-				test.Existing,
-				test.New,
-				done,
-			)
-
-			err := <-errCh
+			differentiator := diff.NewDockerfileDifferentiator(test.ExcludeTags)
+			err := differentiator.DifferentiateImage(test.Existing, test.New)
 
 			if test.ShouldFail {
 				if err == nil {

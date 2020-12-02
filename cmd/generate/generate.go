@@ -130,7 +130,7 @@ func NewGenerateCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 func SetupGenerator(
 	client *registry.HTTPClient,
 	flags *Flags,
-) (*generate.Generator, error) {
+) (generate.IGenerator, error) {
 	if err := ensureFlagsNotNil(flags); err != nil {
 		return nil, err
 	}
@@ -156,7 +156,12 @@ func SetupGenerator(
 		return nil, err
 	}
 
-	generator, err := generate.NewGenerator(collector, parser, updater)
+	sorter, err := DefaultImageFormatter(flags)
+	if err != nil {
+		return nil, err
+	}
+
+	generator, err := generate.NewGenerator(collector, parser, updater, sorter)
 	if err != nil {
 		return nil, err
 	}

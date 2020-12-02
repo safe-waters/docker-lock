@@ -7,28 +7,27 @@ import (
 	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
 )
 
-// Renamer renames written paths to their original file paths.
-type Renamer struct{}
+type renamer struct{}
 
-// IRenamer provides an interface for Renamer's exported methods.
-type IRenamer interface {
-	RenameFiles(writtenPaths <-chan *write.WrittenPath) error
+// NewRenamer returns an IRenamer.
+func NewRenamer() IRenamer {
+	return &renamer{}
 }
 
-// RenameFiles renames written paths to their original file paths.
-func (r *Renamer) RenameFiles(
-	writtenPaths <-chan *write.WrittenPath,
+// RenameFiles renames new paths in IWrittenPaths to their original paths.
+func (r *renamer) RenameFiles(
+	writtenPaths <-chan write.IWrittenPath,
 ) error {
 	if writtenPaths == nil {
 		return nil
 	}
 
-	var allWrittenPaths []*write.WrittenPath // nolint: prealloc
+	var allWrittenPaths []write.IWrittenPath // nolint: prealloc
 
 	// Ensure all files can be rewritten before attempting to rename
 	for writtenPath := range writtenPaths {
-		if writtenPath.Err != nil {
-			return writtenPath.Err
+		if writtenPath.Err() != nil {
+			return writtenPath.Err()
 		}
 
 		allWrittenPaths = append(allWrittenPaths, writtenPath)
@@ -54,7 +53,7 @@ func (r *Renamer) RenameFiles(
 			defer waitGroup.Done()
 
 			if err := os.Rename(
-				writtenPath.Path, writtenPath.OriginalPath,
+				writtenPath.NewPath(), writtenPath.OriginalPath(),
 			); err != nil {
 				select {
 				case <-done:

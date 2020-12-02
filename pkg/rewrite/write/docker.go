@@ -1,4 +1,3 @@
-// Package write provides functionality to write files with image digests.
 package write
 
 import (
@@ -11,42 +10,36 @@ import (
 
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 )
 
-// DockerfileWriter contains information for writing new Dockerfiles.
-type DockerfileWriter struct {
-	ExcludeTags bool
-	Directory   string
+type dockerfileWriter struct {
+	kind        kind.Kind
+	excludeTags bool
+	directory   string
 }
 
-// WrittenPath contains information linking a newly written file and its
-// original.
-type WrittenPath struct {
-	OriginalPath string
-	Path         string
-	Err          error
+// NewDockerfileWriter returns an IWriter for Dockerfiles.
+func NewDockerfileWriter(excludeTags bool, directory string) IWriter {
+	return &dockerfileWriter{
+		kind:        kind.Dockerfile,
+		excludeTags: excludeTags,
+		directory:   directory,
+	}
 }
 
-// IDockerfileWriter provides an interface for DockerfileWriter's exported
-// methods.
-type IDockerfileWriter interface {
-	WriteFiles(
-		pathImages map[string][]*parse.DockerfileImage,
-		done <-chan struct{},
-	) <-chan *WrittenPath
+// Kind is a getter for the kind.
+func (d *dockerfileWriter) Kind() kind.Kind {
+	return d.kind
 }
 
 // WriteFiles writes new Dockerfiles given the paths of the original Dockerfiles
 // and new images that should replace the exsting ones.
-func (d *DockerfileWriter) WriteFiles( // nolint: dupl
-	pathImages map[string][]*parse.DockerfileImage,
+func (d *dockerfileWriter) WriteFiles( // nolint: dupl
+	pathImages map[string][]interface{},
 	done <-chan struct{},
-) <-chan *WrittenPath {
-	if len(pathImages) == 0 {
-		return nil
-	}
-
-	writtenPaths := make(chan *WrittenPath)
+) <-chan IWrittenPath {
+	writtenPaths := make(chan IWrittenPath)
 
 	var waitGroup sync.WaitGroup
 
@@ -68,7 +61,7 @@ func (d *DockerfileWriter) WriteFiles( // nolint: dupl
 				if err != nil {
 					select {
 					case <-done:
-					case writtenPaths <- &WrittenPath{Err: err}:
+					case writtenPaths <- NewWrittenPath("", "", err):
 					}
 
 					return
@@ -77,10 +70,7 @@ func (d *DockerfileWriter) WriteFiles( // nolint: dupl
 				select {
 				case <-done:
 					return
-				case writtenPaths <- &WrittenPath{
-					OriginalPath: path,
-					Path:         writtenPath,
-				}:
+				case writtenPaths <- NewWrittenPath(path, writtenPath, nil):
 				}
 			}()
 		}
@@ -94,9 +84,9 @@ func (d *DockerfileWriter) WriteFiles( // nolint: dupl
 	return writtenPaths
 }
 
-func (d *DockerfileWriter) writeFile(
+func (d *dockerfileWriter) writeFile(
 	path string,
-	images []*parse.DockerfileImage,
+	images []interface{},
 ) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -109,15 +99,13 @@ func (d *DockerfileWriter) writeFile(
 		return "", err
 	}
 
-	stageNames := map[string]bool{}
-
-	var imageIndex int
-
 	const maxNumFields = 3
 
 	var (
 		outputBuffer bytes.Buffer
 		lastEndLine  int
+		imageIndex   int
+		stageNames   = map[string]bool{}
 	)
 
 	for _, child := range loadedDockerfile.AST.Children {
@@ -143,9 +131,17 @@ func (d *DockerfileWriter) writeFile(
 					)
 				}
 
-				replacementImageLine := convertImageToImageLine(
-					images[imageIndex].Image, d.ExcludeTags,
-				)
+				image := images[imageIndex].(map[string]interface{})
+
+				tag := image["tag"].(string)
+				if d.excludeTags {
+					tag = ""
+				}
+
+				replacementImageLine := parse.NewImage(
+					kind.Dockerfile, image["name"].(string), tag,
+					image["digest"].(string), nil, nil,
+				).ImageLine()
 
 				raw[0] = replacementImageLine
 				imageIndex++
@@ -188,7 +184,7 @@ func (d *DockerfileWriter) writeFile(
 	replacer := strings.NewReplacer("/", "-", "\\", "-")
 	tempPath := replacer.Replace(fmt.Sprintf("%s-*", path))
 
-	writtenFile, err := ioutil.TempFile(d.Directory, tempPath)
+	writtenFile, err := ioutil.TempFile(d.directory, tempPath)
 	if err != nil {
 		return "", err
 	}
@@ -201,7 +197,7 @@ func (d *DockerfileWriter) writeFile(
 	return writtenFile.Name(), err
 }
 
-func (d *DockerfileWriter) formatASTLine(
+func (d *dockerfileWriter) formatASTLine(
 	child *parser.Node, raw []string,
 ) string {
 	line := []string{strings.ToUpper(child.Value)}
@@ -212,18 +208,4 @@ func (d *DockerfileWriter) formatASTLine(
 	line = append(line, raw...)
 
 	return strings.Join(line, " ")
-}
-
-func convertImageToImageLine(image *parse.Image, excludeTags bool) string {
-	imageLine := image.Name
-
-	if image.Tag != "" && !excludeTags {
-		imageLine = fmt.Sprintf("%s:%s", imageLine, image.Tag)
-	}
-
-	if image.Digest != "" {
-		imageLine = fmt.Sprintf("%s@sha256:%s", imageLine, image.Digest)
-	}
-
-	return imageLine
 }

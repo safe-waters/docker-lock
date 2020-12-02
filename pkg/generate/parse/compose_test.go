@@ -5,7 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/safe-waters/docker-lock/internal/testutils"
+	"github.com/safe-waters/docker-lock/pkg/generate/collect"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 )
 
 const composefileImageParserTestDir = "composefileParser-tests"
@@ -21,7 +24,7 @@ func TestComposefileImageParser(t *testing.T) {
 		ComposefileContents  [][]byte
 		DockerfilePaths      []string
 		DockerfileContents   [][]byte
-		Expected             []*parse.ComposefileImage
+		Expected             []parse.IImage
 	}{
 		{
 			Name:             "Image",
@@ -34,15 +37,15 @@ services:
     image: busybox
 `),
 			},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					Path:        "docker-compose.yml",
-					ServiceName: "svc",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc",
+					}, nil,
+				),
 			},
 		},
 		{
@@ -56,15 +59,15 @@ services:
     image: scratch
 `),
 			},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "scratch",
-						Tag:  "",
-					},
-					Path:        "docker-compose.yml",
-					ServiceName: "svc",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "scratch", "", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc",
+					}, nil,
+				),
 			},
 		},
 		{
@@ -81,16 +84,18 @@ services:
 			},
 			DockerfilePaths:    []string{filepath.Join("build", "Dockerfile")},
 			DockerfileContents: [][]byte{[]byte(`FROM busybox`)},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					DockerfilePath: filepath.Join("build", "Dockerfile"),
-					Path:           "docker-compose.yml",
-					ServiceName:    "svc",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc",
+						"dockerfilePath": filepath.Join(
+							"build", "Dockerfile",
+						),
+					}, nil,
+				),
 			},
 		},
 		{
@@ -110,16 +115,18 @@ services:
 				filepath.Join("dockerfile", "Dockerfile"),
 			},
 			DockerfileContents: [][]byte{[]byte(`FROM busybox`)},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					DockerfilePath: filepath.Join("dockerfile", "Dockerfile"),
-					Path:           "docker-compose.yml",
-					ServiceName:    "svc",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc",
+						"dockerfilePath": filepath.Join(
+							"dockerfile", "Dockerfile",
+						),
+					}, nil,
+				),
 			},
 		},
 		{
@@ -140,16 +147,17 @@ services:
 				filepath.Join("dockerfile", "Dockerfile"),
 			},
 			DockerfileContents: [][]byte{[]byte(`FROM busybox`)},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					DockerfilePath: filepath.Join("dockerfile", "Dockerfile"),
-					Path:           "docker-compose.yml",
-					ServiceName:    "svc",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc",
+						"dockerfilePath": filepath.Join(
+							"dockerfile", "Dockerfile",
+						),
+					}, nil),
 			},
 		},
 		{
@@ -172,16 +180,17 @@ services:
 				filepath.Join("dockerfile", "Dockerfile"),
 			},
 			DockerfileContents: [][]byte{[]byte(`FROM busybox`)},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					DockerfilePath: filepath.Join("dockerfile", "Dockerfile"),
-					Path:           "docker-compose.yml",
-					ServiceName:    "svc",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc",
+						"dockerfilePath": filepath.Join(
+							"dockerfile", "Dockerfile",
+						),
+					}, nil),
 			},
 		},
 		{
@@ -200,15 +209,15 @@ services:
     image: ${DOT_ENV_IMAGE}
 `),
 			},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					Path:        "docker-compose.yml",
-					ServiceName: "svc",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc",
+					}, nil,
+				),
 			},
 		},
 		{
@@ -230,15 +239,15 @@ services:
     image: ${OS_ENV_OVERRIDES_DOT_ENV_IMAGE}
 `),
 			},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					Path:        "docker-compose.yml",
-					ServiceName: "svc",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc",
+					}, nil,
+				),
 			},
 		},
 		{
@@ -266,16 +275,16 @@ services:
 ARG DOT_ENV_ARGS_ENV_LIST_IMAGE
 FROM ${DOT_ENV_ARGS_ENV_LIST_IMAGE}
 `)},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					DockerfilePath: "Dockerfile",
-					Path:           "docker-compose.yml",
-					ServiceName:    "svc",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc",
+						"dockerfilePath":  "Dockerfile",
+					}, nil,
+				),
 			},
 		},
 		{
@@ -301,16 +310,16 @@ services:
 ARG ARGS_ENV_LIST_IMAGE
 FROM ${ARGS_ENV_LIST_IMAGE}
 `)},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					DockerfilePath: "Dockerfile",
-					Path:           "docker-compose.yml",
-					ServiceName:    "svc",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc",
+						"dockerfilePath":  "Dockerfile",
+					}, nil,
+				),
 			},
 		},
 		{
@@ -333,16 +342,16 @@ services:
 ARG IMAGE
 FROM ${IMAGE}
 `)},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					DockerfilePath: "Dockerfile",
-					Path:           "docker-compose.yml",
-					ServiceName:    "svc",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc",
+						"dockerfilePath":  "Dockerfile",
+					}, nil,
+				),
 			},
 		},
 		{
@@ -365,16 +374,16 @@ services:
 ARG IMAGE
 FROM ${IMAGE}
 `)},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					DockerfilePath: "Dockerfile",
-					Path:           "docker-compose.yml",
-					ServiceName:    "svc",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc",
+						"dockerfilePath":  "Dockerfile",
+					}, nil,
+				),
 			},
 		},
 		{
@@ -397,16 +406,16 @@ services:
 ARG IMAGE=ubuntu
 FROM ${IMAGE}
 `)},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					DockerfilePath: "Dockerfile",
-					Path:           "docker-compose.yml",
-					ServiceName:    "svc",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc",
+						"dockerfilePath":  "Dockerfile",
+					}, nil,
+				),
 			},
 		},
 		{
@@ -427,16 +436,16 @@ services:
 ARG IMAGE=busybox
 FROM ${IMAGE}
 `)},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					DockerfilePath: "Dockerfile",
-					Path:           "docker-compose.yml",
-					ServiceName:    "svc",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc",
+						"dockerfilePath":  "Dockerfile",
+					}, nil,
+				),
 			},
 		},
 		{
@@ -467,25 +476,28 @@ services:
 			DockerfileContents: [][]byte{
 				[]byte(`FROM busybox`), []byte(`FROM busybox`),
 			},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					DockerfilePath: filepath.Join("one", "Dockerfile"),
-					Path:           "docker-compose-one.yml",
-					ServiceName:    "svc-one",
-				},
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					DockerfilePath: filepath.Join("two", "Dockerfile"),
-					Path:           "docker-compose-two.yml",
-					ServiceName:    "svc-two",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose-one.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc-one",
+						"dockerfilePath": filepath.Join(
+							"one", "Dockerfile",
+						),
+					}, nil,
+				),
+				parse.NewImage(kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose-two.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc-two",
+						"dockerfilePath": filepath.Join(
+							"two", "Dockerfile",
+						),
+					}, nil,
+				),
 			},
 		},
 		{
@@ -510,25 +522,27 @@ services:
 			DockerfileContents: [][]byte{
 				[]byte(`FROM busybox`), []byte(`FROM busybox`),
 			},
-			Expected: []*parse.ComposefileImage{
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					DockerfilePath: filepath.Join("one", "Dockerfile"),
-					Path:           "docker-compose.yml",
-					ServiceName:    "svc-one",
-				},
-				{
-					Image: &parse.Image{
-						Name: "busybox",
-						Tag:  "latest",
-					},
-					DockerfilePath: filepath.Join("two", "Dockerfile"),
-					Path:           "docker-compose.yml",
-					ServiceName:    "svc-two",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc-one",
+						"dockerfilePath": filepath.Join(
+							"one", "Dockerfile",
+						),
+					}, nil,
+				),
+				parse.NewImage(kind.Composefile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":            "docker-compose.yml",
+						"servicePosition": 0,
+						"serviceName":     "svc-two",
+						"dockerfilePath": filepath.Join(
+							"two", "Dockerfile",
+						),
+					}, nil,
+				),
 			},
 		},
 	}
@@ -539,17 +553,17 @@ services:
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := makeTempDir(t, composefileImageParserTestDir)
+			tempDir := testutils.MakeTempDir(t, composefileImageParserTestDir)
 			defer os.RemoveAll(tempDir)
 
 			for k, v := range test.EnvironmentVariables {
 				os.Setenv(k, v)
 			}
 
-			makeParentDirsInTempDirFromFilePaths(
+			testutils.MakeParentDirsInTempDirFromFilePaths(
 				t, tempDir, test.DockerfilePaths,
 			)
-			makeParentDirsInTempDirFromFilePaths(
+			testutils.MakeParentDirsInTempDirFromFilePaths(
 				t, tempDir, test.ComposefilePaths,
 			)
 			if len(test.DotEnvContents) != 0 {
@@ -559,61 +573,66 @@ services:
 					dotEnvFiles[i] = ".env"
 				}
 
-				_ = writeFilesToTempDir(
+				_ = testutils.WriteFilesToTempDir(
 					t, tempDir, dotEnvFiles, test.DotEnvContents,
 				)
 			}
 
-			_ = writeFilesToTempDir(
+			_ = testutils.WriteFilesToTempDir(
 				t, tempDir, test.DockerfilePaths, test.DockerfileContents,
 			)
-			pathsToParse := writeFilesToTempDir(
+			pathsToParse := testutils.WriteFilesToTempDir(
 				t, tempDir, test.ComposefilePaths, test.ComposefileContents,
 			)
 
-			pathsToParseCh := make(chan string, len(pathsToParse))
+			pathsToParseCh := make(chan collect.IPath, len(pathsToParse))
 			for _, path := range pathsToParse {
-				pathsToParseCh <- path
+				pathsToParseCh <- collect.NewPath(kind.Composefile, path, nil)
 			}
 			close(pathsToParseCh)
 
 			done := make(chan struct{})
+			defer close(done)
 
-			composefileParser, err := parse.NewComposefileImageParser(
-				&parse.DockerfileImageParser{},
+			parser, err := parse.NewComposefileImageParser(
+				parse.NewDockerfileImageParser(),
 			)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			composefileImages := composefileParser.ParseFiles(
+			images := parser.ParseFiles(
 				pathsToParseCh, done,
 			)
 
-			var got []*parse.ComposefileImage
+			var got []parse.IImage
 
-			for composefileImage := range composefileImages {
-				if composefileImage.Err != nil {
-					close(done)
-					t.Fatal(composefileImage.Err)
+			for image := range images {
+				if image.Err() != nil {
+					t.Fatal(image.Err())
 				}
-				got = append(got, composefileImage)
+				got = append(got, image)
 			}
 
-			for _, composefileImage := range test.Expected {
-				composefileImage.Path = filepath.Join(
-					tempDir, composefileImage.Path,
+			for _, image := range test.Expected {
+				metadata := image.Metadata()
+
+				metadata["path"] = filepath.Join(
+					tempDir, image.Metadata()["path"].(string),
 				)
 
-				if composefileImage.DockerfilePath != "" {
-					composefileImage.DockerfilePath = filepath.Join(
-						tempDir, composefileImage.DockerfilePath,
+				if dockerfilePath, ok := metadata["dockerfilePath"]; ok {
+					metadata["dockerfilePath"] = filepath.Join(
+						tempDir, dockerfilePath.(string),
 					)
 				}
-			}
-			sortComposefileImageParserResults(t, got)
 
-			assertComposefileImagesEqual(t, test.Expected, got)
+				image.SetMetadata(metadata)
+			}
+
+			testutils.SortComposefileImages(t, got)
+
+			testutils.AssertImagesEqual(t, test.Expected, got)
 		})
 	}
 }

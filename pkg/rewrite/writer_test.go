@@ -6,7 +6,8 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/internal/testutils"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 	"github.com/safe-waters/docker-lock/pkg/rewrite"
 	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
 )
@@ -15,47 +16,41 @@ func TestWriter(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		Name          string
-		AnyPathImages *rewrite.AnyPathImages
-		Contents      [][]byte
-		Expected      [][]byte
-		ShouldFail    bool
+		Name       string
+		Lockfile   map[kind.Kind]map[string][]interface{}
+		Contents   [][]byte
+		Expected   [][]byte
+		ShouldFail bool
 	}{
 		{
 			Name: "Dockerfile, Composefile, And Kubernetesfile",
-			AnyPathImages: &rewrite.AnyPathImages{
-				DockerfilePathImages: map[string][]*parse.DockerfileImage{
+			Lockfile: map[kind.Kind]map[string][]interface{}{
+				kind.Dockerfile: {
 					"Dockerfile": {
-						{
-							Image: &parse.Image{
-								Name:   "golang",
-								Tag:    "latest",
-								Digest: "golang",
-							},
+						map[string]interface{}{
+							"name":   "golang",
+							"tag":    "latest",
+							"digest": "golang",
 						},
 					},
 				},
-				ComposefilePathImages: map[string][]*parse.ComposefileImage{
+				kind.Composefile: {
 					"docker-compose.yml": {
-						{
-							Image: &parse.Image{
-								Name:   "busybox",
-								Tag:    "latest",
-								Digest: "busybox",
-							},
-							ServiceName: "svc-compose",
+						map[string]interface{}{
+							"name":    "busybox",
+							"tag":     "latest",
+							"digest":  "busybox",
+							"service": "svc-compose",
 						},
 					},
 				},
-				KubernetesfilePathImages: map[string][]*parse.KubernetesfileImage{ // nolint: lll
+				kind.Kubernetesfile: {
 					"pod.yml": {
-						{
-							Image: &parse.Image{
-								Name:   "redis",
-								Tag:    "latest",
-								Digest: "redis",
-							},
-							ContainerName: "redis",
+						map[string]interface{}{
+							"name":      "redis",
+							"tag":       "latest",
+							"digest":    "redis",
+							"container": "redis",
 						},
 					},
 				},
@@ -120,23 +115,26 @@ spec:
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := makeTempDirInCurrentDir(t)
+			tempDir := testutils.MakeTempDirInCurrentDir(t)
 			defer os.RemoveAll(tempDir)
 
 			uniquePathsToWrite := map[string]struct{}{}
 
-			tempAnyPaths := &rewrite.AnyPathImages{
-				DockerfilePathImages:     map[string][]*parse.DockerfileImage{},
-				ComposefilePathImages:    map[string][]*parse.ComposefileImage{},    // nolint: lll
-				KubernetesfilePathImages: map[string][]*parse.KubernetesfileImage{}, // nolint: lll
-			}
+			lockfileWithTempDir := map[kind.Kind]map[string][]interface{}{}
 
-			for composefilePath, images := range test.AnyPathImages.ComposefilePathImages { // nolint: lll
+			lockfileWithTempDir[kind.Dockerfile] = map[string][]interface{}{}
+			lockfileWithTempDir[kind.Kubernetesfile] = map[string][]interface{}{} // nolint: lll
+			lockfileWithTempDir[kind.Composefile] = map[string][]interface{}{}
+
+			for composefilePath, images := range test.Lockfile[kind.Composefile] { // nolint: lll
 				for _, image := range images {
-					if image.DockerfilePath != "" {
-						uniquePathsToWrite[image.DockerfilePath] = struct{}{}
-						image.DockerfilePath = filepath.Join(
-							tempDir, image.DockerfilePath,
+					image := image.(map[string]interface{})
+					dockerfilePath := image["dockerfile"]
+					if dockerfilePath != nil {
+						dockerfilePath := dockerfilePath.(string)
+						uniquePathsToWrite[dockerfilePath] = struct{}{}
+						image["dockerfile"] = filepath.Join(
+							tempDir, dockerfilePath,
 						)
 					}
 				}
@@ -144,21 +142,21 @@ spec:
 				uniquePathsToWrite[composefilePath] = struct{}{}
 
 				composefilePath = filepath.Join(tempDir, composefilePath)
-				tempAnyPaths.ComposefilePathImages[composefilePath] = images
+				lockfileWithTempDir[kind.Composefile][composefilePath] = images
 			}
 
-			for dockerfilePath, images := range test.AnyPathImages.DockerfilePathImages { // nolint: lll
+			for dockerfilePath, images := range test.Lockfile[kind.Dockerfile] {
 				uniquePathsToWrite[dockerfilePath] = struct{}{}
 
 				dockerfilePath = filepath.Join(tempDir, dockerfilePath)
-				tempAnyPaths.DockerfilePathImages[dockerfilePath] = images
+				lockfileWithTempDir[kind.Dockerfile][dockerfilePath] = images
 			}
 
-			for kubernetesfilePath, images := range test.AnyPathImages.KubernetesfilePathImages { // nolint: lll
+			for kubernetesfilePath, images := range test.Lockfile[kind.Kubernetesfile] { // nolint: lll
 				uniquePathsToWrite[kubernetesfilePath] = struct{}{}
 
 				kubernetesfilePath = filepath.Join(tempDir, kubernetesfilePath)
-				tempAnyPaths.KubernetesfilePathImages[kubernetesfilePath] = images // nolint: lll
+				lockfileWithTempDir[kind.Kubernetesfile][kubernetesfilePath] = images // nolint: lll
 			}
 
 			var pathsToWrite []string
@@ -168,20 +166,20 @@ spec:
 
 			sort.Strings(pathsToWrite)
 
-			writeFilesToTempDir(
+			testutils.WriteFilesToTempDir(
 				t, tempDir, pathsToWrite, test.Contents,
 			)
 
-			dockerfileWriter := &write.DockerfileWriter{
-				Directory: tempDir,
+			dockerfileWriter := write.NewDockerfileWriter(false, tempDir)
+			composefileWriter, err := write.NewComposefileWriter(
+				dockerfileWriter, false, tempDir,
+			)
+			if err != nil {
+				t.Fatal(err)
 			}
-			composefileWriter := &write.ComposefileWriter{
-				DockerfileWriter: dockerfileWriter,
-				Directory:        tempDir,
-			}
-			kubernetesfileWriter := &write.KubernetesfileWriter{
-				Directory: tempDir,
-			}
+			kubernetesfileWriter := write.NewKubernetesfileWriter(
+				false, tempDir,
+			)
 
 			writer, err := rewrite.NewWriter(
 				dockerfileWriter, composefileWriter, kubernetesfileWriter,
@@ -191,15 +189,17 @@ spec:
 			}
 
 			done := make(chan struct{})
-			writtenPathResults := writer.WriteFiles(tempAnyPaths, done)
+			defer close(done)
+
+			writtenPathResults := writer.WriteFiles(lockfileWithTempDir, done)
 
 			var got []string
 
 			for writtenPath := range writtenPathResults {
-				if writtenPath.Err != nil {
-					err = writtenPath.Err
+				if writtenPath.Err() != nil {
+					err = writtenPath.Err()
 				}
-				got = append(got, writtenPath.Path)
+				got = append(got, writtenPath.NewPath())
 			}
 
 			if test.ShouldFail {
@@ -216,7 +216,7 @@ spec:
 
 			sort.Strings(got)
 
-			assertWrittenFiles(t, test.Expected, got)
+			testutils.AssertWrittenFilesEqual(t, test.Expected, got)
 		})
 	}
 }

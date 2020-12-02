@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/safe-waters/docker-lock/cmd/generate"
+	"github.com/safe-waters/docker-lock/internal/testutils"
 )
 
 func TestFlagsWithSharedNames(t *testing.T) {
@@ -18,7 +19,7 @@ func TestFlagsWithSharedNames(t *testing.T) {
 	}{
 		{
 			Name:       "Absolute Path Base Dir",
-			BaseDir:    getAbsPath(t),
+			BaseDir:    testutils.GetAbsPath(t),
 			Expected:   &generate.FlagsWithSharedNames{},
 			ShouldFail: true,
 		},
@@ -52,7 +53,7 @@ func TestFlagsWithSharedNames(t *testing.T) {
 			Name:    "Absolute Paths",
 			BaseDir: "",
 			Expected: &generate.FlagsWithSharedNames{
-				ManualPaths: []string{getAbsPath(t)},
+				ManualPaths: []string{testutils.GetAbsPath(t)},
 			},
 			ShouldFail: true,
 		},
@@ -61,7 +62,7 @@ func TestFlagsWithSharedNames(t *testing.T) {
 			BaseDir: "",
 			Expected: &generate.FlagsWithSharedNames{
 				Globs: []string{filepath.Join(
-					getAbsPath(t), "**", "Dockerfile"),
+					testutils.GetAbsPath(t), "**", "Dockerfile"),
 				},
 			},
 			ShouldFail: true,
@@ -102,7 +103,7 @@ func TestFlagsWithSharedNames(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			assertFlagsEqual(t, test.Expected, got)
+			testutils.AssertFlagsEqual(t, test.Expected, got)
 		})
 	}
 }
@@ -118,7 +119,7 @@ func TestFlagsWithSharedValues(t *testing.T) {
 		{
 			Name: "Absolute Path Base Dir",
 			Expected: &generate.FlagsWithSharedValues{
-				BaseDir: getAbsPath(t),
+				BaseDir: testutils.GetAbsPath(t),
 			},
 			ShouldFail: true,
 		},
@@ -177,7 +178,7 @@ func TestFlagsWithSharedValues(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			assertFlagsEqual(t, test.Expected, got)
+			testutils.AssertFlagsEqual(t, test.Expected, got)
 		})
 	}
 }
@@ -209,7 +210,7 @@ func TestFlags(t *testing.T) {
 			Expected: &generate.Flags{
 				FlagsWithSharedValues: &generate.FlagsWithSharedValues{},
 				DockerfileFlags: &generate.FlagsWithSharedNames{
-					ManualPaths: []string{getAbsPath(t)},
+					ManualPaths: []string{testutils.GetAbsPath(t)},
 				},
 				ComposefileFlags:    &generate.FlagsWithSharedNames{},
 				KubernetesfileFlags: &generate.FlagsWithSharedNames{},
@@ -222,7 +223,7 @@ func TestFlags(t *testing.T) {
 				FlagsWithSharedValues: &generate.FlagsWithSharedValues{},
 				DockerfileFlags:       &generate.FlagsWithSharedNames{},
 				ComposefileFlags: &generate.FlagsWithSharedNames{
-					ManualPaths: []string{getAbsPath(t)},
+					ManualPaths: []string{testutils.GetAbsPath(t)},
 				},
 				KubernetesfileFlags: &generate.FlagsWithSharedNames{},
 			},
@@ -235,7 +236,7 @@ func TestFlags(t *testing.T) {
 				DockerfileFlags:       &generate.FlagsWithSharedNames{},
 				ComposefileFlags:      &generate.FlagsWithSharedNames{},
 				KubernetesfileFlags: &generate.FlagsWithSharedNames{
-					ManualPaths: []string{getAbsPath(t)},
+					ManualPaths: []string{testutils.GetAbsPath(t)},
 				},
 			},
 			ShouldFail: true,
@@ -300,7 +301,7 @@ func TestFlags(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			assertFlagsEqual(t, test.Expected, got)
+			testutils.AssertFlagsEqual(t, test.Expected, got)
 		})
 	}
 }

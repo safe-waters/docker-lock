@@ -3,7 +3,6 @@ package diff_test
 import (
 	"testing"
 
-	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 	"github.com/safe-waters/docker-lock/pkg/verify/diff"
 )
 
@@ -12,233 +11,125 @@ func TestComposefileDifferentiator(t *testing.T) {
 
 	tests := []struct {
 		Name        string
-		Existing    map[string][]*parse.ComposefileImage
-		New         map[string][]*parse.ComposefileImage
+		Existing    map[string]interface{}
+		New         map[string]interface{}
 		ExcludeTags bool
 		ShouldFail  bool
 	}{
 		{
-			Name: "Different Number Of Paths",
-			Existing: map[string][]*parse.ComposefileImage{
-				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc",
-						DockerfilePath: "Dockerfile",
-					},
-				},
-				"docker-compose1.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc",
-						DockerfilePath: "Dockerfile",
-					},
-				},
+			Name: "Different Name",
+			Existing: map[string]interface{}{
+				"name":    "busybox",
+				"tag":     "latest",
+				"digest":  "busybox",
+				"service": "svc",
 			},
-			New: map[string][]*parse.ComposefileImage{
-				"docker-compose1.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc",
-						DockerfilePath: "Dockerfile",
-					},
-				},
+			New: map[string]interface{}{
+				"name":    "redis",
+				"tag":     "latest",
+				"digest":  "busybox",
+				"service": "svc",
 			},
 			ShouldFail: true,
 		},
 		{
-			Name: "Different Paths",
-			Existing: map[string][]*parse.ComposefileImage{
-				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc",
-						DockerfilePath: "Dockerfile",
-					},
-				},
+			Name: "Different Tag",
+			Existing: map[string]interface{}{
+				"name":    "busybox",
+				"tag":     "latest",
+				"digest":  "busybox",
+				"service": "svc",
 			},
-			New: map[string][]*parse.ComposefileImage{
-				"docker-compose1.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc",
-						DockerfilePath: "Dockerfile",
-					},
-				},
+			New: map[string]interface{}{
+				"name":    "busybox",
+				"tag":     "busybox",
+				"digest":  "busybox",
+				"service": "svc",
 			},
 			ShouldFail: true,
 		},
 		{
-			Name: "Different Images",
-			Existing: map[string][]*parse.ComposefileImage{
-				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc",
-						DockerfilePath: "Dockerfile",
-					},
-				},
+			Name: "Different Digest",
+			Existing: map[string]interface{}{
+				"name":    "busybox",
+				"tag":     "latest",
+				"digest":  "busybox",
+				"service": "svc",
 			},
-			New: map[string][]*parse.ComposefileImage{
-				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "notbusybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc",
-						DockerfilePath: "Dockerfile",
-					},
-				},
+			New: map[string]interface{}{
+				"name":    "busybox",
+				"tag":     "latest",
+				"digest":  "unknown",
+				"service": "svc",
 			},
 			ShouldFail: true,
 		},
 		{
-			Name: "Different Service Names",
-			Existing: map[string][]*parse.ComposefileImage{
-				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc1",
-						DockerfilePath: "Dockerfile",
-					},
-				},
+			Name: "Different Service",
+			Existing: map[string]interface{}{
+				"name":    "busybox",
+				"tag":     "latest",
+				"digest":  "busybox",
+				"service": "svc",
 			},
-			New: map[string][]*parse.ComposefileImage{
-				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc",
-						DockerfilePath: "Dockerfile",
-					},
-				},
+			New: map[string]interface{}{
+				"name":    "busybox",
+				"tag":     "latest",
+				"digest":  "busybox",
+				"service": "svc1",
 			},
 			ShouldFail: true,
 		},
 		{
-			Name: "Different Dockerfile Paths",
-			Existing: map[string][]*parse.ComposefileImage{
-				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc",
-						DockerfilePath: "Dockerfile1",
-					},
-				},
+			Name: "Different Dockerfile",
+			Existing: map[string]interface{}{
+				"name":       "busybox",
+				"tag":        "latest",
+				"digest":     "busybox",
+				"service":    "svc",
+				"dockerfile": "Dockerfile",
 			},
-			New: map[string][]*parse.ComposefileImage{
-				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc",
-						DockerfilePath: "Dockerfile",
-					},
-				},
+			New: map[string]interface{}{
+				"name":       "busybox",
+				"tag":        "latest",
+				"digest":     "busybox",
+				"service":    "svc",
+				"dockerfile": "Dockerfile1",
 			},
 			ShouldFail: true,
 		},
 		{
 			Name: "Exclude Tags",
-			Existing: map[string][]*parse.ComposefileImage{
-				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc",
-						DockerfilePath: "Dockerfile",
-					},
-				},
+			Existing: map[string]interface{}{
+				"name":    "busybox",
+				"tag":     "latest",
+				"digest":  "busybox",
+				"service": "svc",
 			},
-			New: map[string][]*parse.ComposefileImage{
-				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "notbusybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc",
-						DockerfilePath: "Dockerfile",
-					},
-				},
+			New: map[string]interface{}{
+				"name":    "busybox",
+				"tag":     "unknown",
+				"digest":  "busybox",
+				"service": "svc",
 			},
 			ExcludeTags: true,
-		},
-		{
-			Name: "Nil",
+			ShouldFail:  false,
 		},
 		{
 			Name: "Normal",
-			Existing: map[string][]*parse.ComposefileImage{
-				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc",
-						DockerfilePath: "Dockerfile",
-					},
-				},
+			Existing: map[string]interface{}{
+				"name":    "busybox",
+				"tag":     "latest",
+				"digest":  "busybox",
+				"service": "svc",
 			},
-			New: map[string][]*parse.ComposefileImage{
-				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ServiceName:    "svc",
-						DockerfilePath: "Dockerfile",
-					},
-				},
+			New: map[string]interface{}{
+				"name":    "busybox",
+				"tag":     "latest",
+				"digest":  "busybox",
+				"service": "svc",
 			},
+			ShouldFail: false,
 		},
 	}
 
@@ -248,20 +139,10 @@ func TestComposefileDifferentiator(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			differentiator := &diff.ComposefileDifferentiator{
-				ExcludeTags: test.ExcludeTags,
-			}
-
-			done := make(chan struct{})
-			defer close(done)
-
-			errCh := differentiator.Differentiate(
-				test.Existing,
-				test.New,
-				done,
+			differentiator := diff.NewComposefileDifferentiator(
+				test.ExcludeTags,
 			)
-
-			err := <-errCh
+			err := differentiator.DifferentiateImage(test.Existing, test.New)
 
 			if test.ShouldFail {
 				if err == nil {

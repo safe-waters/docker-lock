@@ -9,8 +9,8 @@ import (
 	"os"
 
 	cmd_generate "github.com/safe-waters/docker-lock/cmd/generate"
-	"github.com/safe-waters/docker-lock/pkg/generate"
 	"github.com/safe-waters/docker-lock/pkg/generate/registry"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 	"github.com/safe-waters/docker-lock/pkg/verify"
 	"github.com/safe-waters/docker-lock/pkg/verify/diff"
 	"github.com/spf13/cobra"
@@ -78,7 +78,7 @@ func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 func SetupVerifier(
 	client *registry.HTTPClient,
 	flags *Flags,
-) (*verify.Verifier, error) {
+) (verify.IVerifier, error) {
 	if flags == nil {
 		return nil, errors.New("flags cannot be nil")
 	}
@@ -92,30 +92,30 @@ func SetupVerifier(
 		return nil, err
 	}
 
-	var existingLockfile generate.Lockfile
+	var existingLockfile map[kind.Kind]map[string][]interface{}
 	if err = json.Unmarshal(existingLByt, &existingLockfile); err != nil {
 		return nil, err
 	}
 
-	dockerfilePaths := make([]string, len(existingLockfile.DockerfileImages))
-	composefilePaths := make([]string, len(existingLockfile.ComposefileImages))
+	dockerfilePaths := make([]string, len(existingLockfile[kind.Dockerfile]))
+	composefilePaths := make([]string, len(existingLockfile[kind.Composefile]))
 	kubernetesfilePaths := make(
-		[]string, len(existingLockfile.KubernetesfileImages),
+		[]string, len(existingLockfile[kind.Kubernetesfile]),
 	)
 
 	var i, j, k int
 
-	for p := range existingLockfile.DockerfileImages {
+	for p := range existingLockfile[kind.Dockerfile] {
 		dockerfilePaths[i] = p
 		i++
 	}
 
-	for p := range existingLockfile.ComposefileImages {
+	for p := range existingLockfile[kind.Composefile] {
 		composefilePaths[j] = p
 		j++
 	}
 
-	for p := range existingLockfile.KubernetesfileImages {
+	for p := range existingLockfile[kind.Kubernetesfile] {
 		kubernetesfilePaths[k] = p
 		k++
 	}
@@ -135,19 +135,21 @@ func SetupVerifier(
 		return nil, err
 	}
 
-	dockerfileDifferentiator := &diff.DockerfileDifferentiator{
-		ExcludeTags: flags.ExcludeTags,
-	}
-	composefileDifferentiator := &diff.ComposefileDifferentiator{
-		ExcludeTags: flags.ExcludeTags,
-	}
-	kubernetesfileDifferentiator := &diff.KubernetesfileDifferentiator{
-		ExcludeTags: flags.ExcludeTags,
-	}
+	dockerfileDifferentiator := diff.NewDockerfileDifferentiator(
+		flags.ExcludeTags,
+	)
+
+	composefileDifferentiator := diff.NewComposefileDifferentiator(
+		flags.ExcludeTags,
+	)
+
+	kubernetesfileDifferentiator := diff.NewKubernetesfileDifferentiator(
+		flags.ExcludeTags,
+	)
 
 	return verify.NewVerifier(
-		generator, dockerfileDifferentiator,
-		composefileDifferentiator, kubernetesfileDifferentiator,
+		generator, dockerfileDifferentiator, composefileDifferentiator,
+		kubernetesfileDifferentiator,
 	)
 }
 

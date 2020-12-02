@@ -1,38 +1,20 @@
 package verify
 
 import (
-	"encoding/json"
 	"fmt"
-
-	"github.com/safe-waters/docker-lock/pkg/generate"
 )
 
-// DifferentLockfileError reports differences between the existing Lockfile
-// and one that is newly generated.
-type DifferentLockfileError struct {
-	ExistingLockfile *generate.Lockfile
-	NewLockfile      *generate.Lockfile
+type differentLockfileError struct {
+	existingLockfile []byte
+	newLockfile      []byte
+	err              error
 }
 
-// Error returns the different files, indented as JSON.
-func (d *DifferentLockfileError) Error() string {
-	existingPrettyLockfile, _ := d.jsonPrettyPrint(d.ExistingLockfile)
-	newPrettyLockfile, _ := d.jsonPrettyPrint(d.NewLockfile)
-
+func (d *differentLockfileError) Error() string {
 	return fmt.Sprintf(
-		"new:\n%s\nexisting:\n%s",
-		newPrettyLockfile,
-		existingPrettyLockfile,
+		"existing:\n%s\nnew:\n%s\nmsg: %s",
+		string(d.existingLockfile),
+		string(d.newLockfile),
+		d.err,
 	)
-}
-
-func (d *DifferentLockfileError) jsonPrettyPrint(
-	lockfile *generate.Lockfile,
-) (string, error) {
-	byt, err := json.MarshalIndent(lockfile, "", "\t")
-	if err != nil {
-		return "", err
-	}
-
-	return string(byt), nil
 }

@@ -6,43 +6,34 @@ import (
 	"io/ioutil"
 	"sync"
 
+	"github.com/safe-waters/docker-lock/pkg/generate/collect"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-// KubernetesfileImageParser extracts image values from Kubernetesfiles.
-type KubernetesfileImageParser struct{}
-
-// KubernetesfileImage annotates an image with data about the
-// Kubernetesfile from which it was parsed.
-type KubernetesfileImage struct {
-	*Image
-	ContainerName string `json:"container"`
-	ImagePosition int    `json:"-"`
-	DocPosition   int    `json:"-"`
-	Path          string `json:"-"`
-	Err           error  `json:"-"`
+type kubernetesfileImageParser struct {
+	kind kind.Kind
 }
 
-// IKubernetesfileImageParser provides an interface for
-// KubernetesfileImageParser's exported methods.
-type IKubernetesfileImageParser interface {
-	ParseFiles(
-		paths <-chan string,
-		done <-chan struct{},
-	) <-chan *KubernetesfileImage
-}
-
-// ParseFiles reads Kubernetesfiles to parse all images.
-func (k *KubernetesfileImageParser) ParseFiles(
-	paths <-chan string,
-	done <-chan struct{},
-) <-chan *KubernetesfileImage {
-	if paths == nil {
-		return nil
+// NewComposefileImageParser returns an IImageParser for Kubernetesfiles.
+func NewKubernetesfileImageParser() IKubernetesfileImageParser {
+	return &kubernetesfileImageParser{
+		kind: kind.Kubernetesfile,
 	}
+}
 
-	kubernetesfileImages := make(chan *KubernetesfileImage)
+// Kind is a getter for the kind.
+func (k *kubernetesfileImageParser) Kind() kind.Kind {
+	return k.kind
+}
+
+// ParseFiles parses IImages from Kubernetesfiles.
+func (k *kubernetesfileImageParser) ParseFiles(
+	paths <-chan collect.IPath,
+	done <-chan struct{},
+) <-chan IImage {
+	kubernetesfileImages := make(chan IImage)
 
 	var waitGroup sync.WaitGroup
 
@@ -54,7 +45,7 @@ func (k *KubernetesfileImageParser) ParseFiles(
 		for path := range paths {
 			waitGroup.Add(1)
 
-			go k.parseFile(
+			go k.ParseFile(
 				path, kubernetesfileImages, done, &waitGroup,
 			)
 		}
@@ -68,19 +59,31 @@ func (k *KubernetesfileImageParser) ParseFiles(
 	return kubernetesfileImages
 }
 
-func (k *KubernetesfileImageParser) parseFile(
-	path string,
-	kubernetesfileImages chan<- *KubernetesfileImage,
+// ParseFile parses IImages from a Kubernetesfile.
+func (k *kubernetesfileImageParser) ParseFile(
+	path collect.IPath,
+	kubernetesfileImages chan<- IImage,
 	done <-chan struct{},
 	waitGroup *sync.WaitGroup,
 ) {
 	defer waitGroup.Done()
 
-	byt, err := ioutil.ReadFile(path)
+	if path.Err() != nil {
+		select {
+		case <-done:
+		case kubernetesfileImages <- NewImage(
+			k.kind, "", "", "", nil, path.Err(),
+		):
+		}
+
+		return
+	}
+
+	byt, err := ioutil.ReadFile(path.Val())
 	if err != nil {
 		select {
 		case <-done:
-		case kubernetesfileImages <- &KubernetesfileImage{Err: err}:
+		case kubernetesfileImages <- NewImage(k.kind, "", "", "", nil, err):
 		}
 
 		return
@@ -90,7 +93,7 @@ func (k *KubernetesfileImageParser) parseFile(
 	if err != nil {
 		select {
 		case <-done:
-		case kubernetesfileImages <- &KubernetesfileImage{Err: err}:
+		case kubernetesfileImages <- NewImage(k.kind, "", "", "", nil, err):
 		}
 
 		return
@@ -105,7 +108,9 @@ func (k *KubernetesfileImageParser) parseFile(
 			if err != io.EOF {
 				select {
 				case <-done:
-				case kubernetesfileImages <- &KubernetesfileImage{Err: err}:
+				case kubernetesfileImages <- NewImage(
+					k.kind, "", "", "", nil, err,
+				):
 				}
 
 				return
@@ -122,10 +127,10 @@ func (k *KubernetesfileImageParser) parseFile(
 	}
 }
 
-func (k *KubernetesfileImageParser) parseDoc(
-	path string,
+func (k *kubernetesfileImageParser) parseDoc(
+	path collect.IPath,
 	doc interface{},
-	kubernetesfileImages chan<- *KubernetesfileImage,
+	kubernetesfileImages chan<- IImage,
 	docPosition int,
 	done <-chan struct{},
 	waitGroup *sync.WaitGroup,
@@ -139,10 +144,10 @@ func (k *KubernetesfileImageParser) parseDoc(
 	)
 }
 
-func (k *KubernetesfileImageParser) parseDocRecursive(
-	path string,
+func (k *kubernetesfileImageParser) parseDocRecursive(
+	path collect.IPath,
 	doc interface{},
-	kubernetesfileImages chan<- *KubernetesfileImage,
+	kubernetesfileImages chan<- IImage,
 	docPosition int,
 	imagePosition *int,
 	done <-chan struct{},
@@ -166,17 +171,17 @@ func (k *KubernetesfileImageParser) parseDocRecursive(
 		}
 
 		if name != "" && imageLine != "" {
-			image := convertImageLineToImage(imageLine)
+			image := NewImage(k.kind, "", "", "", map[string]interface{}{
+				"containerName": name,
+				"path":          path.Val(),
+				"imagePosition": *imagePosition,
+				"docPosition":   docPosition,
+			}, nil)
+			image.SetNameTagDigestFromImageLine(imageLine)
 
 			select {
 			case <-done:
-			case kubernetesfileImages <- &KubernetesfileImage{
-				Image:         image,
-				ContainerName: name,
-				Path:          path,
-				ImagePosition: *imagePosition,
-				DocPosition:   docPosition,
-			}:
+			case kubernetesfileImages <- image:
 			}
 
 			*imagePosition++

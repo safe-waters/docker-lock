@@ -1,32 +1,27 @@
-// Package rewrite provides functionality to rewrite a Lockfile.
 package rewrite
 
 import (
 	"encoding/json"
 	"errors"
 	"io"
-	"os"
-	"path/filepath"
 	"reflect"
-	"sync"
 
-	"github.com/safe-waters/docker-lock/pkg/generate"
-	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 )
 
-// Rewriter rewrites files referenced by a Lockfile with their image digests.
-type Rewriter struct {
-	Writer  IWriter
-	Renamer IRenamer
+type rewriter struct {
+	preprocessor IPreprocessor
+	writer       IWriter
+	renamer      IRenamer
 }
 
-type deduplicatedPath struct {
-	path string
-	err  error
-}
-
-// NewRewriter returns a Rewriter after validating its fields.
-func NewRewriter(writer IWriter, renamer IRenamer) (*Rewriter, error) {
+// NewRewriter returns an IRewriter after ensuring writer and renamer
+// are non nil.
+func NewRewriter(
+	preprocessor IPreprocessor,
+	writer IWriter,
+	renamer IRenamer,
+) (IRewriter, error) {
 	if writer == nil || reflect.ValueOf(writer).IsNil() {
 		return nil, errors.New("writer cannot be nil")
 	}
@@ -35,152 +30,38 @@ func NewRewriter(writer IWriter, renamer IRenamer) (*Rewriter, error) {
 		return nil, errors.New("renamer cannot be nil")
 	}
 
-	return &Rewriter{
-		Writer:  writer,
-		Renamer: renamer,
+	return &rewriter{
+		writer:       writer,
+		renamer:      renamer,
+		preprocessor: preprocessor,
 	}, nil
 }
 
-// RewriteLockfile rewrites files referenced by a Lockfile with their image
-// digests.
-func (r *Rewriter) RewriteLockfile(reader io.Reader) error {
-	if reader == nil || reflect.ValueOf(reader).IsNil() {
-		return errors.New("reader cannot be nil")
+// RewriteLockfile rewrites files referenced by a Lockfile with images from
+// the Lockfile.
+func (r *rewriter) RewriteLockfile(lockfileReader io.Reader) error {
+	if lockfileReader == nil || reflect.ValueOf(lockfileReader).IsNil() {
+		return errors.New("lockfileReader cannot be nil")
 	}
 
-	var lockfile generate.Lockfile
-	if err := json.NewDecoder(reader).Decode(&lockfile); err != nil {
+	var lockfile map[kind.Kind]map[string][]interface{}
+	if err := json.NewDecoder(lockfileReader).Decode(&lockfile); err != nil {
 		return err
 	}
 
-	if len(lockfile.DockerfileImages) == 0 &&
-		len(lockfile.ComposefileImages) == 0 &&
-		len(lockfile.KubernetesfileImages) == 0 {
-		return nil
-	}
+	if r.preprocessor != nil && !reflect.ValueOf(r.preprocessor).IsNil() {
+		var err error
 
-	anyPathImages := &AnyPathImages{
-		DockerfilePathImages:     lockfile.DockerfileImages,
-		ComposefilePathImages:    lockfile.ComposefileImages,
-		KubernetesfilePathImages: lockfile.KubernetesfileImages,
-	}
-
-	anyPathImages, err := r.deduplicateAnyPathImages(anyPathImages)
-	if err != nil {
-		return err
+		lockfile, err = r.preprocessor.PreprocessLockfile(lockfile)
+		if err != nil {
+			return err
+		}
 	}
 
 	done := make(chan struct{})
 	defer close(done)
 
-	writtenPaths := r.Writer.WriteFiles(anyPathImages, done)
+	writtenPaths := r.writer.WriteFiles(lockfile, done)
 
-	return r.Renamer.RenameFiles(writtenPaths)
-}
-
-func (r *Rewriter) deduplicateAnyPathImages(
-	anyPathImages *AnyPathImages,
-) (*AnyPathImages, error) {
-	if len(anyPathImages.ComposefilePathImages) == 0 ||
-		len(anyPathImages.DockerfilePathImages) == 0 {
-		return anyPathImages, nil
-	}
-
-	var waitGroup sync.WaitGroup
-
-	done := make(chan struct{})
-	defer close(done)
-
-	deduplicatedDockerfilePaths := make(chan *deduplicatedPath)
-
-	for _, images := range anyPathImages.ComposefilePathImages {
-		images := images
-
-		waitGroup.Add(1)
-
-		go func() {
-			defer waitGroup.Done()
-
-			for _, image := range images {
-				if image.DockerfilePath != "" {
-					dockerfilePath := image.DockerfilePath
-
-					if filepath.IsAbs(dockerfilePath) {
-						var err error
-
-						dockerfilePath, err = r.convertAbsToRelPath(
-							dockerfilePath,
-						)
-						if err != nil {
-							select {
-							case <-done:
-							case deduplicatedDockerfilePaths <- &deduplicatedPath{ // nolint: lll
-								err: err,
-							}:
-							}
-
-							return
-						}
-					}
-
-					select {
-					case <-done:
-						return
-					case deduplicatedDockerfilePaths <- &deduplicatedPath{
-						path: dockerfilePath,
-					}:
-					}
-				}
-			}
-		}()
-	}
-
-	go func() {
-		waitGroup.Wait()
-		close(deduplicatedDockerfilePaths)
-	}()
-
-	dockerfilePathsCache := map[string]struct{}{}
-
-	for deduplicatedDockerfilePath := range deduplicatedDockerfilePaths {
-		if deduplicatedDockerfilePath.err != nil {
-			return nil, deduplicatedDockerfilePath.err
-		}
-
-		dockerfilePathsCache[deduplicatedDockerfilePath.path] = struct{}{}
-	}
-
-	if len(dockerfilePathsCache) == 0 {
-		return anyPathImages, nil
-	}
-
-	dockerfilePathImages := map[string][]*parse.DockerfileImage{}
-
-	for path, images := range anyPathImages.DockerfilePathImages {
-		if _, ok := dockerfilePathsCache[path]; !ok {
-			dockerfilePathImages[path] = images
-		}
-	}
-
-	return &AnyPathImages{
-		DockerfilePathImages:     dockerfilePathImages,
-		ComposefilePathImages:    anyPathImages.ComposefilePathImages,
-		KubernetesfilePathImages: anyPathImages.KubernetesfilePathImages,
-	}, nil
-}
-
-func (r *Rewriter) convertAbsToRelPath(path string) (string, error) {
-	currentWorkingDirectory, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	relativePath, err := filepath.Rel(
-		currentWorkingDirectory, filepath.FromSlash(path),
-	)
-	if err != nil {
-		return "", err
-	}
-
-	return filepath.ToSlash(relativePath), nil
+	return r.renamer.RenameFiles(writtenPaths)
 }

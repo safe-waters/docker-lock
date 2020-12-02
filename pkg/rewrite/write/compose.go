@@ -3,6 +3,7 @@ package write
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,42 +13,54 @@ import (
 	"sync"
 
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 	"gopkg.in/yaml.v2"
 )
 
-// ComposefileWriter contains information for writing new Composefiles.
-type ComposefileWriter struct {
-	DockerfileWriter *DockerfileWriter
-	ExcludeTags      bool
-	Directory        string
-}
-
-// IComposefileWriter provides an interface for ComposefileWriter's
-// exported methods.
-type IComposefileWriter interface {
-	WriteFiles(
-		pathImages map[string][]*parse.ComposefileImage,
-		done <-chan struct{},
-	) <-chan *WrittenPath
+type composefileWriter struct {
+	kind             kind.Kind
+	dockerfileWriter IWriter
+	excludeTags      bool
+	directory        string
 }
 
 type filteredDockerfilePathImages struct {
-	dockerfilePathImages map[string][]*parse.DockerfileImage
+	dockerfilePathImages map[string][]interface{}
 	err                  error
+}
+
+// NewComposefileWriter returns an IWriter for Composefiles. dockerfileWriter
+// cannot be nil as it handles writing Dockerfiles referenced by Composefiles.
+func NewComposefileWriter(
+	dockerfileWriter IWriter,
+	excludeTags bool,
+	directory string,
+) (IWriter, error) {
+	if dockerfileWriter == nil || reflect.ValueOf(dockerfileWriter).IsNil() {
+		return nil, errors.New("dockerfileWriter cannot be nil")
+	}
+
+	return &composefileWriter{
+		kind:             kind.Composefile,
+		dockerfileWriter: dockerfileWriter,
+		excludeTags:      excludeTags,
+		directory:        directory,
+	}, nil
+}
+
+// Kind is a getter for the kind.
+func (c *composefileWriter) Kind() kind.Kind {
+	return c.kind
 }
 
 // WriteFiles writes new Composefiles and Dockerfiles referenced by the
 // Composefiles given the paths of the original Composefiles
 // and new images that should replace the exsting ones.
-func (c *ComposefileWriter) WriteFiles(
-	pathImages map[string][]*parse.ComposefileImage,
+func (c *composefileWriter) WriteFiles(
+	pathImages map[string][]interface{},
 	done <-chan struct{},
-) <-chan *WrittenPath {
-	if len(pathImages) == 0 {
-		return nil
-	}
-
-	writtenPaths := make(chan *WrittenPath)
+) <-chan IWrittenPath {
+	writtenPaths := make(chan IWrittenPath)
 
 	var waitGroup sync.WaitGroup
 
@@ -56,60 +69,54 @@ func (c *ComposefileWriter) WriteFiles(
 	go func() {
 		defer waitGroup.Done()
 
-		if c.DockerfileWriter != nil {
-			waitGroup.Add(1)
+		waitGroup.Add(1)
 
-			go func() {
-				defer waitGroup.Done()
+		go func() {
+			defer waitGroup.Done()
 
-				dockerfilePathImages, err := c.filterDockerfilePathImages(
-					pathImages,
-				)
-				if err != nil {
-					select {
-					case <-done:
-					case writtenPaths <- &WrittenPath{Err: err}:
-					}
-
-					return
+			dockerfilePathImages, err := c.filterDockerfilePathImages(
+				pathImages,
+			)
+			if err != nil {
+				select {
+				case <-done:
+				case writtenPaths <- NewWrittenPath("", "", err):
 				}
 
-				if len(dockerfilePathImages) != 0 {
-					dockerfileWrittenPaths := c.DockerfileWriter.WriteFiles(
-						dockerfilePathImages, done,
-					)
+				return
+			}
 
-					for writtenPath := range dockerfileWrittenPaths {
-						if writtenPath.Err != nil {
-							select {
-							case <-done:
-							case writtenPaths <- writtenPath:
-							}
-
-							return
-						}
-
+			if len(dockerfilePathImages) != 0 {
+				for writtenPath := range c.dockerfileWriter.WriteFiles(
+					dockerfilePathImages, done,
+				) {
+					if writtenPath.Err() != nil {
 						select {
 						case <-done:
-							return
 						case writtenPaths <- writtenPath:
 						}
+
+						return
+					}
+
+					select {
+					case <-done:
+						return
+					case writtenPaths <- writtenPath:
 					}
 				}
-			}()
-		}
+			}
+		}()
 
 		waitGroup.Add(1)
 
 		go func() {
 			defer waitGroup.Done()
 
-			composefileWrittenPaths := c.writeComposefiles(
+			for writtenPath := range c.writeComposefiles(
 				pathImages, done,
-			)
-
-			for writtenPath := range composefileWrittenPaths {
-				if writtenPath.Err != nil {
+			) {
+				if writtenPath.Err() != nil {
 					select {
 					case <-done:
 					case writtenPaths <- writtenPath:
@@ -135,11 +142,11 @@ func (c *ComposefileWriter) WriteFiles(
 	return writtenPaths
 }
 
-func (c *ComposefileWriter) writeComposefiles(
-	pathImages map[string][]*parse.ComposefileImage,
+func (c *composefileWriter) writeComposefiles(
+	pathImages map[string][]interface{},
 	done <-chan struct{},
-) <-chan *WrittenPath {
-	writtenPaths := make(chan *WrittenPath)
+) <-chan IWrittenPath {
+	writtenPaths := make(chan IWrittenPath)
 
 	var waitGroup sync.WaitGroup
 
@@ -161,7 +168,7 @@ func (c *ComposefileWriter) writeComposefiles(
 				if err != nil {
 					select {
 					case <-done:
-					case writtenPaths <- &WrittenPath{Err: err}:
+					case writtenPaths <- NewWrittenPath("", "", err):
 					}
 
 					return
@@ -171,10 +178,7 @@ func (c *ComposefileWriter) writeComposefiles(
 					select {
 					case <-done:
 						return
-					case writtenPaths <- &WrittenPath{
-						OriginalPath: path,
-						Path:         writtenPath,
-					}:
+					case writtenPaths <- NewWrittenPath(path, writtenPath, nil):
 					}
 				}
 			}()
@@ -189,9 +193,9 @@ func (c *ComposefileWriter) writeComposefiles(
 	return writtenPaths
 }
 
-func (c *ComposefileWriter) writeFile(
+func (c *composefileWriter) writeFile(
 	path string,
-	images []*parse.ComposefileImage,
+	images []interface{},
 ) (string, error) {
 	pathByt, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -207,15 +211,14 @@ func (c *ComposefileWriter) writeFile(
 		return "", nil
 	}
 
-	var serviceName string
+	var (
+		serviceName        string
+		numServicesWritten int
+		outputBuffer       bytes.Buffer
+		inputBuffer        = bytes.NewBuffer(pathByt)
+		scanner            = bufio.NewScanner(inputBuffer)
+	)
 
-	var numServicesWritten int
-
-	inputBuffer := bytes.NewBuffer(pathByt)
-
-	var outputBuffer bytes.Buffer
-
-	scanner := bufio.NewScanner(inputBuffer)
 	for scanner.Scan() {
 		inputLine := scanner.Text()
 		outputLine := inputLine
@@ -251,7 +254,7 @@ func (c *ComposefileWriter) writeFile(
 	replacer := strings.NewReplacer("/", "-", "\\", "-")
 	tempPath := replacer.Replace(fmt.Sprintf("%s-*", path))
 
-	writtenFile, err := ioutil.TempFile(c.Directory, tempPath)
+	writtenFile, err := ioutil.TempFile(c.directory, tempPath)
 	if err != nil {
 		return "", err
 	}
@@ -264,40 +267,51 @@ func (c *ComposefileWriter) writeFile(
 	return writtenFile.Name(), err
 }
 
-func (c *ComposefileWriter) filterComposefileServices(
+func (c *composefileWriter) filterComposefileServices(
 	pathByt []byte,
-	images []*parse.ComposefileImage,
+	images []interface{},
 ) (map[string]string, error) {
 	comp := compose{}
 	if err := yaml.Unmarshal(pathByt, &comp); err != nil {
 		return nil, err
 	}
 
-	uniqueServices := map[string]struct{}{}
-
-	serviceImageLines := map[string]string{}
+	var (
+		uniqueServices    = map[string]struct{}{}
+		serviceImageLines = map[string]string{}
+	)
 
 	for _, image := range images {
-		if _, ok := comp.Services[image.ServiceName]; !ok {
+		image := image.(map[string]interface{})
+		serviceName := image["service"].(string)
+
+		if _, ok := comp.Services[serviceName]; !ok {
 			return nil, fmt.Errorf(
-				"'%s' service does not exist", image.ServiceName,
+				"'%s' service does not exist", serviceName,
 			)
 		}
 
-		if image.DockerfilePath == "" {
-			if _, ok := serviceImageLines[image.ServiceName]; ok {
+		if image["dockerfile"] == nil {
+			if _, ok := serviceImageLines[serviceName]; ok {
 				return nil, fmt.Errorf(
 					"multiple images exist for the same service '%s'",
-					image.ServiceName,
+					serviceName,
 				)
 			}
 
-			serviceImageLines[image.ServiceName] = convertImageToImageLine(
-				image.Image, c.ExcludeTags,
-			)
+			tag := image["tag"].(string)
+			if c.excludeTags {
+				tag = ""
+			}
+
+			imageLine := parse.NewImage(
+				c.kind, image["name"].(string), tag, image["digest"].(string),
+				nil, nil,
+			).ImageLine()
+			serviceImageLines[serviceName] = imageLine
 		}
 
-		uniqueServices[image.ServiceName] = struct{}{}
+		uniqueServices[serviceName] = struct{}{}
 	}
 
 	if len(comp.Services) != len(uniqueServices) {
@@ -310,15 +324,12 @@ func (c *ComposefileWriter) filterComposefileServices(
 	return serviceImageLines, nil
 }
 
-func (c *ComposefileWriter) filterDockerfilePathImages(
-	pathImages map[string][]*parse.ComposefileImage,
-) (
-	map[string][]*parse.DockerfileImage,
-	error,
-) {
+func (c *composefileWriter) filterDockerfilePathImages(
+	pathImages map[string][]interface{},
+) (map[string][]interface{}, error) {
 	filteredCh := make(chan *filteredDockerfilePathImages)
-	done := make(chan struct{})
 
+	done := make(chan struct{})
 	defer close(done)
 
 	var waitGroup sync.WaitGroup
@@ -328,19 +339,21 @@ func (c *ComposefileWriter) filterDockerfilePathImages(
 	go func() {
 		defer waitGroup.Done()
 
-		for _, allImages := range pathImages {
-			allImages := allImages
+		for _, images := range pathImages {
+			images := images
 
 			waitGroup.Add(1)
 
 			go func() {
 				defer waitGroup.Done()
 
-				serviceDockerfileImages := map[string][]*parse.DockerfileImage{}
+				serviceDockerfileImages := map[string][]interface{}{}
 
-				for _, image := range allImages {
-					if image.DockerfilePath != "" {
-						dockerfilePath := image.DockerfilePath
+				for _, image := range images {
+					image := image.(map[string]interface{})
+
+					if image["dockerfile"] != nil {
+						dockerfilePath := image["dockerfile"].(string)
 
 						if filepath.IsAbs(dockerfilePath) {
 							var err error
@@ -358,28 +371,25 @@ func (c *ComposefileWriter) filterDockerfilePathImages(
 
 								return
 							}
+
+							image["dockerfile"] = dockerfilePath
 						}
 
-						serviceDockerfileImages[image.ServiceName] = append(
-							serviceDockerfileImages[image.ServiceName],
-							&parse.DockerfileImage{
-								Image: image.Image,
-								Path:  dockerfilePath,
-							},
+						serviceName := image["service"].(string)
+						serviceDockerfileImages[serviceName] = append(
+							serviceDockerfileImages[serviceName], image,
 						)
 					}
 				}
 
 				for _, images := range serviceDockerfileImages {
-					dockerfilePathImages := map[string][]*parse.DockerfileImage{} // nolint: lll
+					dockerfilePathImages := map[string][]interface{}{} // nolint: lll
 
 					for _, image := range images {
-						dockerfilePathImages[image.Path] = append(
-							dockerfilePathImages[image.Path],
-							&parse.DockerfileImage{
-								Image: image.Image,
-								Path:  image.Path,
-							},
+						image := image.(map[string]interface{})
+						dockerfilePath := image["dockerfile"].(string)
+						dockerfilePathImages[dockerfilePath] = append(
+							dockerfilePathImages[dockerfilePath], image,
 						)
 					}
 
@@ -400,7 +410,7 @@ func (c *ComposefileWriter) filterDockerfilePathImages(
 		close(filteredCh)
 	}()
 
-	dockerfilePathImages := map[string][]*parse.DockerfileImage{}
+	dockerfilePathImages := map[string][]interface{}{}
 
 	for filtered := range filteredCh {
 		if filtered.err != nil {
@@ -409,11 +419,27 @@ func (c *ComposefileWriter) filterDockerfilePathImages(
 
 		for path, images := range filtered.dockerfilePathImages {
 			if existingImages, ok := dockerfilePathImages[path]; ok {
-				if !reflect.DeepEqual(existingImages, images) {
+				if len(existingImages) != len(images) {
 					return nil, fmt.Errorf(
-						"multiple services reference the same Dockerfile '%s' with different images", // nolint: lll
+						"multiple services reference the same Dockerfile"+
+							"'%s' with different images",
 						path,
 					)
+				}
+
+				for i := 0; i < len(existingImages); i++ {
+					existingImage := existingImages[i].(map[string]interface{})
+					image := images[i].(map[string]interface{})
+
+					if existingImage["name"] != image["name"] ||
+						existingImage["tag"] != image["tag"] ||
+						existingImage["digest"] != image["digest"] {
+						return nil, fmt.Errorf(
+							"multiple services reference the same Dockerfile"+
+								" '%s' with different images",
+							path,
+						)
+					}
 				}
 			} else {
 				dockerfilePathImages[path] = images
@@ -424,7 +450,7 @@ func (c *ComposefileWriter) filterDockerfilePathImages(
 	return dockerfilePathImages, nil
 }
 
-func (c *ComposefileWriter) convertAbsToRelPath(
+func (c *composefileWriter) convertAbsToRelPath(
 	path string,
 ) (string, error) {
 	currentWorkingDirectory, err := os.Getwd()

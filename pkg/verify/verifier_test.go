@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	cmd_verify "github.com/safe-waters/docker-lock/cmd/verify"
-	"github.com/safe-waters/docker-lock/pkg/generate"
-	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/internal/testutils"
 	"github.com/safe-waters/docker-lock/pkg/generate/registry"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 )
 
 func TestVerifier(t *testing.T) {
@@ -23,10 +23,34 @@ func TestVerifier(t *testing.T) {
 		ShouldFail  bool
 	}{
 		{
-			Name: "Dockerfile Diff",
+			Name: "Diff Num Images",
 			Contents: [][]byte{
 				[]byte(`
 FROM busybox
+FROM busybox
+`,
+				),
+				// nolint: lll
+				[]byte(`
+{
+	"dockerfiles": {
+		"Dockerfile": [
+			{
+				"name": "busybox",
+				"tag": "latest",
+				"digest": "bae015c28bc7cdee3b7ef20d35db4299e3068554a769070950229d9f53f58572"
+			}
+		]
+	}
+}
+`),
+			},
+			ShouldFail: true,
+		},
+		{
+			Name: "Dockerfile Diff",
+			Contents: [][]byte{
+				[]byte(`
 FROM busybox
 `,
 				),
@@ -52,9 +76,7 @@ FROM busybox
 				[]byte(`
 version: '3'
 services:
-  svc-one:
-    image: busybox
-  svc-two:
+  svc:
     image: busybox
 `,
 				),
@@ -66,7 +88,7 @@ services:
 				"name": "busybox",
 				"tag": "latest",
 				"digest": "busybox",
-				"service": "svc-two"
+				"service": "svc"
 			}
 		]
 	}
@@ -121,6 +143,7 @@ services:
     image: busybox
 `,
 				),
+				// nolint: lll
 				[]byte(`
 {
 	"composefiles": {
@@ -128,7 +151,7 @@ services:
 			{
 				"name": "busybox",
 				"tag": "latest",
-				"digest": "busybox",
+				"digest": "bae015c28bc7cdee3b7ef20d35db4299e3068554a769070950229d9f53f58572",
 				"service": "svc"
 			}
 		]
@@ -148,6 +171,7 @@ services:
     image: busybox
 `,
 				),
+				// nolint: lll
 				[]byte(`
 {
 	"composefiles": {
@@ -155,7 +179,7 @@ services:
 			{
 				"name": "busybox",
 				"tag": "",
-				"digest": "busybox",
+				"digest": "bae015c28bc7cdee3b7ef20d35db4299e3068554a769070950229d9f53f58572",
 				"service": "svc"
 			}
 		]
@@ -174,10 +198,10 @@ services:
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := makeTempDirInCurrentDir(t)
+			tempDir := testutils.MakeTempDirInCurrentDir(t)
 			defer os.RemoveAll(tempDir)
 
-			var lockfile generate.Lockfile
+			var lockfile map[kind.Kind]map[string][]interface{}
 			if err := json.Unmarshal(
 				test.Contents[len(test.Contents)-1], &lockfile,
 			); err != nil {
@@ -186,14 +210,16 @@ services:
 
 			uniquePathsToWrite := map[string]struct{}{}
 
-			composefileImagesWithTempDir := map[string][]*parse.ComposefileImage{} // nolint: lll
+			composefileImagesWithTempDir := map[string][]interface{}{}
 
-			for composefilePath, images := range lockfile.ComposefileImages {
+			for composefilePath, images := range lockfile[kind.Composefile] {
 				for _, image := range images {
-					if image.DockerfilePath != "" {
-						uniquePathsToWrite[image.DockerfilePath] = struct{}{}
-						image.DockerfilePath = filepath.ToSlash(
-							filepath.Join(tempDir, image.DockerfilePath),
+					image := image.(map[string]interface{})
+					if image["dockerfile"] != nil {
+						dockerfilePath := image["dockerfile"].(string)
+						uniquePathsToWrite[dockerfilePath] = struct{}{}
+						image["dockerfile"] = filepath.ToSlash(
+							filepath.Join(tempDir, dockerfilePath),
 						)
 					}
 				}
@@ -205,9 +231,9 @@ services:
 				composefileImagesWithTempDir[composefilePath] = images
 			}
 
-			dockerfileImagesWithTempDir := map[string][]*parse.DockerfileImage{}
+			dockerfileImagesWithTempDir := map[string][]interface{}{}
 
-			for dockerfilePath, images := range lockfile.DockerfileImages {
+			for dockerfilePath, images := range lockfile[kind.Dockerfile] {
 				uniquePathsToWrite[dockerfilePath] = struct{}{}
 
 				dockerfilePath = filepath.ToSlash(
@@ -216,9 +242,9 @@ services:
 				dockerfileImagesWithTempDir[dockerfilePath] = images
 			}
 
-			kubernetesfileImagesWithTempDir := map[string][]*parse.KubernetesfileImage{} // nolint: lll
+			kubernetesfileImagesWithTempDir := map[string][]interface{}{}
 
-			for kubernetesfilePath, images := range lockfile.KubernetesfileImages { // nolint: lll
+			for kubernetesfilePath, images := range lockfile[kind.Kubernetesfile] { // nolint: lll
 				uniquePathsToWrite[kubernetesfilePath] = struct{}{}
 
 				kubernetesfilePath = filepath.ToSlash(
@@ -234,10 +260,17 @@ services:
 
 			pathsToWrite = append(pathsToWrite, "docker-lock.json")
 
-			lockfileWithTempDir := &generate.Lockfile{
-				DockerfileImages:     dockerfileImagesWithTempDir,
-				ComposefileImages:    composefileImagesWithTempDir,
-				KubernetesfileImages: kubernetesfileImagesWithTempDir,
+			lockfileWithTempDir := map[kind.Kind]map[string][]interface{}{}
+			if len(dockerfileImagesWithTempDir) != 0 {
+				lockfileWithTempDir[kind.Dockerfile] = dockerfileImagesWithTempDir // nolint: lll
+			}
+
+			if len(composefileImagesWithTempDir) != 0 {
+				lockfileWithTempDir[kind.Composefile] = composefileImagesWithTempDir // nolint: lll
+			}
+
+			if len(kubernetesfileImagesWithTempDir) != 0 {
+				lockfileWithTempDir[kind.Kubernetesfile] = kubernetesfileImagesWithTempDir // nolint: lll
 			}
 
 			lockfileWithTempDirByt, err := json.Marshal(lockfileWithTempDir)
@@ -247,13 +280,15 @@ services:
 
 			test.Contents[len(test.Contents)-1] = lockfileWithTempDirByt
 
-			tempPaths := writeFilesToTempDir(
+			tempPaths := testutils.WriteFilesToTempDir(
 				t, tempDir, pathsToWrite, test.Contents,
 			)
 
 			reader := bytes.NewReader(lockfileWithTempDirByt)
 
-			server := mockServer(t)
+			var numNetworkCalls uint64
+
+			server := testutils.MakeMockServer(t, &numNetworkCalls)
 			defer server.Close()
 
 			client := &registry.HTTPClient{

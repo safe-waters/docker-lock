@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/safe-waters/docker-lock/internal/testutils"
 	"github.com/safe-waters/docker-lock/pkg/rewrite"
 	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
 )
@@ -14,20 +15,14 @@ func TestRenamer(t *testing.T) {
 
 	tests := []struct {
 		Name           string
-		RewrittenPaths []*write.WrittenPath
+		RewrittenPaths []write.IWrittenPath
 		Expected       [][]byte
 	}{
 		{
 			Name: "Rename Rewritten Path to Original",
-			RewrittenPaths: []*write.WrittenPath{
-				{
-					OriginalPath: "Dockerfile1",
-					Path:         "TempDockerfile1",
-				},
-				{
-					OriginalPath: "Dockerfile2",
-					Path:         "TempDockerfile2",
-				},
+			RewrittenPaths: []write.IWrittenPath{
+				write.NewWrittenPath("Dockerfile1", "TempDockerfile1", nil),
+				write.NewWrittenPath("Dockerfile2", "TempDockerfile2", nil),
 			},
 			Expected: [][]byte{[]byte("temporary1"), []byte("temporary2")},
 		},
@@ -39,40 +34,44 @@ func TestRenamer(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := makeTempDirInCurrentDir(t)
+			tempDir := testutils.MakeTempDirInCurrentDir(t)
 			defer os.RemoveAll(tempDir)
 
-			renamer := &rewrite.Renamer{}
-
-			var paths []string
-
-			var originalPaths []string
-
-			var originalContents [][]byte
-
-			rewrittenPathsCh := make(
-				chan *write.WrittenPath, len(test.RewrittenPaths),
+			var (
+				paths            []string
+				originalPaths    []string
+				originalContents [][]byte
+				renamer          = rewrite.NewRenamer()
+				rewrittenPathsCh = make(
+					chan write.IWrittenPath, len(test.RewrittenPaths),
+				)
 			)
+
 			for _, rewrittenPath := range test.RewrittenPaths {
 				originalPaths = append(
-					originalPaths, rewrittenPath.OriginalPath,
+					originalPaths, rewrittenPath.OriginalPath(),
 				)
 				originalContents = append(originalContents, []byte("original"))
 
-				paths = append(paths, rewrittenPath.Path)
+				paths = append(paths, rewrittenPath.NewPath())
 
-				rewrittenPath.OriginalPath = filepath.Join(
-					tempDir, rewrittenPath.OriginalPath,
+				rewrittenPath.SetOriginalPath(
+					filepath.Join(tempDir, rewrittenPath.OriginalPath()),
 				)
-				rewrittenPath.Path = filepath.Join(tempDir, rewrittenPath.Path)
+
+				rewrittenPath.SetNewPath(
+					filepath.Join(tempDir, rewrittenPath.NewPath()),
+				)
 
 				rewrittenPathsCh <- rewrittenPath
 			}
 
 			close(rewrittenPathsCh)
 
-			writeFilesToTempDir(t, tempDir, originalPaths, originalContents)
-			writeFilesToTempDir(t, tempDir, paths, test.Expected)
+			testutils.WriteFilesToTempDir(
+				t, tempDir, originalPaths, originalContents,
+			)
+			testutils.WriteFilesToTempDir(t, tempDir, paths, test.Expected)
 
 			if err := renamer.RenameFiles(rewrittenPathsCh); err != nil {
 				t.Fatal(err)
@@ -81,10 +80,10 @@ func TestRenamer(t *testing.T) {
 			var got []string
 
 			for _, rewrittenPath := range test.RewrittenPaths {
-				got = append(got, rewrittenPath.OriginalPath)
+				got = append(got, rewrittenPath.OriginalPath())
 			}
 
-			assertWrittenFiles(t, test.Expected, got)
+			testutils.AssertWrittenFilesEqual(t, test.Expected, got)
 		})
 	}
 }

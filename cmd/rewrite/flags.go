@@ -6,7 +6,8 @@ import (
 	"strings"
 )
 
-// Flags are all possible flags to initialize a Rewriter.
+// Flags holds all command line options for Dockerfiles, Composefiles,
+// and Kubernetesfiles.
 type Flags struct {
 	LockfileName string
 	TempDir      string
@@ -14,6 +15,7 @@ type Flags struct {
 }
 
 // NewFlags returns Flags after validating its fields.
+// lockfileName may not contain slashes.
 func NewFlags(
 	lockfileName string,
 	tempDir string,

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/internal/testutils"
 	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
 )
 
@@ -17,7 +17,7 @@ func TestKubernetesfileWriter(t *testing.T) {
 		Name        string
 		Contents    [][]byte
 		Expected    [][]byte
-		PathImages  map[string][]*parse.KubernetesfileImage
+		PathImages  map[string][]interface{}
 		ExcludeTags bool
 		ShouldFail  bool
 	}{
@@ -42,23 +42,19 @@ spec:
     - containerPort: 88
 `),
 			},
-			PathImages: map[string][]*parse.KubernetesfileImage{
-				"pod.yaml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ContainerName: "busybox",
+			PathImages: map[string][]interface{}{
+				"pod.yml": {
+					map[string]interface{}{
+						"name":      "busybox",
+						"tag":       "latest",
+						"digest":    "busybox",
+						"container": "busybox",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
-						ContainerName: "golang",
+					map[string]interface{}{
+						"name":      "golang",
+						"tag":       "latest",
+						"digest":    "golang",
+						"container": "golang",
 					},
 				},
 			},
@@ -136,39 +132,31 @@ spec:
         name: bash
 `),
 			},
-			PathImages: map[string][]*parse.KubernetesfileImage{
+			PathImages: map[string][]interface{}{
 				"deployment.yaml": {
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
-						ContainerName: "golang",
+					map[string]interface{}{
+						"name":      "golang",
+						"tag":       "latest",
+						"digest":    "golang",
+						"container": "golang",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "python",
-							Tag:    "latest",
-							Digest: "python",
-						},
-						ContainerName: "python",
+					map[string]interface{}{
+						"name":      "python",
+						"tag":       "latest",
+						"digest":    "python",
+						"container": "python",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "redis",
-							Tag:    "latest",
-							Digest: "redis",
-						},
-						ContainerName: "redis",
+					map[string]interface{}{
+						"name":      "redis",
+						"tag":       "latest",
+						"digest":    "redis",
+						"container": "redis",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "bash",
-							Tag:    "latest",
-							Digest: "bash",
-						},
-						ContainerName: "bash",
+					map[string]interface{}{
+						"name":      "bash",
+						"tag":       "latest",
+						"digest":    "bash",
+						"container": "bash",
 					},
 				},
 			},
@@ -329,73 +317,57 @@ spec:
         name: ruby
 `),
 			},
-			PathImages: map[string][]*parse.KubernetesfileImage{
+			PathImages: map[string][]interface{}{
 				"deployment.yaml": {
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
-						ContainerName: "golang",
+					map[string]interface{}{
+						"name":      "golang",
+						"tag":       "latest",
+						"digest":    "golang",
+						"container": "golang",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "python",
-							Tag:    "latest",
-							Digest: "python",
-						},
-						ContainerName: "python",
+					map[string]interface{}{
+						"name":      "python",
+						"tag":       "latest",
+						"digest":    "python",
+						"container": "python",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "redis",
-							Tag:    "latest",
-							Digest: "redis",
-						},
-						ContainerName: "redis",
+					map[string]interface{}{
+						"name":      "redis",
+						"tag":       "latest",
+						"digest":    "redis",
+						"container": "redis",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "bash",
-							Tag:    "latest",
-							Digest: "bash",
-						},
-						ContainerName: "bash",
+					map[string]interface{}{
+						"name":      "bash",
+						"tag":       "latest",
+						"digest":    "bash",
+						"container": "bash",
 					},
 				},
 				"deployment1.yaml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ContainerName: "busybox",
+					map[string]interface{}{
+						"name":      "busybox",
+						"tag":       "latest",
+						"digest":    "busybox",
+						"container": "busybox",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "java",
-							Tag:    "latest",
-							Digest: "java",
-						},
-						ContainerName: "java",
+					map[string]interface{}{
+						"name":      "java",
+						"tag":       "latest",
+						"digest":    "java",
+						"container": "java",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "alpine",
-							Tag:    "latest",
-							Digest: "alpine",
-						},
-						ContainerName: "alpine",
+					map[string]interface{}{
+						"name":      "alpine",
+						"tag":       "latest",
+						"digest":    "alpine",
+						"container": "alpine",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "ruby",
-							Tag:    "latest",
-							Digest: "ruby",
-						},
-						ContainerName: "ruby",
+					map[string]interface{}{
+						"name":      "ruby",
+						"tag":       "latest",
+						"digest":    "ruby",
+						"container": "ruby",
 					},
 				},
 			},
@@ -519,15 +491,13 @@ spec:
     - containerPort: 80
 `),
 			},
-			PathImages: map[string][]*parse.KubernetesfileImage{
+			PathImages: map[string][]interface{}{
 				"pod.yaml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ContainerName: "busybox",
+					map[string]interface{}{
+						"name":      "busybox",
+						"tag":       "latest",
+						"digest":    "busybox",
+						"container": "busybox",
 					},
 				},
 			},
@@ -569,28 +539,25 @@ spec:
     - containerPort: 88
 `),
 			},
-			PathImages: map[string][]*parse.KubernetesfileImage{
+			PathImages: map[string][]interface{}{
 				"pod.yaml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
+					map[string]interface{}{
+						"name":      "busybox",
+						"tag":       "latest",
+						"digest":    "busybox",
+						"container": "busybox",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
+					map[string]interface{}{
+						"name":      "golang",
+						"tag":       "latest",
+						"digest":    "golang",
+						"container": "golang",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "extra",
-							Tag:    "latest",
-							Digest: "extra",
-						},
+					map[string]interface{}{
+						"name":      "extra",
+						"tag":       "latest",
+						"digest":    "extra",
+						"container": "extra",
 					},
 				},
 			},
@@ -617,14 +584,13 @@ spec:
     - containerPort: 88
 `),
 			},
-			PathImages: map[string][]*parse.KubernetesfileImage{
-				"pod.yaml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
+			PathImages: map[string][]interface{}{
+				"pod.yml": {
+					map[string]interface{}{
+						"name":      "busybox",
+						"tag":       "latest",
+						"digest":    "busybox",
+						"container": "busybox",
 					},
 				},
 			},
@@ -638,12 +604,12 @@ spec:
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := makeTempDirInCurrentDir(t)
+			tempDir := testutils.MakeTempDirInCurrentDir(t)
 			defer os.RemoveAll(tempDir)
 
 			var pathsToWrite []string
 
-			tempPathImages := map[string][]*parse.KubernetesfileImage{}
+			tempPathImages := map[string][]interface{}{}
 
 			for path, images := range test.PathImages {
 				pathsToWrite = append(pathsToWrite, path)
@@ -654,15 +620,15 @@ spec:
 
 			sort.Strings(pathsToWrite)
 
-			writeFilesToTempDir(
+			testutils.WriteFilesToTempDir(
 				t, tempDir, pathsToWrite, test.Contents,
 			)
 
-			writer := &write.KubernetesfileWriter{
-				Directory:   tempDir,
-				ExcludeTags: test.ExcludeTags,
-			}
+			writer := write.NewKubernetesfileWriter(test.ExcludeTags, tempDir)
+
 			done := make(chan struct{})
+			defer close(done)
+
 			writtenPathResults := writer.WriteFiles(
 				tempPathImages, done,
 			)
@@ -672,10 +638,10 @@ spec:
 			var err error
 
 			for writtenPath := range writtenPathResults {
-				if writtenPath.Err != nil {
-					err = writtenPath.Err
+				if writtenPath.Err() != nil {
+					err = writtenPath.Err()
 				}
-				got = append(got, writtenPath.Path)
+				got = append(got, writtenPath.NewPath())
 			}
 
 			if test.ShouldFail {
@@ -692,7 +658,7 @@ spec:
 
 			sort.Strings(got)
 
-			assertWrittenFiles(t, test.Expected, got)
+			testutils.AssertWrittenFilesEqual(t, test.Expected, got)
 		})
 	}
 }

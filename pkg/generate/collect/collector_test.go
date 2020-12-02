@@ -3,118 +3,70 @@ package collect_test
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
+	"github.com/safe-waters/docker-lock/internal/testutils"
 	"github.com/safe-waters/docker-lock/pkg/generate/collect"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 )
-
-const testDir = "collect"
 
 func TestPathCollector(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		Name                  string
-		PathCollector         *collect.PathCollector
-		AddTempDirToCollector bool
-		BaseDirIsTempDir      bool
-		ShouldFail            bool
-		Expected              []string
-		PathsToCreate         []string
+		Name          string
+		DefaultPaths  []string
+		ManualPaths   []string
+		Globs         []string
+		ShouldFail    bool
+		Expected      []string
+		PathsToCreate []string
 	}{
 		{
-			Name: "Default Path Exists",
-			PathCollector: makePathCollector(
-				t, "", []string{"Dockerfile"}, nil, nil, false, false,
-			),
-			AddTempDirToCollector: true,
-			PathsToCreate:         []string{"Dockerfile"},
-			Expected:              []string{"Dockerfile"},
+			Name:          "Default Path Exists",
+			DefaultPaths:  []string{"Dockerfile"},
+			PathsToCreate: []string{"Dockerfile"},
+			Expected:      []string{"Dockerfile"},
 		},
 		{
-			Name: "Default Path Does Not Exist",
-			PathCollector: makePathCollector(
-				t, "", []string{"Dockerfile"}, nil, nil, false, false,
-			),
+			Name:         "Default Path Does Not Exist",
+			DefaultPaths: []string{"Dockerfile"},
 		},
 		{
-			Name: "Do Not Use Default Paths If Other Methods Specified",
-			PathCollector: makePathCollector(
-				t, "", []string{"Dockerfile"}, []string{"Dockerfile-Manual"},
-				nil, false, false,
-			),
-			AddTempDirToCollector: true,
-			Expected:              []string{"Dockerfile-Manual"},
-			PathsToCreate:         []string{"Dockerfile-Manual"},
+			Name:          "Do Not Use Default Paths If Other Methods chosen",
+			DefaultPaths:  []string{"Dockerfile"},
+			ManualPaths:   []string{"Dockerfile-Manual"},
+			Expected:      []string{"Dockerfile-Manual"},
+			PathsToCreate: []string{"Dockerfile", "Dockerfile-Manual"},
 		},
 		{
-			Name: "Manual Paths",
-			PathCollector: makePathCollector(
-				t, "", nil, []string{"Dockerfile"}, nil, false, false,
-			),
-			AddTempDirToCollector: true,
-			Expected:              []string{"Dockerfile"},
-			PathsToCreate:         []string{"Dockerfile"},
+			Name:          "Manual Paths",
+			ManualPaths:   []string{"Dockerfile-Manual"},
+			Expected:      []string{"Dockerfile-Manual"},
+			PathsToCreate: []string{"Dockerfile-Manual"},
 		},
 		{
-			Name: "Globs",
-			PathCollector: makePathCollector(
-				t, "", nil, nil, []string{filepath.Join("**", "Dockerfile")},
-				false, false,
-			),
-			AddTempDirToCollector: true,
-			Expected: []string{
-				filepath.Join("globs-test", "Dockerfile"),
-			},
-			PathsToCreate: []string{
-				filepath.Join("globs-test", "Dockerfile"),
-			},
+			Name:          "Globs",
+			Globs:         []string{"Dockerfile-*"},
+			Expected:      []string{"Dockerfile-glob"},
+			PathsToCreate: []string{"Dockerfile-glob"},
 		},
 		{
-			Name: "Recursive",
-			PathCollector: makePathCollector(
-				t, "", []string{"Dockerfile"}, nil, nil, true, false,
-			),
-			BaseDirIsTempDir: true,
-			Expected: []string{
-				filepath.Join("recursive-test", "Dockerfile"),
-			},
-			PathsToCreate: []string{
-				filepath.Join("recursive-test", "Dockerfile"),
-			},
+			Name:          "Duplicate Paths",
+			ManualPaths:   []string{"Dockerfile-Manual", "Dockerfile-Manual"},
+			Expected:      []string{"Dockerfile-Manual"},
+			PathsToCreate: []string{"Dockerfile-Manual"},
 		},
 		{
-			Name: "Duplicate Paths",
-			PathCollector: makePathCollector(
-				t, "", nil, []string{"Dockerfile", "Dockerfile"}, nil,
-				false, false,
-			),
-			AddTempDirToCollector: true,
-			Expected:              []string{"Dockerfile"},
-			PathsToCreate:         []string{"Dockerfile"},
+			Name:         "Default Path Outside Of Base Directory",
+			DefaultPaths: []string{filepath.Join("..", "..", "Dockerfile")},
+			ShouldFail:   true,
 		},
 		{
-			Name: "Default Path Outside Of Base Directory",
-			PathCollector: makePathCollector(
-				t, "", []string{filepath.Join("..", "Dockerfile")}, nil, nil,
-				false, false,
-			),
-			ShouldFail: true,
-		},
-		{
-			Name: "Manual Path Outside Of Base Directory",
-			PathCollector: makePathCollector(
-				t, "", nil, []string{filepath.Join("..", "Dockerfile")}, nil,
-				false, false,
-			),
-			ShouldFail: true,
-		},
-		{
-			Name: "No Default Paths And Recursive",
-			PathCollector: makePathCollector(
-				t, "", nil, nil, nil, true, true,
-			),
-			ShouldFail: true,
+			Name:        "Manual Path Outside Of Base Directory",
+			ManualPaths: []string{filepath.Join("..", "..", "Dockerfile")},
+			ShouldFail:  true,
 		},
 	}
 
@@ -124,29 +76,14 @@ func TestPathCollector(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			if test.PathCollector == nil {
-				return
-			}
+			tempDir := testutils.MakeTempDirInCurrentDir(t)
+			defer os.RemoveAll(tempDir)
 
 			var expected []string
 
 			if len(test.PathsToCreate) != 0 {
-				tempDir := makeTempDir(t, testDir)
-				defer os.RemoveAll(tempDir)
-
-				if test.BaseDirIsTempDir {
-					test.PathCollector.BaseDir = tempDir
-				}
-
-				if test.AddTempDirToCollector {
-					addTempDirToStringSlices(t, test.PathCollector, tempDir)
-				}
-
-				makeParentDirsInTempDirFromFilePaths(
-					t, tempDir, test.PathsToCreate,
-				)
 				pathsToCreateContents := make([][]byte, len(test.PathsToCreate))
-				writeFilesToTempDir(
+				testutils.WriteFilesToTempDir(
 					t, tempDir, test.PathsToCreate, pathsToCreateContents,
 				)
 
@@ -157,18 +94,26 @@ func TestPathCollector(t *testing.T) {
 				}
 			}
 
+			collector, err := collect.NewPathCollector(
+				kind.Dockerfile, tempDir, test.DefaultPaths,
+				test.ManualPaths, test.Globs, false,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			var got []string
 
-			var err error
-
 			done := make(chan struct{})
-			for pathResult := range test.PathCollector.CollectPaths(done) {
-				if pathResult.Err != nil {
-					close(done)
-					err = pathResult.Err
+			defer close(done)
+
+			for path := range collector.CollectPaths(done) {
+				if path.Err() != nil {
+					err = path.Err()
 					break
 				}
-				got = append(got, pathResult.Path)
+
+				got = append(got, path.Val())
 			}
 
 			if test.ShouldFail {
@@ -183,7 +128,9 @@ func TestPathCollector(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			assertCollectedPathsEqual(t, expected, got)
+			if !reflect.DeepEqual(expected, got) {
+				t.Fatalf("expected %v, got %v", expected, got)
+			}
 		})
 	}
 }

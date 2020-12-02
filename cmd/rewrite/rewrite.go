@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/safe-waters/docker-lock/pkg/rewrite"
+	"github.com/safe-waters/docker-lock/pkg/rewrite/preprocess"
 	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -61,22 +62,21 @@ func NewRewriteCmd() (*cobra.Command, error) {
 }
 
 // SetupRewriter creates a Rewriter configured for docker-lock's cli.
-func SetupRewriter(flags *Flags) (*rewrite.Rewriter, error) {
-	dockerfileWriter := &write.DockerfileWriter{
-		ExcludeTags: flags.ExcludeTags,
-		Directory:   flags.TempDir,
+func SetupRewriter(flags *Flags) (rewrite.IRewriter, error) {
+	dockerfileWriter := write.NewDockerfileWriter(
+		flags.ExcludeTags, flags.TempDir,
+	)
+
+	composefileWriter, err := write.NewComposefileWriter(
+		dockerfileWriter, flags.ExcludeTags, flags.TempDir,
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	composefileWriter := &write.ComposefileWriter{
-		DockerfileWriter: dockerfileWriter,
-		ExcludeTags:      flags.ExcludeTags,
-		Directory:        flags.TempDir,
-	}
-
-	kubernetesfileWriter := &write.KubernetesfileWriter{
-		ExcludeTags: flags.ExcludeTags,
-		Directory:   flags.TempDir,
-	}
+	kubernetesfileWriter := write.NewKubernetesfileWriter(
+		flags.ExcludeTags, flags.TempDir,
+	)
 
 	writer, err := rewrite.NewWriter(
 		dockerfileWriter, composefileWriter, kubernetesfileWriter,
@@ -85,9 +85,16 @@ func SetupRewriter(flags *Flags) (*rewrite.Rewriter, error) {
 		return nil, err
 	}
 
-	renamer := &rewrite.Renamer{}
+	renamer := rewrite.NewRenamer()
 
-	return rewrite.NewRewriter(writer, renamer)
+	composefilePreprocessor := preprocess.NewComposefilePreprocessor()
+
+	preprocessor, err := rewrite.NewPreprocessor(composefilePreprocessor)
+	if err != nil {
+		return nil, err
+	}
+
+	return rewrite.NewRewriter(preprocessor, writer, renamer)
 }
 
 func bindPFlags(cmd *cobra.Command, flagNames []string) error {

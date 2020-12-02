@@ -6,7 +6,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/internal/testutils"
 	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
 )
 
@@ -17,7 +17,7 @@ func TestComposefileWriter(t *testing.T) {
 		Name        string
 		Contents    [][]byte
 		Expected    [][]byte
-		PathImages  map[string][]*parse.ComposefileImage
+		PathImages  map[string][]interface{}
 		ExcludeTags bool
 		ShouldFail  bool
 	}{
@@ -35,16 +35,14 @@ services:
 `,
 				),
 			},
-			PathImages: map[string][]*parse.ComposefileImage{
+			PathImages: map[string][]interface{}{
 				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						DockerfilePath: "Dockerfile",
-						ServiceName:    "svc",
+					map[string]interface{}{
+						"name":       "busybox",
+						"tag":        "latest",
+						"digest":     "busybox",
+						"dockerfile": "Dockerfile",
+						"service":    "svc",
 					},
 				},
 			},
@@ -65,15 +63,13 @@ services:
 `,
 				),
 			},
-			PathImages: map[string][]*parse.ComposefileImage{
+			PathImages: map[string][]interface{}{
 				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ServiceName: "svc",
+					map[string]interface{}{
+						"name":    "busybox",
+						"tag":     "latest",
+						"digest":  "busybox",
+						"service": "svc",
 					},
 				},
 			},
@@ -100,15 +96,13 @@ services:
 `,
 				),
 			},
-			PathImages: map[string][]*parse.ComposefileImage{
+			PathImages: map[string][]interface{}{
 				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "scratch",
-							Tag:    "",
-							Digest: "",
-						},
-						ServiceName: "svc",
+					map[string]interface{}{
+						"name":    "scratch",
+						"tag":     "",
+						"digest":  "",
+						"service": "svc",
 					},
 				},
 			},
@@ -135,15 +129,13 @@ services:
 `,
 				),
 			},
-			PathImages: map[string][]*parse.ComposefileImage{
+			PathImages: map[string][]interface{}{
 				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ServiceName: "svc",
+					map[string]interface{}{
+						"name":    "busybox",
+						"tag":     "latest",
+						"digest":  "busybox",
+						"service": "svc",
 					},
 				},
 			},
@@ -175,24 +167,20 @@ services:
 `,
 				),
 			},
-			PathImages: map[string][]*parse.ComposefileImage{
+			PathImages: map[string][]interface{}{
 				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ServiceName: "svc-compose",
+					map[string]interface{}{
+						"name":    "busybox",
+						"tag":     "latest",
+						"digest":  "busybox",
+						"service": "svc-compose",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
-						DockerfilePath: "Dockerfile",
-						ServiceName:    "svc-docker",
+					map[string]interface{}{
+						"name":       "golang",
+						"tag":        "latest",
+						"digest":     "golang",
+						"dockerfile": "Dockerfile",
+						"service":    "svc-docker",
 					},
 				},
 			},
@@ -227,16 +215,14 @@ services:
 `,
 				),
 			},
-			PathImages: map[string][]*parse.ComposefileImage{
+			PathImages: map[string][]interface{}{
 				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
-						DockerfilePath: "Dockerfile",
-						ServiceName:    "svc-docker",
+					map[string]interface{}{
+						"name":       "golang",
+						"tag":        "latest",
+						"digest":     "golang",
+						"dockerfile": "Dockerfile",
+						"service":    "svc-docker",
 					},
 				},
 			},
@@ -258,32 +244,26 @@ services:
 `,
 				),
 			},
-			PathImages: map[string][]*parse.ComposefileImage{
+			PathImages: map[string][]interface{}{
 				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ServiceName: "svc-compose",
+					map[string]interface{}{
+						"name":    "busybox",
+						"tag":     "latest",
+						"digest":  "busybox",
+						"service": "svc-compose",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ServiceName: "svc-unknown",
+					map[string]interface{}{
+						"name":    "busybox",
+						"tag":     "latest",
+						"digest":  "busybox",
+						"service": "svc-unknown",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
-						DockerfilePath: "Dockerfile",
-						ServiceName:    "svc-docker",
+					map[string]interface{}{
+						"name":       "golang",
+						"tag":        "latest",
+						"digest":     "golang",
+						"dockerfile": "Dockerfile",
+						"service":    "svc-docker",
 					},
 				},
 			},
@@ -307,33 +287,27 @@ services:
 `,
 				),
 			},
-			PathImages: map[string][]*parse.ComposefileImage{
+			PathImages: map[string][]interface{}{
 				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ServiceName: "svc-compose",
+					map[string]interface{}{
+						"name":    "busybox",
+						"tag":     "latest",
+						"digest":  "busybox",
+						"service": "svc-compose",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						DockerfilePath: "Dockerfile",
-						ServiceName:    "svc-another-docker",
+					map[string]interface{}{
+						"name":       "busybox",
+						"tag":        "latest",
+						"digest":     "busybox",
+						"dockerfile": "Dockerfile",
+						"service":    "svc-another-docker",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
-						DockerfilePath: "Dockerfile",
-						ServiceName:    "svc-docker",
+					map[string]interface{}{
+						"name":       "golang",
+						"tag":        "latest",
+						"digest":     "golang",
+						"dockerfile": "Dockerfile",
+						"service":    "svc-docker",
 					},
 				},
 			},
@@ -365,43 +339,35 @@ services:
 `,
 				),
 			},
-			PathImages: map[string][]*parse.ComposefileImage{
+			PathImages: map[string][]interface{}{
 				"docker-compose-1.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ServiceName: "svc-compose",
+					map[string]interface{}{
+						"name":    "busybox",
+						"tag":     "latest",
+						"digest":  "busybox",
+						"service": "svc-compose",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						DockerfilePath: "Dockerfile",
-						ServiceName:    "svc-docker",
+					map[string]interface{}{
+						"name":       "busybox",
+						"tag":        "latest",
+						"digest":     "busybox",
+						"dockerfile": "Dockerfile",
+						"service":    "svc-docker",
 					},
 				},
 				"docker-compose-2.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ServiceName: "svc-compose",
+					map[string]interface{}{
+						"name":    "busybox",
+						"tag":     "latest",
+						"digest":  "busybox",
+						"service": "svc-compose",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
-						DockerfilePath: "Dockerfile",
-						ServiceName:    "svc-docker",
+					map[string]interface{}{
+						"name":       "golang",
+						"tag":        "latest",
+						"digest":     "golang",
+						"dockerfile": "Dockerfile",
+						"service":    "svc-docker",
 					},
 				},
 			},
@@ -425,33 +391,27 @@ services:
 `,
 				),
 			},
-			PathImages: map[string][]*parse.ComposefileImage{
+			PathImages: map[string][]interface{}{
 				"docker-compose.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ServiceName: "svc-compose",
+					map[string]interface{}{
+						"name":    "busybox",
+						"tag":     "latest",
+						"digest":  "busybox",
+						"service": "svc-compose",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
-						DockerfilePath: "Dockerfile",
-						ServiceName:    "svc-another-docker",
+					map[string]interface{}{
+						"name":       "golang",
+						"tag":        "latest",
+						"digest":     "golang",
+						"dockerfile": "Dockerfile",
+						"service":    "svc-another-docker",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
-						DockerfilePath: "Dockerfile",
-						ServiceName:    "svc-docker",
+					map[string]interface{}{
+						"name":       "golang",
+						"tag":        "latest",
+						"digest":     "golang",
+						"dockerfile": "Dockerfile",
+						"service":    "svc-docker",
 					},
 				},
 			},
@@ -498,43 +458,35 @@ services:
 `,
 				),
 			},
-			PathImages: map[string][]*parse.ComposefileImage{
+			PathImages: map[string][]interface{}{
 				"docker-compose-one.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ServiceName: "svc-compose",
+					map[string]interface{}{
+						"name":    "busybox",
+						"tag":     "latest",
+						"digest":  "busybox",
+						"service": "svc-compose",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
-						DockerfilePath: "Dockerfile",
-						ServiceName:    "svc-docker",
+					map[string]interface{}{
+						"name":       "golang",
+						"tag":        "latest",
+						"digest":     "golang",
+						"dockerfile": "Dockerfile",
+						"service":    "svc-docker",
 					},
 				},
 				"docker-compose-two.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ServiceName: "svc-compose",
+					map[string]interface{}{
+						"name":    "busybox",
+						"tag":     "latest",
+						"digest":  "busybox",
+						"service": "svc-compose",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
-						DockerfilePath: "Dockerfile",
-						ServiceName:    "svc-docker",
+					map[string]interface{}{
+						"name":       "golang",
+						"tag":        "latest",
+						"digest":     "golang",
+						"dockerfile": "Dockerfile",
+						"service":    "svc-docker",
 					},
 				},
 			},
@@ -593,43 +545,35 @@ services:
 `,
 				),
 			},
-			PathImages: map[string][]*parse.ComposefileImage{
+			PathImages: map[string][]interface{}{
 				"docker-compose-1.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
-						ServiceName: "svc-compose",
+					map[string]interface{}{
+						"name":    "busybox",
+						"tag":     "latest",
+						"digest":  "busybox",
+						"service": "svc-compose",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
-						DockerfilePath: "Dockerfile-1",
-						ServiceName:    "svc-docker",
+					map[string]interface{}{
+						"name":       "golang",
+						"tag":        "latest",
+						"digest":     "golang",
+						"dockerfile": "Dockerfile-1",
+						"service":    "svc-docker",
 					},
 				},
 				"docker-compose-2.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "node",
-							Tag:    "latest",
-							Digest: "node",
-						},
-						ServiceName: "svc-compose",
+					map[string]interface{}{
+						"name":    "node",
+						"tag":     "latest",
+						"digest":  "node",
+						"service": "svc-compose",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "python",
-							Tag:    "latest",
-							Digest: "python",
-						},
-						DockerfilePath: "Dockerfile-2",
-						ServiceName:    "svc-another-docker",
+					map[string]interface{}{
+						"name":       "python",
+						"tag":        "latest",
+						"digest":     "python",
+						"dockerfile": "Dockerfile-2",
+						"service":    "svc-another-docker",
 					},
 				},
 			},
@@ -669,19 +613,21 @@ services:
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := makeTempDirInCurrentDir(t)
+			tempDir := testutils.MakeTempDirInCurrentDir(t)
 			defer os.RemoveAll(tempDir)
 
 			uniquePathsToWrite := map[string]struct{}{}
 
-			tempPathImages := map[string][]*parse.ComposefileImage{}
+			tempPathImages := map[string][]interface{}{}
 
 			for composefilePath, images := range test.PathImages {
 				for _, image := range images {
-					if image.DockerfilePath != "" {
-						uniquePathsToWrite[image.DockerfilePath] = struct{}{}
-						image.DockerfilePath = filepath.Join(
-							tempDir, image.DockerfilePath,
+					image := image.(map[string]interface{})
+					if image["dockerfile"] != nil {
+						dockerfilePath := image["dockerfile"].(string)
+						uniquePathsToWrite[dockerfilePath] = struct{}{}
+						image["dockerfile"] = filepath.Join(
+							tempDir, dockerfilePath,
 						)
 					}
 				}
@@ -699,34 +645,35 @@ services:
 
 			sort.Strings(pathsToWrite)
 
-			writeFilesToTempDir(
+			testutils.WriteFilesToTempDir(
 				t, tempDir, pathsToWrite, test.Contents,
 			)
 
-			dockerfileWriter := &write.DockerfileWriter{
-				Directory:   tempDir,
-				ExcludeTags: test.ExcludeTags,
-			}
-			composefileWriter := &write.ComposefileWriter{
-				DockerfileWriter: dockerfileWriter,
-				Directory:        tempDir,
-				ExcludeTags:      test.ExcludeTags,
+			dockerfileWriter := write.NewDockerfileWriter(
+				test.ExcludeTags, tempDir,
+			)
+
+			composefileWriter, err := write.NewComposefileWriter(
+				dockerfileWriter, test.ExcludeTags, tempDir,
+			)
+			if err != nil {
+				t.Fatal(err)
 			}
 
 			done := make(chan struct{})
+			defer close(done)
+
 			writtenPathResults := composefileWriter.WriteFiles(
 				tempPathImages, done,
 			)
 
 			var got []string
 
-			var err error
-
 			for writtenPath := range writtenPathResults {
-				if writtenPath.Err != nil {
-					err = writtenPath.Err
+				if writtenPath.Err() != nil {
+					err = writtenPath.Err()
 				}
-				got = append(got, writtenPath.Path)
+				got = append(got, writtenPath.NewPath())
 			}
 
 			if test.ShouldFail {
@@ -743,7 +690,7 @@ services:
 
 			sort.Strings(got)
 
-			assertWrittenFiles(t, test.Expected, got)
+			testutils.AssertWrittenFilesEqual(t, test.Expected, got)
 		})
 	}
 }

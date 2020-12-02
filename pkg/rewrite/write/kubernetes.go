@@ -9,37 +9,39 @@ import (
 	"sync"
 
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/deprecated/scheme"
 )
 
-// KubernetesfileWriter contains information for writing new Kubernetesfiles.
-type KubernetesfileWriter struct {
-	ExcludeTags bool
-	Directory   string
+type kubernetesfileWriter struct {
+	kind        kind.Kind
+	excludeTags bool
+	directory   string
 }
 
-// IKubernetesfileWriter provides an interface for KubernetesfileWriter's
-// exported methods.
-type IKubernetesfileWriter interface {
-	WriteFiles(
-		pathImages map[string][]*parse.KubernetesfileImage,
-		done <-chan struct{},
-	) <-chan *WrittenPath
+// NewKubernetesfileWriter returns an IWriter for Kubernetesfiles.
+func NewKubernetesfileWriter(excludeTags bool, directory string) IWriter {
+	return &kubernetesfileWriter{
+		kind:        kind.Kubernetesfile,
+		excludeTags: excludeTags,
+		directory:   directory,
+	}
+}
+
+// Kind is a getter for the kind.
+func (k *kubernetesfileWriter) Kind() kind.Kind {
+	return k.kind
 }
 
 // WriteFiles writes new Kubernetesfiles given the paths of the
 // original Kubernetesfiles and new images that should replace
 // the exsting ones.
-func (k *KubernetesfileWriter) WriteFiles( // nolint: dupl
-	pathImages map[string][]*parse.KubernetesfileImage,
+func (k *kubernetesfileWriter) WriteFiles( // nolint: dupl
+	pathImages map[string][]interface{},
 	done <-chan struct{},
-) <-chan *WrittenPath {
-	if len(pathImages) == 0 {
-		return nil
-	}
-
-	writtenPaths := make(chan *WrittenPath)
+) <-chan IWrittenPath {
+	writtenPaths := make(chan IWrittenPath)
 
 	var waitGroup sync.WaitGroup
 
@@ -61,7 +63,7 @@ func (k *KubernetesfileWriter) WriteFiles( // nolint: dupl
 				if err != nil {
 					select {
 					case <-done:
-					case writtenPaths <- &WrittenPath{Err: err}:
+					case writtenPaths <- NewWrittenPath("", "", err):
 					}
 
 					return
@@ -70,10 +72,7 @@ func (k *KubernetesfileWriter) WriteFiles( // nolint: dupl
 				select {
 				case <-done:
 					return
-				case writtenPaths <- &WrittenPath{
-					OriginalPath: path,
-					Path:         writtenPath,
-				}:
+				case writtenPaths <- NewWrittenPath(path, writtenPath, nil):
 				}
 			}()
 		}
@@ -87,9 +86,9 @@ func (k *KubernetesfileWriter) WriteFiles( // nolint: dupl
 	return writtenPaths
 }
 
-func (k *KubernetesfileWriter) writeFile(
+func (k *kubernetesfileWriter) writeFile(
 	path string,
-	images []*parse.KubernetesfileImage,
+	images []interface{},
 ) (string, error) {
 	byt, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -101,11 +100,11 @@ func (k *KubernetesfileWriter) writeFile(
 		return "", err
 	}
 
-	dec := yaml.NewDecoder(bytes.NewReader(byt))
-
-	var encodedDocs []interface{}
-
-	var imagePosition int
+	var (
+		encodedDocs   []interface{}
+		imagePosition int
+		dec           = yaml.NewDecoder(bytes.NewReader(byt))
+	)
 
 	for {
 		var doc yaml.MapSlice
@@ -134,7 +133,7 @@ func (k *KubernetesfileWriter) writeFile(
 	replacer := strings.NewReplacer("/", "-", "\\", "-")
 	tempPath := replacer.Replace(fmt.Sprintf("%s-*", path))
 
-	writtenFile, err := ioutil.TempFile(k.Directory, tempPath)
+	writtenFile, err := ioutil.TempFile(k.directory, tempPath)
 	if err != nil {
 		return "", err
 	}
@@ -151,10 +150,10 @@ func (k *KubernetesfileWriter) writeFile(
 	return writtenFile.Name(), nil
 }
 
-func (k *KubernetesfileWriter) encodeDoc(
+func (k *kubernetesfileWriter) encodeDoc(
 	path string,
 	doc interface{},
-	images []*parse.KubernetesfileImage,
+	images []interface{},
 	imagePosition *int,
 ) error {
 	switch doc := doc.(type) {
@@ -180,9 +179,18 @@ func (k *KubernetesfileWriter) encodeDoc(
 				)
 			}
 
-			doc[imageLineIndex].Value = convertImageToImageLine(
-				images[*imagePosition].Image, k.ExcludeTags,
-			)
+			image := images[*imagePosition].(map[string]interface{})
+
+			tag := image["tag"].(string)
+			if k.excludeTags {
+				tag = ""
+			}
+
+			imageLine := parse.NewImage(
+				k.kind, image["name"].(string), tag, image["digest"].(string),
+				nil, nil,
+			).ImageLine()
+			doc[imageLineIndex].Value = imageLine
 
 			*imagePosition++
 		}

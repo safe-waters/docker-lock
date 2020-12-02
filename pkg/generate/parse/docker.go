@@ -1,4 +1,3 @@
-// Package parse provides functionality to parse images from collected files.
 package parse
 
 import (
@@ -8,39 +7,32 @@ import (
 	"sync"
 
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
+	"github.com/safe-waters/docker-lock/pkg/generate/collect"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 )
 
-// DockerfileImageParser extracts image values from Dockerfiles.
-type DockerfileImageParser struct{}
-
-// DockerfileImage annotates an image with data about the Dockerfile
-// from which it was parsed.
-type DockerfileImage struct {
-	*Image
-	Position int    `json:"-"`
-	Path     string `json:"-"`
-	Err      error  `json:"-"`
+type dockerfileImageParser struct {
+	kind kind.Kind
 }
 
-// IDockerfileImageParser provides an interface for DockerfileImageParser's
-// exported methods.
-type IDockerfileImageParser interface {
-	ParseFiles(
-		paths <-chan string,
-		done <-chan struct{},
-	) <-chan *DockerfileImage
-}
-
-// ParseFiles reads Dockerfiles to parse all images in FROM instructions.
-func (d *DockerfileImageParser) ParseFiles(
-	paths <-chan string,
-	done <-chan struct{},
-) <-chan *DockerfileImage {
-	if paths == nil {
-		return nil
+// NewDockerfileImageParser returns an IImageParser for Dockerfiles.
+func NewDockerfileImageParser() IDockerfileImageParser {
+	return &dockerfileImageParser{
+		kind: kind.Dockerfile,
 	}
+}
 
-	dockerfileImages := make(chan *DockerfileImage)
+// Kind is a getter for the kind.
+func (d *dockerfileImageParser) Kind() kind.Kind {
+	return d.kind
+}
+
+// ParseFiles parses IImages from Dockerfiles.
+func (d *dockerfileImageParser) ParseFiles(
+	paths <-chan collect.IPath,
+	done <-chan struct{},
+) <-chan IImage {
+	dockerfileImages := make(chan IImage)
 
 	var waitGroup sync.WaitGroup
 
@@ -52,7 +44,7 @@ func (d *DockerfileImageParser) ParseFiles(
 		for path := range paths {
 			waitGroup.Add(1)
 
-			go d.parseFile(
+			go d.ParseFile(
 				path, nil, dockerfileImages, done, &waitGroup,
 			)
 		}
@@ -66,20 +58,30 @@ func (d *DockerfileImageParser) ParseFiles(
 	return dockerfileImages
 }
 
-func (d *DockerfileImageParser) parseFile(
-	path string,
+// ParseFile parses IImages from a Dockerfile.
+func (d *dockerfileImageParser) ParseFile(
+	path collect.IPath,
 	buildArgs map[string]string,
-	dockerfileImages chan<- *DockerfileImage,
+	dockerfileImages chan<- IImage,
 	done <-chan struct{},
 	waitGroup *sync.WaitGroup,
 ) {
 	defer waitGroup.Done()
 
-	f, err := os.Open(path)
+	if path.Err() != nil {
+		select {
+		case <-done:
+		case dockerfileImages <- NewImage(d.kind, "", "", "", nil, path.Err()):
+		}
+
+		return
+	}
+
+	f, err := os.Open(path.Val())
 	if err != nil {
 		select {
 		case <-done:
-		case dockerfileImages <- &DockerfileImage{Err: err}:
+		case dockerfileImages <- NewImage(d.kind, "", "", "", nil, err):
 		}
 
 		return
@@ -90,21 +92,24 @@ func (d *DockerfileImageParser) parseFile(
 	if err != nil {
 		select {
 		case <-done:
-		case dockerfileImages <- &DockerfileImage{Err: err}:
+		case dockerfileImages <- NewImage(d.kind, "", "", "", nil, err):
 		}
 
 		return
 	}
 
-	position := 0                     // order of image in Dockerfile
-	stages := map[string]bool{}       // FROM <image line> as <stage>
-	globalArgs := map[string]string{} // ARGs before the first FROM
-	globalContext := true             // true if before first FROM
+	var (
+		position      int                   // order of image in Dockerfile
+		stages        = map[string]bool{}   // FROM <image line> as <stage>
+		globalArgs    = map[string]string{} // ARGs before the first FROM
+		globalContext = true                // true if before first FROM
+	)
 
 	for _, child := range loadedDockerfile.AST.Children {
 		switch child.Value {
 		case "arg":
 			var raw []string
+
 			for n := child.Next; n != nil; n = n.Next {
 				raw = append(raw, n.Value)
 			}
@@ -113,9 +118,10 @@ func (d *DockerfileImageParser) parseFile(
 				err := fmt.Errorf(
 					"invalid arg instruction in Dockerfile '%s'", path,
 				)
+
 				select {
 				case <-done:
-				case dockerfileImages <- &DockerfileImage{Err: err}:
+				case dockerfileImages <- NewImage(d.kind, "", "", "", nil, err):
 				}
 
 				return
@@ -126,9 +132,10 @@ func (d *DockerfileImageParser) parseFile(
 					// ARG VAR=VAL
 					varVal := strings.SplitN(raw[0], "=", 2)
 
-					const varIndex = 0
-
-					const valIndex = 1
+					const (
+						varIndex = 0
+						valIndex = 1
+					)
 
 					strippedVar := d.stripQuotes(varVal[varIndex])
 					strippedVal := d.stripQuotes(varVal[valIndex])
@@ -143,6 +150,7 @@ func (d *DockerfileImageParser) parseFile(
 			}
 		case "from":
 			var raw []string
+
 			for n := child.Next; n != nil; n = n.Next {
 				raw = append(raw, n.Value)
 			}
@@ -151,9 +159,10 @@ func (d *DockerfileImageParser) parseFile(
 				err := fmt.Errorf(
 					"invalid from instruction in Dockerfile '%s'", path,
 				)
+
 				select {
 				case <-done:
-				case dockerfileImages <- &DockerfileImage{Err: err}:
+				case dockerfileImages <- NewImage(d.kind, "", "", "", nil, err):
 				}
 
 				return
@@ -162,16 +171,18 @@ func (d *DockerfileImageParser) parseFile(
 			globalContext = false
 
 			if !stages[raw[0]] {
-				imageLine := expandField(raw[0], globalArgs, buildArgs)
+				image := NewImage(d.kind, "", "", "", map[string]interface{}{
+					"position": position,
+					"path":     path.Val(),
+				}, nil)
+				imageLine := d.expandField(raw[0], globalArgs, buildArgs)
 
-				image := convertImageLineToImage(imageLine)
+				image.SetNameTagDigestFromImageLine(imageLine)
 
 				select {
 				case <-done:
 					return
-				case dockerfileImages <- &DockerfileImage{
-					Image: image, Position: position, Path: path,
-				}:
+				case dockerfileImages <- image:
 					position++
 				}
 			}
@@ -189,7 +200,7 @@ func (d *DockerfileImageParser) parseFile(
 	}
 }
 
-func (d *DockerfileImageParser) stripQuotes(s string) string {
+func (d *dockerfileImageParser) stripQuotes(s string) string {
 	// Valid in a Dockerfile - any number of quotes if quote is on either side.
 	// ARG "IMAGE"="busybox"
 	// ARG "IMAGE"""""="busybox"""""""""""""
@@ -200,53 +211,7 @@ func (d *DockerfileImageParser) stripQuotes(s string) string {
 	return s
 }
 
-func convertImageLineToImage(imageLine string) *Image {
-	tagSeparator := -1
-	digestSeparator := -1
-
-loop:
-	for i, c := range imageLine {
-		switch c {
-		case ':':
-			tagSeparator = i
-		case '/':
-			// reset tagSeparator
-			// for instance, 'localhost:5000/my-image'
-			tagSeparator = -1
-		case '@':
-			digestSeparator = i
-			break loop
-		}
-	}
-
-	var name, tag, digest string
-
-	switch {
-	case tagSeparator != -1 && digestSeparator != -1:
-		// ubuntu:18.04@sha256:9b1702...
-		name = imageLine[:tagSeparator]
-		tag = imageLine[tagSeparator+1 : digestSeparator]
-		digest = imageLine[digestSeparator+1+len("sha256:"):]
-	case tagSeparator != -1 && digestSeparator == -1:
-		// ubuntu:18.04
-		name = imageLine[:tagSeparator]
-		tag = imageLine[tagSeparator+1:]
-	case tagSeparator == -1 && digestSeparator != -1:
-		// ubuntu@sha256:9b1702...
-		name = imageLine[:digestSeparator]
-		digest = imageLine[digestSeparator+1+len("sha256:"):]
-	default:
-		// ubuntu
-		name = imageLine
-		if name != "scratch" {
-			tag = "latest"
-		}
-	}
-
-	return &Image{Name: name, Tag: tag, Digest: digest}
-}
-
-func expandField(
+func (d *dockerfileImageParser) expandField(
 	field string,
 	globalArgs map[string]string,
 	buildArgs map[string]string,

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/internal/testutils"
 	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
 )
 
@@ -17,7 +17,7 @@ func TestDockerfileWriter(t *testing.T) {
 		Name        string
 		Contents    [][]byte
 		Expected    [][]byte
-		PathImages  map[string][]*parse.DockerfileImage
+		PathImages  map[string][]interface{}
 		ExcludeTags bool
 		ShouldFail  bool
 	}{
@@ -30,28 +30,22 @@ FROM redis:latest
 FROM golang:latest@sha256:12345
 `),
 			},
-			PathImages: map[string][]*parse.DockerfileImage{
+			PathImages: map[string][]interface{}{
 				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
+					map[string]interface{}{
+						"name":   "busybox",
+						"tag":    "latest",
+						"digest": "busybox",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "redis",
-							Tag:    "latest",
-							Digest: "redis",
-						},
+					map[string]interface{}{
+						"name":   "redis",
+						"tag":    "latest",
+						"digest": "redis",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
+					map[string]interface{}{
+						"name":   "golang",
+						"tag":    "latest",
+						"digest": "golang",
 					},
 				},
 			},
@@ -64,7 +58,7 @@ FROM golang:latest@sha256:golang
 			},
 		},
 		{
-			Name: "Comments and newlines",
+			Name: "Comments and Newlines",
 			Contents: [][]byte{
 				[]byte(`FROM busybox
 
@@ -78,14 +72,12 @@ RUN echo
 RUN touch foo
 `),
 			},
-			PathImages: map[string][]*parse.DockerfileImage{
+			PathImages: map[string][]interface{}{
 				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
+					map[string]interface{}{
+						"name":   "busybox",
+						"tag":    "latest",
+						"digest": "busybox",
 					},
 				},
 			},
@@ -108,14 +100,12 @@ RUN touch foo
 			Contents: [][]byte{
 				[]byte(`FROM scratch`),
 			},
-			PathImages: map[string][]*parse.DockerfileImage{
+			PathImages: map[string][]interface{}{
 				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "scratch",
-							Tag:    "",
-							Digest: "",
-						},
+					map[string]interface{}{
+						"name":   "scratch",
+						"tag":    "",
+						"digest": "",
 					},
 				},
 			},
@@ -136,51 +126,39 @@ FROM busybox
 FROM redis
 `),
 			},
-			PathImages: map[string][]*parse.DockerfileImage{
+			PathImages: map[string][]interface{}{
 				"Dockerfile-1": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox-1",
-						},
+					map[string]interface{}{
+						"name":   "busybox",
+						"tag":    "latest",
+						"digest": "busybox-1",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "redis",
-							Tag:    "latest",
-							Digest: "redis-1",
-						},
+					map[string]interface{}{
+						"name":   "redis",
+						"tag":    "latest",
+						"digest": "redis-1",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang-1",
-						},
+					map[string]interface{}{
+						"name":   "golang",
+						"tag":    "latest",
+						"digest": "golang-1",
 					},
 				},
 				"Dockerfile-2": {
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang-2",
-						},
+					map[string]interface{}{
+						"name":   "golang",
+						"tag":    "latest",
+						"digest": "golang-2",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox-2",
-						},
+					map[string]interface{}{
+						"name":   "busybox",
+						"tag":    "latest",
+						"digest": "busybox-2",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "redis",
-							Tag:    "latest",
-							Digest: "redis-2",
-						},
+					map[string]interface{}{
+						"name":   "redis",
+						"tag":    "latest",
+						"digest": "redis-2",
 					},
 				},
 			},
@@ -204,28 +182,22 @@ FROM golang
 `),
 			},
 			ExcludeTags: true,
-			PathImages: map[string][]*parse.DockerfileImage{
+			PathImages: map[string][]interface{}{
 				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
+					map[string]interface{}{
+						"name":   "busybox",
+						"tag":    "latest",
+						"digest": "busybox",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "redis",
-							Tag:    "latest",
-							Digest: "redis",
-						},
+					map[string]interface{}{
+						"name":   "redis",
+						"tag":    "latest",
+						"digest": "redis",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
+					map[string]interface{}{
+						"name":   "golang",
+						"tag":    "latest",
+						"digest": "golang",
 					},
 				},
 			},
@@ -245,28 +217,22 @@ FROM base
 FROM golang
 `),
 			},
-			PathImages: map[string][]*parse.DockerfileImage{
+			PathImages: map[string][]interface{}{
 				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
+					map[string]interface{}{
+						"name":   "busybox",
+						"tag":    "latest",
+						"digest": "busybox",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "redis",
-							Tag:    "latest",
-							Digest: "redis",
-						},
+					map[string]interface{}{
+						"name":   "redis",
+						"tag":    "latest",
+						"digest": "redis",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "golang",
-							Tag:    "latest",
-							Digest: "golang",
-						},
+					map[string]interface{}{
+						"name":   "golang",
+						"tag":    "latest",
+						"digest": "golang",
 					},
 				},
 			},
@@ -287,21 +253,17 @@ FROM --platform=$BUILDPLATFORM redis
 FROM --platform=$BUILDPLATFORM base AS anotherbase
 `),
 			},
-			PathImages: map[string][]*parse.DockerfileImage{
+			PathImages: map[string][]interface{}{
 				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
+					map[string]interface{}{
+						"name":   "busybox",
+						"tag":    "latest",
+						"digest": "busybox",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "redis",
-							Tag:    "latest",
-							Digest: "redis",
-						},
+					map[string]interface{}{
+						"name":   "redis",
+						"tag":    "latest",
+						"digest": "redis",
 					},
 				},
 			},
@@ -318,21 +280,17 @@ FROM --platform=$BUILDPLATFORM base AS anotherbase
 			Contents: [][]byte{
 				[]byte(`FROM busybox`),
 			},
-			PathImages: map[string][]*parse.DockerfileImage{
+			PathImages: map[string][]interface{}{
 				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
+					map[string]interface{}{
+						"name":   "busybox",
+						"tag":    "latest",
+						"digest": "busybox",
 					},
-					{
-						Image: &parse.Image{
-							Name:   "redis",
-							Tag:    "latest",
-							Digest: "redis",
-						},
+					map[string]interface{}{
+						"name":   "redis",
+						"tag":    "latest",
+						"digest": "redis",
 					},
 				},
 			},
@@ -345,14 +303,12 @@ FROM --platform=$BUILDPLATFORM base AS anotherbase
 FROM redis
 `),
 			},
-			PathImages: map[string][]*parse.DockerfileImage{
+			PathImages: map[string][]interface{}{
 				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
+					map[string]interface{}{
+						"name":   "busybox",
+						"tag":    "latest",
+						"digest": "busybox",
 					},
 				},
 			},
@@ -363,14 +319,12 @@ FROM redis
 			Contents: [][]byte{
 				[]byte(`FROM`),
 			},
-			PathImages: map[string][]*parse.DockerfileImage{
+			PathImages: map[string][]interface{}{
 				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
+					map[string]interface{}{
+						"name":   "busybox",
+						"tag":    "latest",
+						"digest": "busybox",
 					},
 				},
 			},
@@ -381,14 +335,12 @@ FROM redis
 			Contents: [][]byte{
 				[]byte(`FROM --platform=$BUILDTARGET`),
 			},
-			PathImages: map[string][]*parse.DockerfileImage{
+			PathImages: map[string][]interface{}{
 				"Dockerfile": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "latest",
-							Digest: "busybox",
-						},
+					map[string]interface{}{
+						"name":   "busybox",
+						"tag":    "latest",
+						"digest": "busybox",
 					},
 				},
 			},
@@ -402,12 +354,12 @@ FROM redis
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := makeTempDirInCurrentDir(t)
+			tempDir := testutils.MakeTempDirInCurrentDir(t)
 			defer os.RemoveAll(tempDir)
 
 			var pathsToWrite []string
 
-			tempPathImages := map[string][]*parse.DockerfileImage{}
+			tempPathImages := map[string][]interface{}{}
 
 			for path, images := range test.PathImages {
 				pathsToWrite = append(pathsToWrite, path)
@@ -418,15 +370,15 @@ FROM redis
 
 			sort.Strings(pathsToWrite)
 
-			writeFilesToTempDir(
+			testutils.WriteFilesToTempDir(
 				t, tempDir, pathsToWrite, test.Contents,
 			)
 
-			writer := &write.DockerfileWriter{
-				Directory:   tempDir,
-				ExcludeTags: test.ExcludeTags,
-			}
+			writer := write.NewDockerfileWriter(test.ExcludeTags, tempDir)
+
 			done := make(chan struct{})
+			defer close(done)
+
 			writtenPathResults := writer.WriteFiles(
 				tempPathImages, done,
 			)
@@ -436,10 +388,10 @@ FROM redis
 			var err error
 
 			for writtenPath := range writtenPathResults {
-				if writtenPath.Err != nil {
-					err = writtenPath.Err
+				if writtenPath.Err() != nil {
+					err = writtenPath.Err()
 				}
-				got = append(got, writtenPath.Path)
+				got = append(got, writtenPath.NewPath())
 			}
 
 			if test.ShouldFail {
@@ -456,7 +408,7 @@ FROM redis
 
 			sort.Strings(got)
 
-			assertWrittenFiles(t, test.Expected, got)
+			testutils.AssertWrittenFilesEqual(t, test.Expected, got)
 		})
 	}
 }

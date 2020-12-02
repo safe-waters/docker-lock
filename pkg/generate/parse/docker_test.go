@@ -5,7 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/safe-waters/docker-lock/internal/testutils"
+	"github.com/safe-waters/docker-lock/pkg/generate/collect"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 )
 
 const dockerfileImageParserTestDir = "dockerfileParser-tests"
@@ -17,7 +20,7 @@ func TestDockerfileImageParser(t *testing.T) {
 		Name               string
 		DockerfilePaths    []string
 		DockerfileContents [][]byte
-		Expected           []*parse.DockerfileImage
+		Expected           []parse.IImage
 		ShouldFail         bool
 	}{
 		{
@@ -30,22 +33,28 @@ FROM golang:1.14
 FROM node
 `),
 			},
-			Expected: []*parse.DockerfileImage{
-				{
-					Image:    &parse.Image{Name: "ubuntu", Tag: "bionic"},
-					Position: 0,
-					Path:     "Dockerfile",
-				},
-				{
-					Image:    &parse.Image{Name: "golang", Tag: "1.14"},
-					Position: 1,
-					Path:     "Dockerfile",
-				},
-				{
-					Image:    &parse.Image{Name: "node", Tag: "latest"},
-					Position: 2,
-					Path:     "Dockerfile",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "ubuntu", "bionic", "",
+					map[string]interface{}{
+						"path":     "Dockerfile",
+						"position": 0,
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Dockerfile, "golang", "1.14", "",
+					map[string]interface{}{
+						"path":     "Dockerfile",
+						"position": 1,
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Dockerfile, "node", "latest", "",
+					map[string]interface{}{
+						"path":     "Dockerfile",
+						"position": 2,
+					}, nil,
+				),
 			},
 		},
 		{
@@ -56,12 +65,14 @@ FROM node
 FROM scratch
 `),
 			},
-			Expected: []*parse.DockerfileImage{
-				{
-					Image:    &parse.Image{Name: "scratch"},
-					Position: 0,
-					Path:     "Dockerfile",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "scratch", "", "",
+					map[string]interface{}{
+						"path":     "Dockerfile",
+						"position": 0,
+					}, nil,
+				),
 			},
 		},
 		{
@@ -72,15 +83,14 @@ FROM scratch
 FROM ubuntu@sha256:bae015c28bc7
 `),
 			},
-			Expected: []*parse.DockerfileImage{
-				{
-					Image: &parse.Image{
-						Name:   "ubuntu",
-						Digest: "bae015c28bc7",
-					},
-					Position: 0,
-					Path:     "Dockerfile",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "ubuntu", "", "bae015c28bc7",
+					map[string]interface{}{
+						"path":     "Dockerfile",
+						"position": 0,
+					}, nil,
+				),
 			},
 		},
 		{
@@ -91,15 +101,14 @@ FROM ubuntu@sha256:bae015c28bc7
 FROM --platform=$BUILDPLATFORM ubuntu@sha256:bae015c28bc7
 `),
 			},
-			Expected: []*parse.DockerfileImage{
-				{
-					Image: &parse.Image{
-						Name:   "ubuntu",
-						Digest: "bae015c28bc7",
-					},
-					Position: 0,
-					Path:     "Dockerfile",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "ubuntu", "", "bae015c28bc7",
+					map[string]interface{}{
+						"path":     "Dockerfile",
+						"position": 0,
+					}, nil,
+				),
 			},
 		},
 		{
@@ -110,16 +119,14 @@ FROM --platform=$BUILDPLATFORM ubuntu@sha256:bae015c28bc7
 FROM ubuntu:bionic@sha256:bae015c28bc7
 `),
 			},
-			Expected: []*parse.DockerfileImage{
-				{
-					Image: &parse.Image{
-						Name:   "ubuntu",
-						Tag:    "bionic",
-						Digest: "bae015c28bc7",
-					},
-					Position: 0,
-					Path:     "Dockerfile",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "ubuntu", "bionic", "bae015c28bc7",
+					map[string]interface{}{
+						"path":     "Dockerfile",
+						"position": 0,
+					}, nil,
+				),
 			},
 		},
 		{
@@ -130,16 +137,14 @@ FROM ubuntu:bionic@sha256:bae015c28bc7
 FROM localhost:5000/ubuntu:bionic@sha256:bae015c28bc7
 `),
 			},
-			Expected: []*parse.DockerfileImage{
-				{
-					Image: &parse.Image{
-						Name:   "localhost:5000/ubuntu",
-						Tag:    "bionic",
-						Digest: "bae015c28bc7",
-					},
-					Position: 0,
-					Path:     "Dockerfile",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "localhost:5000/ubuntu", "bionic",
+					"bae015c28bc7", map[string]interface{}{
+						"path":     "Dockerfile",
+						"position": 0,
+					}, nil,
+				),
 			},
 		},
 		{
@@ -153,17 +158,21 @@ ARG IMAGE=ubuntu
 FROM ${IMAGE}
 `),
 			},
-			Expected: []*parse.DockerfileImage{
-				{
-					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
-					Position: 0,
-					Path:     "Dockerfile",
-				},
-				{
-					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
-					Position: 1,
-					Path:     "Dockerfile",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":     "Dockerfile",
+						"position": 0,
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Dockerfile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":     "Dockerfile",
+						"position": 1,
+					}, nil,
+				),
 			},
 		},
 		{
@@ -176,17 +185,21 @@ FROM busy as anotherbusy
 FROM ubuntu as worker
 `),
 			},
-			Expected: []*parse.DockerfileImage{
-				{
-					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
-					Position: 0,
-					Path:     "Dockerfile",
-				},
-				{
-					Image:    &parse.Image{Name: "ubuntu", Tag: "latest"},
-					Position: 1,
-					Path:     "Dockerfile",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":     "Dockerfile",
+						"position": 0,
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Dockerfile, "ubuntu", "latest", "",
+					map[string]interface{}{
+						"path":     "Dockerfile",
+						"position": 1,
+					}, nil,
+				),
 			},
 		},
 		{
@@ -202,28 +215,35 @@ FROM ubuntu
 FROM busybox
 `),
 			},
-			Expected: []*parse.DockerfileImage{
-				{
-					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
-					Position: 0,
-					Path:     "Dockerfile-one",
-				},
-				{
-					Image:    &parse.Image{Name: "ubuntu", Tag: "latest"},
-					Position: 1,
-					Path:     "Dockerfile-one",
-				},
-
-				{
-					Image:    &parse.Image{Name: "ubuntu", Tag: "latest"},
-					Position: 0,
-					Path:     "Dockerfile-two",
-				},
-				{
-					Image:    &parse.Image{Name: "busybox", Tag: "latest"},
-					Position: 1,
-					Path:     "Dockerfile-two",
-				},
+			Expected: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":     "Dockerfile-one",
+						"position": 0,
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Dockerfile, "ubuntu", "latest", "",
+					map[string]interface{}{
+						"path":     "Dockerfile-one",
+						"position": 1,
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Dockerfile, "ubuntu", "latest", "",
+					map[string]interface{}{
+						"path":     "Dockerfile-two",
+						"position": 0,
+					}, nil,
+				),
+				parse.NewImage(
+					kind.Dockerfile, "busybox", "latest", "",
+					map[string]interface{}{
+						"path":     "Dockerfile-two",
+						"position": 1,
+					}, nil,
+				),
 			},
 		},
 		{
@@ -249,63 +269,64 @@ FROM
 		},
 	}
 
-	for _, test := range tests { // nolint: dupl
+	for _, test := range tests {
 		test := test
 
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := makeTempDir(t, dockerfileImageParserTestDir)
+			tempDir := testutils.MakeTempDir(t, dockerfileImageParserTestDir)
 			defer os.RemoveAll(tempDir)
 
-			makeParentDirsInTempDirFromFilePaths(
+			testutils.MakeParentDirsInTempDirFromFilePaths(
 				t, tempDir, test.DockerfilePaths,
 			)
-			pathsToParse := writeFilesToTempDir(
+			pathsToParse := testutils.WriteFilesToTempDir(
 				t, tempDir, test.DockerfilePaths, test.DockerfileContents,
 			)
 
-			pathsToParseCh := make(chan string, len(pathsToParse))
+			pathsToParseCh := make(chan collect.IPath, len(pathsToParse))
 			for _, path := range pathsToParse {
-				pathsToParseCh <- path
+				pathsToParseCh <- collect.NewPath(kind.Dockerfile, path, nil)
 			}
 			close(pathsToParseCh)
 
 			done := make(chan struct{})
+			defer close(done)
 
-			dockerfileParser := &parse.DockerfileImageParser{}
-			dockerfileImages := dockerfileParser.ParseFiles(
-				pathsToParseCh, done,
-			)
+			parser := parse.NewDockerfileImageParser()
+			images := parser.ParseFiles(pathsToParseCh, done)
 
-			var got []*parse.DockerfileImage
+			var got []parse.IImage
 
-			for dockerfileImage := range dockerfileImages {
+			for image := range images {
 				if test.ShouldFail {
-					if dockerfileImage.Err == nil {
+					if image.Err() == nil {
 						t.Fatal("expected error but did not get one")
 					}
 
 					return
 				}
 
-				if dockerfileImage.Err != nil {
-					close(done)
-					t.Fatal(dockerfileImage.Err)
+				if image.Err() != nil {
+					t.Fatal(image.Err())
 				}
 
-				got = append(got, dockerfileImage)
+				got = append(got, image)
 			}
 
-			sortDockerfileImageParserResults(t, got)
-
-			for _, dockerfileImage := range test.Expected {
-				dockerfileImage.Path = filepath.Join(
-					tempDir, dockerfileImage.Path,
-				)
+			for _, image := range test.Expected {
+				image.SetMetadata(map[string]interface{}{
+					"path": filepath.Join(
+						tempDir, image.Metadata()["path"].(string),
+					),
+					"position": image.Metadata()["position"],
+				})
 			}
 
-			assertDockerfileImagesEqual(t, test.Expected, got)
+			testutils.SortDockerfileImages(t, got)
+
+			testutils.AssertImagesEqual(t, test.Expected, got)
 		})
 	}
 }

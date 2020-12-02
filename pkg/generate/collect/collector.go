@@ -1,4 +1,3 @@
-// Package collect provides functionality to collect file paths for processing.
 package collect
 
 import (
@@ -8,56 +7,53 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/safe-waters/docker-lock/pkg/kind"
 )
 
-// PathCollector gathers files for processing.
-type PathCollector struct {
-	BaseDir      string
-	DefaultPaths []string
-	ManualPaths  []string
-	Globs        []string
-	Recursive    bool
+type pathCollector struct {
+	kind            kind.Kind
+	baseDir         string
+	defaultPathVals []string
+	manualPathVals  []string
+	globVals        []string
+	recursive       bool
 }
 
-// IPathCollector provides an interface for PathCollector's exported methods.
-type IPathCollector interface {
-	CollectPaths(done <-chan struct{}) <-chan *PathResult
-}
-
-// PathResult holds collected paths and errors that occurred
-// while gathering them.
-type PathResult struct {
-	Path string
-	Err  error
-}
-
-// NewPathCollector returns a PathCollector after validating its fields.
+// NewPathCollector returns an IPathCollector after validating its fields. If
+// recursive is true, defaultPathVals must be defined so the collector knows
+// which files to collect as it recurs.
 func NewPathCollector(
+	kind kind.Kind,
 	baseDir string,
-	defaultPaths []string,
-	manualPaths []string,
-	globs []string,
+	defaultPathVals []string,
+	manualPathVals []string,
+	globVals []string,
 	recursive bool,
-) (*PathCollector, error) {
-	if recursive && len(defaultPaths) == 0 {
+) (IPathCollector, error) {
+	if recursive && len(defaultPathVals) == 0 {
 		return nil,
-			errors.New("if recursive is true, defaultPaths must also be set")
+			errors.New("if recursive is true, defaultPathVals must also be set")
 	}
 
-	return &PathCollector{
-		BaseDir:      baseDir,
-		DefaultPaths: defaultPaths,
-		ManualPaths:  manualPaths,
-		Globs:        globs,
-		Recursive:    recursive,
+	return &pathCollector{
+		kind:            kind,
+		baseDir:         baseDir,
+		defaultPathVals: defaultPathVals,
+		manualPathVals:  manualPathVals,
+		globVals:        globVals,
+		recursive:       recursive,
 	}, nil
 }
 
-// CollectPaths gathers file paths specified by PathCollector.
-// It removes duplicates and ensures that the file paths are within
-// a subdirectory of the base directory.
-func (p *PathCollector) CollectPaths(done <-chan struct{}) <-chan *PathResult {
-	pathResults := make(chan *PathResult)
+func (p *pathCollector) Kind() kind.Kind {
+	return p.kind
+}
+
+// CollectPaths gathers specified file paths if they are within the base
+// directory or a subdirectory of the base directory. Paths are deduplicated.
+func (p *pathCollector) CollectPaths(done <-chan struct{}) <-chan IPath {
+	paths := make(chan IPath)
 
 	var waitGroup sync.WaitGroup
 
@@ -66,75 +62,75 @@ func (p *PathCollector) CollectPaths(done <-chan struct{}) <-chan *PathResult {
 	go func() {
 		defer waitGroup.Done()
 
-		intermediatePathResults := make(chan *PathResult)
+		intermediatePaths := make(chan IPath)
 		intermediateDone := make(chan struct{})
 
 		var intermediateWaitGroup sync.WaitGroup
 
-		if len(p.ManualPaths) != 0 {
+		if len(p.manualPathVals) != 0 {
 			intermediateWaitGroup.Add(1)
 
 			go p.collectManualPaths(
-				intermediatePathResults, intermediateDone,
+				intermediatePaths, intermediateDone,
 				&intermediateWaitGroup,
 			)
 		}
 
-		if len(p.Globs) != 0 {
+		if len(p.globVals) != 0 {
 			intermediateWaitGroup.Add(1)
 
 			go p.collectGlobs(
-				intermediatePathResults, intermediateDone,
+				intermediatePaths, intermediateDone,
 				&intermediateWaitGroup,
 			)
 		}
 
-		if p.Recursive {
+		if p.recursive {
 			intermediateWaitGroup.Add(1)
 
 			go p.collectRecursive(
-				intermediatePathResults, intermediateDone,
+				intermediatePaths, intermediateDone,
 				&intermediateWaitGroup,
 			)
 		}
 
-		if len(p.ManualPaths) == 0 &&
-			len(p.Globs) == 0 &&
-			!p.Recursive &&
-			len(p.DefaultPaths) != 0 {
+		if len(p.manualPathVals) == 0 &&
+			len(p.globVals) == 0 &&
+			!p.recursive &&
+			len(p.defaultPathVals) != 0 {
 			intermediateWaitGroup.Add(1)
 
 			go p.collectDefaultPaths(
-				intermediatePathResults, intermediateDone,
+				intermediatePaths, intermediateDone,
 				&intermediateWaitGroup,
 			)
 		}
 
 		go func() {
 			intermediateWaitGroup.Wait()
-			close(intermediatePathResults)
+			close(intermediatePaths)
 		}()
 
-		seenPaths := map[string]struct{}{}
+		seenPathVals := map[string]struct{}{}
 
-		for result := range intermediatePathResults {
-			if result.Err != nil {
+		for result := range intermediatePaths {
+			if result.Err() != nil {
 				close(intermediateDone)
 
 				select {
 				case <-done:
-				case pathResults <- result:
+				case paths <- result:
 				}
 
 				return
 			}
 
-			if _, ok := seenPaths[result.Path]; !ok {
-				seenPaths[result.Path] = struct{}{}
+			if _, ok := seenPathVals[result.Val()]; !ok {
+				seenPathVals[result.Val()] = struct{}{}
 
 				select {
 				case <-done:
-				case pathResults <- result:
+				case paths <- result:
 				}
 			}
 		}
@@ -142,26 +138,26 @@ func (p *PathCollector) CollectPaths(done <-chan struct{}) <-chan *PathResult {
 
 	go func() {
 		waitGroup.Wait()
-		close(pathResults)
+		close(paths)
 	}()
 
-	return pathResults
+	return paths
 }
 
-func (p *PathCollector) collectManualPaths(
-	pathResults chan<- *PathResult,
+func (p *pathCollector) collectManualPaths(
+	paths chan<- IPath,
 	done <-chan struct{},
 	waitGroup *sync.WaitGroup,
 ) {
 	defer waitGroup.Done()
 
-	for _, path := range p.ManualPaths {
-		path = filepath.Join(p.BaseDir, path)
+	for _, val := range p.manualPathVals {
+		val = filepath.Join(p.baseDir, val)
 
-		if err := p.validatePath(path); err != nil {
+		if err := p.validatePath(val); err != nil {
 			select {
 			case <-done:
-			case pathResults <- &PathResult{Err: err}:
+			case paths <- NewPath(p.kind, "", err):
 			}
 
 			return
@@ -170,65 +166,65 @@ func (p *PathCollector) collectManualPaths(
 		select {
 		case <-done:
 			return
-		case pathResults <- &PathResult{Path: path}:
+		case paths <- NewPath(p.kind, val, nil):
 		}
 	}
 }
 
-func (p *PathCollector) collectDefaultPaths(
-	pathResults chan<- *PathResult,
+func (p *pathCollector) collectDefaultPaths(
+	paths chan<- IPath,
 	done <-chan struct{},
 	waitGroup *sync.WaitGroup,
 ) {
 	defer waitGroup.Done()
 
-	for _, path := range p.DefaultPaths {
-		path = filepath.Join(p.BaseDir, path)
+	for _, val := range p.defaultPathVals {
+		val = filepath.Join(p.baseDir, val)
 
-		if err := p.validatePath(path); err != nil {
+		if err := p.validatePath(val); err != nil {
 			select {
 			case <-done:
-			case pathResults <- &PathResult{Err: err}:
+			case paths <- NewPath(p.kind, "", err):
 			}
 
 			return
 		}
 
-		if err := p.fileExists(path); err == nil {
+		if err := p.fileExists(val); err == nil {
 			select {
 			case <-done:
 				return
-			case pathResults <- &PathResult{Path: path}:
+			case paths <- NewPath(p.kind, val, nil):
 			}
 		}
 	}
 }
 
-func (p *PathCollector) collectGlobs(
-	pathResults chan<- *PathResult,
+func (p *pathCollector) collectGlobs(
+	pathResults chan<- IPath,
 	done <-chan struct{},
 	waitGroup *sync.WaitGroup,
 ) {
 	defer waitGroup.Done()
 
-	for _, glob := range p.Globs {
-		glob = filepath.Join(p.BaseDir, glob)
+	for _, val := range p.globVals {
+		val = filepath.Join(p.baseDir, val)
 
-		paths, err := filepath.Glob(glob)
+		vals, err := filepath.Glob(val)
 		if err != nil {
 			select {
 			case <-done:
-			case pathResults <- &PathResult{Err: err}:
+			case pathResults <- NewPath(p.kind, "", err):
 			}
 
 			return
 		}
 
-		for _, path := range paths {
-			if err := p.validatePath(path); err != nil {
+		for _, val := range vals {
+			if err := p.validatePath(val); err != nil {
 				select {
 				case <-done:
-				case pathResults <- &PathResult{Err: err}:
+				case pathResults <- NewPath(p.kind, "", err):
 				}
 
 				return
@@ -237,14 +233,14 @@ func (p *PathCollector) collectGlobs(
 			select {
 			case <-done:
 				return
-			case pathResults <- &PathResult{Path: path}:
+			case pathResults <- NewPath(p.kind, val, nil):
 			}
 		}
 	}
 }
 
-func (p *PathCollector) collectRecursive(
-	pathResults chan<- *PathResult,
+func (p *pathCollector) collectRecursive(
+	paths chan<- IPath,
 	done <-chan struct{},
 	waitGroup *sync.WaitGroup,
 ) {
@@ -252,25 +248,25 @@ func (p *PathCollector) collectRecursive(
 
 	defaultSet := map[string]struct{}{}
 
-	for _, path := range p.DefaultPaths {
-		defaultSet[path] = struct{}{}
+	for _, val := range p.defaultPathVals {
+		defaultSet[val] = struct{}{}
 	}
 
 	if err := filepath.Walk(
-		p.BaseDir, func(path string, info os.FileInfo, err error,
+		p.baseDir, func(val string, info os.FileInfo, err error,
 		) error {
 			if err != nil {
 				return err
 			}
 
-			if _, ok := defaultSet[filepath.Base(path)]; ok {
-				if err := p.validatePath(path); err != nil {
+			if _, ok := defaultSet[filepath.Base(val)]; ok {
+				if err := p.validatePath(val); err != nil {
 					return err
 				}
 
 				select {
 				case <-done:
-				case pathResults <- &PathResult{Path: path}:
+				case paths <- NewPath(p.kind, val, nil):
 				}
 			}
 
@@ -279,19 +275,19 @@ func (p *PathCollector) collectRecursive(
 	); err != nil {
 		select {
 		case <-done:
-		case pathResults <- &PathResult{Err: err}:
+		case paths <- NewPath(p.kind, "", err):
 		}
 	}
 }
 
-func (p *PathCollector) fileExists(path string) error {
-	_, err := os.Stat(path)
+func (p *pathCollector) fileExists(val string) error {
+	_, err := os.Stat(val)
 	return err
 }
 
-func (p *PathCollector) validatePath(path string) error {
-	if strings.HasPrefix(path, "..") {
-		return fmt.Errorf("'%s' is outside the current working directory", path)
+func (p *pathCollector) validatePath(val string) error {
+	if strings.HasPrefix(val, "..") {
+		return fmt.Errorf("'%s' is outside the current working directory", val)
 	}
 
 	return nil

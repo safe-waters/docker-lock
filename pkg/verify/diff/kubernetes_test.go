@@ -3,7 +3,6 @@ package diff_test
 import (
 	"testing"
 
-	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 	"github.com/safe-waters/docker-lock/pkg/verify/diff"
 )
 
@@ -12,190 +11,107 @@ func TestKubernetesfileDifferentiator(t *testing.T) {
 
 	tests := []struct {
 		Name        string
-		Existing    map[string][]*parse.KubernetesfileImage
-		New         map[string][]*parse.KubernetesfileImage
+		Existing    map[string]interface{}
+		New         map[string]interface{}
 		ExcludeTags bool
 		ShouldFail  bool
 	}{
 		{
-			Name: "Different Number Of Paths",
-			Existing: map[string][]*parse.KubernetesfileImage{
-				"pod.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ContainerName: "svc",
-					},
-				},
-				"pod1.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ContainerName: "svc1",
-					},
-				},
+			Name: "Different Name",
+			Existing: map[string]interface{}{
+				"name":      "busybox",
+				"tag":       "latest",
+				"digest":    "busybox",
+				"container": "busybox",
 			},
-			New: map[string][]*parse.KubernetesfileImage{
-				"pod.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ContainerName: "svc",
-					},
-				},
+			New: map[string]interface{}{
+				"name":      "redis",
+				"tag":       "latest",
+				"digest":    "busybox",
+				"container": "busybox",
 			},
 			ShouldFail: true,
 		},
 		{
-			Name: "Different Paths",
-			Existing: map[string][]*parse.KubernetesfileImage{
-				"pod.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ContainerName: "svc",
-					},
-				},
+			Name: "Different Tag",
+			Existing: map[string]interface{}{
+				"name":      "busybox",
+				"tag":       "latest",
+				"digest":    "busybox",
+				"container": "busybox",
 			},
-			New: map[string][]*parse.KubernetesfileImage{
-				"pod1.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ContainerName: "svc",
-					},
-				},
+			New: map[string]interface{}{
+				"name":      "busybox",
+				"tag":       "busybox",
+				"digest":    "busybox",
+				"container": "busybox",
 			},
 			ShouldFail: true,
 		},
 		{
-			Name: "Different Images",
-			Existing: map[string][]*parse.KubernetesfileImage{
-				"pod.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ContainerName: "svc",
-					},
-				},
+			Name: "Different Digest",
+			Existing: map[string]interface{}{
+				"name":      "busybox",
+				"tag":       "latest",
+				"digest":    "busybox",
+				"container": "busybox",
 			},
-			New: map[string][]*parse.KubernetesfileImage{
-				"pod.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "notbusybox",
-							Digest: "busybox",
-						},
-						ContainerName: "svc",
-					},
-				},
+			New: map[string]interface{}{
+				"name":      "busybox",
+				"tag":       "latest",
+				"digest":    "unknown",
+				"container": "busybox",
 			},
 			ShouldFail: true,
 		},
 		{
-			Name: "Different Container Names",
-			Existing: map[string][]*parse.KubernetesfileImage{
-				"pod.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ContainerName: "svc1",
-					},
-				},
+			Name: "Different Container",
+			Existing: map[string]interface{}{
+				"name":      "busybox",
+				"tag":       "latest",
+				"digest":    "busybox",
+				"container": "busybox",
 			},
-			New: map[string][]*parse.KubernetesfileImage{
-				"pod.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ContainerName: "svc",
-					},
-				},
+			New: map[string]interface{}{
+				"name":      "busybox",
+				"tag":       "latest",
+				"digest":    "busybox",
+				"container": "busybox1",
 			},
 			ShouldFail: true,
 		},
 		{
 			Name: "Exclude Tags",
-			Existing: map[string][]*parse.KubernetesfileImage{
-				"pod.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ContainerName: "svc",
-					},
-				},
+			Existing: map[string]interface{}{
+				"name":      "busybox",
+				"tag":       "latest",
+				"digest":    "busybox",
+				"container": "busybox",
 			},
-			New: map[string][]*parse.KubernetesfileImage{
-				"pod.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "notbusybox",
-							Digest: "busybox",
-						},
-						ContainerName: "svc",
-					},
-				},
+			New: map[string]interface{}{
+				"name":      "busybox",
+				"tag":       "unknown",
+				"digest":    "busybox",
+				"container": "busybox",
 			},
 			ExcludeTags: true,
-		},
-		{
-			Name: "Nil",
+			ShouldFail:  false,
 		},
 		{
 			Name: "Normal",
-			Existing: map[string][]*parse.KubernetesfileImage{
-				"pod.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ContainerName: "svc",
-					},
-				},
+			Existing: map[string]interface{}{
+				"name":      "busybox",
+				"tag":       "latest",
+				"digest":    "busybox",
+				"container": "busybox",
 			},
-			New: map[string][]*parse.KubernetesfileImage{
-				"pod.yml": {
-					{
-						Image: &parse.Image{
-							Name:   "busybox",
-							Tag:    "busybox",
-							Digest: "busybox",
-						},
-						ContainerName: "svc",
-					},
-				},
+			New: map[string]interface{}{
+				"name":      "busybox",
+				"tag":       "latest",
+				"digest":    "busybox",
+				"container": "busybox",
 			},
+			ShouldFail: false,
 		},
 	}
 
@@ -205,20 +121,10 @@ func TestKubernetesfileDifferentiator(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			differentiator := &diff.KubernetesfileDifferentiator{
-				ExcludeTags: test.ExcludeTags,
-			}
-
-			done := make(chan struct{})
-			defer close(done)
-
-			errCh := differentiator.Differentiate(
-				test.Existing,
-				test.New,
-				done,
+			differentiator := diff.NewKubernetesfileDifferentiator(
+				test.ExcludeTags,
 			)
-
-			err := <-errCh
+			err := differentiator.DifferentiateImage(test.Existing, test.New)
 
 			if test.ShouldFail {
 				if err == nil {

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/safe-waters/docker-lock/cmd/rewrite"
+	"github.com/safe-waters/docker-lock/internal/testutils"
 )
 
 func TestFlags(t *testing.T) {
@@ -53,7 +54,7 @@ func TestFlags(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			assertFlagsEqual(t, test.Expected, got)
+			testutils.AssertFlagsEqual(t, test.Expected, got)
 		})
 	}
 }

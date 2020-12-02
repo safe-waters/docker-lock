@@ -8,29 +8,47 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/safe-waters/docker-lock/pkg/generate"
 	"github.com/safe-waters/docker-lock/pkg/generate/collect"
+	"github.com/safe-waters/docker-lock/pkg/generate/format"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 	"github.com/safe-waters/docker-lock/pkg/generate/registry/contrib"
 	"github.com/safe-waters/docker-lock/pkg/generate/registry/firstparty"
 	"github.com/safe-waters/docker-lock/pkg/generate/update"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 )
 
-// DefaultPathCollector creates a PathCollector for Generator.
+// DefaultPathCollector creates an IPathCollector that works with Dockerfiles,
+// Composefiles, and Kubernetesfiles.
+//
+// For all three, respectively, the defaults are
+// ["Dockerfile"], ["docker-compose.yml", "docker-compose.yaml"], and
+// ["deployment.yml", "deployment.yaml", "pod.yml", "pod.yaml",
+// "job.yml", "job.yaml"].
+//
+// PathCollectors are set according to the flag, "ExcludePaths".
+// If all "ExcludePaths" are true or any of the three's flags,
+// are nil, an error is returned.
 func DefaultPathCollector(flags *Flags) (generate.IPathCollector, error) {
 	if err := ensureFlagsNotNil(flags); err != nil {
 		return nil, err
 	}
 
-	var dockerfileCollector *collect.PathCollector
+	if flags.DockerfileFlags.ExcludePaths &&
+		flags.ComposefileFlags.ExcludePaths &&
+		flags.KubernetesfileFlags.ExcludePaths {
+		return nil, errors.New("nothing to do - all paths excluded")
+	}
 
-	var composefileCollector *collect.PathCollector
-
-	var kubernetesfileCollector *collect.PathCollector
-
-	var err error
+	var (
+		dockerfileCollector     collect.IPathCollector
+		composefileCollector    collect.IPathCollector
+		kubernetesfileCollector collect.IPathCollector
+		err                     error
+	)
 
 	if !flags.DockerfileFlags.ExcludePaths {
 		dockerfileCollector, err = collect.NewPathCollector(
+			kind.Dockerfile,
 			flags.FlagsWithSharedValues.BaseDir, []string{"Dockerfile"},
 			flags.DockerfileFlags.ManualPaths, flags.DockerfileFlags.Globs,
 			flags.DockerfileFlags.Recursive,
@@ -42,6 +60,7 @@ func DefaultPathCollector(flags *Flags) (generate.IPathCollector, error) {
 
 	if !flags.ComposefileFlags.ExcludePaths {
 		composefileCollector, err = collect.NewPathCollector(
+			kind.Composefile,
 			flags.FlagsWithSharedValues.BaseDir,
 			[]string{"docker-compose.yml", "docker-compose.yaml"},
 			flags.ComposefileFlags.ManualPaths, flags.ComposefileFlags.Globs,
@@ -54,6 +73,7 @@ func DefaultPathCollector(flags *Flags) (generate.IPathCollector, error) {
 
 	if !flags.KubernetesfileFlags.ExcludePaths {
 		kubernetesfileCollector, err = collect.NewPathCollector(
+			kind.Kubernetesfile,
 			flags.FlagsWithSharedValues.BaseDir,
 			[]string{
 				"deployment.yml", "deployment.yaml",
@@ -69,28 +89,37 @@ func DefaultPathCollector(flags *Flags) (generate.IPathCollector, error) {
 		}
 	}
 
-	return &generate.PathCollector{
-		DockerfileCollector:     dockerfileCollector,
-		ComposefileCollector:    composefileCollector,
-		KubernetesfileCollector: kubernetesfileCollector,
-	}, nil
+	return generate.NewPathCollector(
+		dockerfileCollector, composefileCollector, kubernetesfileCollector,
+	)
 }
 
-// DefaultImageParser creates an ImageParser for Generator.
+// DefaultImageParser creates an IImageParser that works with Dockerfiles,
+// Composefiles, and Kubernetesfiles.
+//
+// ImageParsers are set according to the flag, "ExcludePaths".
+// If all "ExcludePaths" are true or any of the three's flags,
+// are nil, an error is returned.
 func DefaultImageParser(flags *Flags) (generate.IImageParser, error) {
 	if err := ensureFlagsNotNil(flags); err != nil {
 		return nil, err
 	}
 
-	var dockerfileImageParser *parse.DockerfileImageParser
+	if flags.DockerfileFlags.ExcludePaths &&
+		flags.ComposefileFlags.ExcludePaths &&
+		flags.KubernetesfileFlags.ExcludePaths {
+		return nil, errors.New("nothing to do - all paths excluded")
+	}
 
-	var composefileImageParser *parse.ComposefileImageParser
-
-	var kubernetesfileImageParser *parse.KubernetesfileImageParser
+	var (
+		dockerfileImageParser     parse.IDockerfileImageParser
+		composefileImageParser    parse.IComposefileImageParser
+		kubernetesfileImageParser parse.IKubernetesfileImageParser
+	)
 
 	if !flags.DockerfileFlags.ExcludePaths ||
 		!flags.ComposefileFlags.ExcludePaths {
-		dockerfileImageParser = &parse.DockerfileImageParser{}
+		dockerfileImageParser = parse.NewDockerfileImageParser()
 	}
 
 	if !flags.ComposefileFlags.ExcludePaths {
@@ -106,23 +135,62 @@ func DefaultImageParser(flags *Flags) (generate.IImageParser, error) {
 	}
 
 	if !flags.KubernetesfileFlags.ExcludePaths {
-		kubernetesfileImageParser = &parse.KubernetesfileImageParser{}
+		kubernetesfileImageParser = parse.NewKubernetesfileImageParser()
 	}
 
-	return &generate.ImageParser{
-		DockerfileImageParser:     dockerfileImageParser,
-		ComposefileImageParser:    composefileImageParser,
-		KubernetesfileImageParser: kubernetesfileImageParser,
-	}, nil
+	return generate.NewImageParser(
+		dockerfileImageParser, composefileImageParser,
+		kubernetesfileImageParser,
+	)
 }
 
-// DefaultImageDigestUpdater creates an ImageDigestUpdater for Generator.
+// DefaultImageFormatter creates an IImageFormatter that works with
+// Dockerfiles, Composefiles, and Kubernetesfiles.
+//
+// ImageFormatters are set according to the flag, "ExcludePaths".
+// If all "ExcludePaths" are true or any of the three's flags,
+// are nil, an error is returned.
+func DefaultImageFormatter(flags *Flags) (generate.IImageFormatter, error) {
+	if err := ensureFlagsNotNil(flags); err != nil {
+		return nil, err
+	}
+
+	if flags.DockerfileFlags.ExcludePaths &&
+		flags.ComposefileFlags.ExcludePaths &&
+		flags.KubernetesfileFlags.ExcludePaths {
+		return nil, errors.New("nothing to do - all paths excluded")
+	}
+
+	dockerfileImageFormatter := format.NewDockerfileImageFormatter()
+	composefileImageFormatter := format.NewComposefileImageFormatter()
+	kubernetesfileImageFormatter := format.NewKubernetesfileImageFormatter()
+
+	return generate.NewImageFormatter(
+		dockerfileImageFormatter, composefileImageFormatter,
+		kubernetesfileImageFormatter,
+	)
+}
+
+// DefaultImageDigestUpdater creates an IImageDigestUpdater that works with
+// Dockerfiles, Composefiles, and Kubernetesfiles.
+//
+// If all "ExcludePaths" are true or any of the three's flags,
+// are nil, an error is returned.
+//
+// DefaultImageDigestUpdater relies on DefaultWrapperManager and is subject
+// to the same error conditions.
 func DefaultImageDigestUpdater(
 	client *registry.HTTPClient,
 	flags *Flags,
 ) (generate.IImageDigestUpdater, error) {
 	if err := ensureFlagsNotNil(flags); err != nil {
 		return nil, err
+	}
+
+	if flags.DockerfileFlags.ExcludePaths &&
+		flags.ComposefileFlags.ExcludePaths &&
+		flags.KubernetesfileFlags.ExcludePaths {
+		return nil, errors.New("nothing to do - all paths excluded")
 	}
 
 	wrapperManager, err := DefaultWrapperManager(
@@ -132,18 +200,19 @@ func DefaultImageDigestUpdater(
 		return nil, err
 	}
 
-	imageDigestUpdater, err := update.NewImageDigestUpdater(wrapperManager)
+	imageDigestUpdater, err := update.NewImageDigestUpdater(
+		wrapperManager, flags.FlagsWithSharedValues.IgnoreMissingDigests,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	return generate.NewImageDigestUpdater(
-		imageDigestUpdater, flags.FlagsWithSharedValues.IgnoreMissingDigests,
-	)
+	return generate.NewImageDigestUpdater(imageDigestUpdater)
 }
 
 // DefaultConfigPath returns the default location of docker's config.json
-// for all platforms.
+// for all platforms. If the platform does not have a home directory, it
+// returns an empty string.
 func DefaultConfigPath() string {
 	if homeDir, err := os.UserHomeDir(); err == nil {
 		configPath := filepath.Join(homeDir, ".docker", "config.json")
@@ -157,8 +226,10 @@ func DefaultConfigPath() string {
 	return ""
 }
 
-// DefaultWrapperManager creates a WrapperManager with all possible Wrappers,
-// the default being the docker wrapper.
+// DefaultWrapperManager creates a WrapperManager for querying registries
+// for image digests. The returned wrapper manager uses all possible first party
+// and contrib wrappers. The default wrapper queries Dockerhub for digests
+// and is used if the manager is unable to select a more specific wrapper.
 func DefaultWrapperManager(
 	client *registry.HTTPClient,
 	configPath string,

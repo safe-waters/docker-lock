@@ -5,64 +5,39 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/pkg/kind"
 	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
 )
 
-// Writer is used to write files with their image digests.
-type Writer struct {
-	DockerfileWriter     write.IDockerfileWriter
-	ComposefileWriter    write.IComposefileWriter
-	KubernetesfileWriter write.IKubernetesfileWriter
+type writer struct {
+	writers map[kind.Kind]write.IWriter
 }
 
-// AnyPathImages contains any possible type of path and associated images.
-type AnyPathImages struct {
-	DockerfilePathImages     map[string][]*parse.DockerfileImage
-	ComposefilePathImages    map[string][]*parse.ComposefileImage
-	KubernetesfilePathImages map[string][]*parse.KubernetesfileImage
-}
+// NewWriter creates an IWriter from IWriters for different
+// kinds of files. At least one writer must be non nil, otherwise there
+// would be no way to write files.
+func NewWriter(writers ...write.IWriter) (IWriter, error) {
+	kindWriter := map[kind.Kind]write.IWriter{}
 
-// IWriter provides an interface for Writer's exported methods.
-type IWriter interface {
-	WriteFiles(
-		anyPathImages *AnyPathImages,
-		done <-chan struct{},
-	) <-chan *write.WrittenPath
-}
-
-// NewWriter returns a Writer after validating its fields.
-func NewWriter(
-	dockerfileWriter write.IDockerfileWriter,
-	composefileWriter write.IComposefileWriter,
-	kubernetesfileWriter write.IKubernetesfileWriter,
-) (*Writer, error) {
-	if (dockerfileWriter == nil ||
-		reflect.ValueOf(dockerfileWriter).IsNil()) &&
-		(composefileWriter == nil ||
-			reflect.ValueOf(composefileWriter).IsNil()) &&
-		(kubernetesfileWriter == nil ||
-			reflect.ValueOf(kubernetesfileWriter).IsNil()) {
-		return nil, errors.New("at least one writer must not be nil")
+	for _, writer := range writers {
+		if writer != nil && !reflect.ValueOf(writer).IsNil() {
+			kindWriter[writer.Kind()] = writer
+		}
 	}
 
-	return &Writer{
-		DockerfileWriter:     dockerfileWriter,
-		ComposefileWriter:    composefileWriter,
-		KubernetesfileWriter: kubernetesfileWriter,
-	}, nil
+	if len(kindWriter) == 0 {
+		return nil, errors.New("non nil writers must be greater than 0")
+	}
+
+	return &writer{writers: kindWriter}, nil
 }
 
-// WriteFiles writes files with their image digests.
-func (w *Writer) WriteFiles(
-	anyPathImages *AnyPathImages,
+// WriteFiles writes files with images from a Lockfile.
+func (w *writer) WriteFiles(
+	lockfile map[kind.Kind]map[string][]interface{},
 	done <-chan struct{},
-) <-chan *write.WrittenPath {
-	if anyPathImages == nil {
-		return nil
-	}
-
-	writtenPaths := make(chan *write.WrittenPath)
+) <-chan write.IWrittenPath {
+	writtenPaths := make(chan write.IWrittenPath)
 
 	var waitGroup sync.WaitGroup
 
@@ -71,78 +46,25 @@ func (w *Writer) WriteFiles(
 	go func() {
 		defer waitGroup.Done()
 
-		if w.DockerfileWriter != nil &&
-			!reflect.ValueOf(w.DockerfileWriter).IsNil() &&
-			len(anyPathImages.DockerfilePathImages) != 0 {
+		for kind, writer := range w.writers {
+			kind := kind
+			writer := writer
+
 			waitGroup.Add(1)
 
 			go func() {
 				defer waitGroup.Done()
 
-				writtenPathsFromDockerfiles := w.DockerfileWriter.WriteFiles(
-					anyPathImages.DockerfilePathImages, done,
-				)
-
-				for writtenPath := range writtenPathsFromDockerfiles {
+				for writtenPath := range writer.WriteFiles(
+					lockfile[kind], done,
+				) {
 					select {
 					case <-done:
 						return
 					case writtenPaths <- writtenPath:
 					}
 
-					if writtenPath.Err != nil {
-						return
-					}
-				}
-			}()
-		}
-
-		if w.ComposefileWriter != nil &&
-			!reflect.ValueOf(w.ComposefileWriter).IsNil() &&
-			len(anyPathImages.ComposefilePathImages) != 0 {
-			waitGroup.Add(1)
-
-			go func() {
-				defer waitGroup.Done()
-
-				writtenPathsFromComposefiles := w.ComposefileWriter.WriteFiles(
-					anyPathImages.ComposefilePathImages, done,
-				)
-
-				for writtenPath := range writtenPathsFromComposefiles {
-					select {
-					case <-done:
-						return
-					case writtenPaths <- writtenPath:
-					}
-
-					if writtenPath.Err != nil {
-						return
-					}
-				}
-			}()
-		}
-
-		if w.KubernetesfileWriter != nil &&
-			!reflect.ValueOf(w.KubernetesfileWriter).IsNil() &&
-			len(anyPathImages.KubernetesfilePathImages) != 0 {
-			waitGroup.Add(1)
-
-			go func() {
-				defer waitGroup.Done()
-
-				writtenPathsFromKubernetesfiles := w.KubernetesfileWriter.WriteFiles( // nolint: lll
-					anyPathImages.KubernetesfilePathImages, done,
-				)
-
-				for writtenPath := range writtenPathsFromKubernetesfiles {
-					select {
-					case <-done:
-						return
-					case writtenPaths <- writtenPath:
-					}
-
-					if writtenPath.Err != nil {
+					if writtenPath.Err() != nil {
 						return
 					}
 				}
