@@ -50,6 +50,8 @@ func (c *composefileImageFormatter) FormatImages(
 			return nil, errors.New("missing path in composefile image")
 		}
 
+		path = filepath.ToSlash(path)
+
 		dockerfilePath, _ := image.Metadata()["dockerfilePath"].(string)
 		dockerfilePath = filepath.ToSlash(dockerfilePath)
 

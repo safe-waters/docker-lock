@@ -283,13 +283,13 @@ spec:
 					for _, image := range images {
 						image := image.(map[string]string)
 						if dockerfile, ok := image["dockerfile"]; ok {
-							image["dockerfile"] = filepath.Join(
-								tempDir, dockerfile,
+							image["dockerfile"] = filepath.ToSlash(
+								filepath.Join(tempDir, dockerfile),
 							)
 						}
 					}
 
-					tempPath := filepath.Join(tempDir, path)
+					tempPath := filepath.ToSlash(filepath.Join(tempDir, path))
 					expectedWithTempDir[k][tempPath] = pathImages[path]
 				}
 			}
