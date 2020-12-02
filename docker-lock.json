@@ -4,14 +4,14 @@
 			{
 				"name": "ubuntu",
 				"tag": "bionic",
-				"digest": "fd25e706f3dea2a5ff705dbc3353cf37f08307798f3e360a13e9385840f73fb3"
+				"digest": ""
 			}
 		],
 		"Dockerfile": [
 			{
 				"name": "alpine",
 				"tag": "latest",
-				"digest": "c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a"
+				"digest": ""
 			},
 			{
 				"name": "scratch",
