@@ -64,11 +64,12 @@ FROM golang:latest@sha256:golang
 
 
 COPY . .
+
 # my comment
+
 RUN echo
 
-# cannot distinguish where newlines are
-
+# my next comment
 RUN touch foo
 `),
 			},
@@ -86,12 +87,49 @@ RUN touch foo
 
 
 COPY . .
+
 # my comment
+
 RUN echo
 
-
-# cannot distinguish where newlines are
+# my next comment
 RUN touch foo
+`),
+			},
+		},
+		{
+			Name: "Multiline",
+			Contents: [][]byte{
+				[]byte(`FROM \
+busybox
+FROM redis \
+AS \
+prod
+
+RUN apt-get update && \
+    apt-get intall vim
+`),
+			},
+			PathImages: map[string][]interface{}{
+				"Dockerfile": {
+					map[string]interface{}{
+						"name":   "busybox",
+						"tag":    "latest",
+						"digest": "busybox",
+					},
+					map[string]interface{}{
+						"name":   "redis",
+						"tag":    "latest",
+						"digest": "redis",
+					},
+				},
+			},
+			Expected: [][]byte{
+				[]byte(`FROM busybox:latest@sha256:busybox
+FROM redis:latest@sha256:redis AS prod
+
+RUN apt-get update && \
+    apt-get intall vim
 `),
 			},
 		},

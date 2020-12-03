@@ -1,6 +1,7 @@
 package write
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io/ioutil"
@@ -8,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 	"github.com/safe-waters/docker-lock/pkg/kind"
 )
@@ -88,91 +88,97 @@ func (d *dockerfileWriter) writeFile(
 	path string,
 	images []interface{},
 ) (string, error) {
-	f, err := os.Open(path)
+	dockerfile, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
-
-	loadedDockerfile, err := parser.Parse(f)
-	if err != nil {
-		return "", err
-	}
-
-	const maxNumFields = 3
+	defer dockerfile.Close()
 
 	var (
-		outputBuffer bytes.Buffer
-		lastEndLine  int
-		imageIndex   int
+		scanner      = bufio.NewScanner(dockerfile)
 		stageNames   = map[string]bool{}
+		imageIndex   int
+		outputBuffer bytes.Buffer
+		outputLine   string
 	)
 
-	for _, child := range loadedDockerfile.AST.Children {
-		outputLine := child.Original
+	const instructionIndex = 0 // for instance, FROM is an instruction
 
-		if child.Value == "from" {
-			var raw []string
-			for n := child.Next; n != nil; n = n.Next {
-				raw = append(raw, n.Value)
+	for scanner.Scan() {
+		outputLine = fmt.Sprintf("%s%s", outputLine, scanner.Text())
+		fields := strings.Fields(outputLine)
+
+		if len(fields) > 1 &&
+			strings.ToLower(fields[instructionIndex]) == "from" {
+			if fields[len(fields)-1] == "\\" {
+				fields = fields[:len(fields)-1]
+				outputLine = fmt.Sprintf("%s ", strings.Join(fields, " "))
+
+				continue
 			}
 
-			if len(raw) == 0 {
-				return "", fmt.Errorf(
-					"invalid from instruction in Dockerfile '%s'", path,
-				)
-			}
-
-			if !stageNames[raw[0]] {
-				if imageIndex >= len(images) {
-					return "", fmt.Errorf(
-						"more images exist in '%s' than in the Lockfile",
-						path,
-					)
-				}
-
-				image := images[imageIndex].(map[string]interface{})
-
-				tag := image["tag"].(string)
-				if d.excludeTags {
-					tag = ""
-				}
-
-				replacementImageLine := parse.NewImage(
-					kind.Dockerfile, image["name"].(string), tag,
-					image["digest"].(string), nil, nil,
-				).ImageLine()
-
-				raw[0] = replacementImageLine
-				imageIndex++
-			}
-			// Ensure stage is added to the stage name set:
+			// FROM instructions may take the form:
+			// FROM <image>
+			// FROM --platform <image>
 			// FROM <image> AS <stage>
-
-			// Ensure another stage is added to the stage name set:
+			// FROM --platform <image> AS <stage>
 			// FROM <stage> AS <another stage>
-			if len(raw) == maxNumFields {
-				const stageIndex = maxNumFields - 1
+			// FROM --platform <stage> AS <another stage>
+			var (
+				imageLineIndex = 1
+				stageIndex     = 3
+				maxNumFields   = 4
+			)
 
-				stageNames[raw[stageIndex]] = true
+			if strings.HasPrefix(fields[1], "--") {
+				imageLineIndex++
+				stageIndex++
+				maxNumFields++
 			}
 
-			outputLine = d.formatASTLine(child, raw)
-		}
+			if len(fields) > imageLineIndex {
+				imageLine := fields[imageLineIndex]
 
-		expectedLineNo := lastEndLine + len(child.PrevComment) + 1
-		if expectedLineNo != child.StartLine {
-			newlines := strings.Repeat("\n", child.StartLine-expectedLineNo)
-			outputBuffer.WriteString(newlines)
-		}
+				if !stageNames[imageLine] {
+					if imageIndex >= len(images) {
+						return "", fmt.Errorf(
+							"more images exist in '%s' than in the Lockfile",
+							path,
+						)
+					}
 
-		lastEndLine = child.EndLine
+					image := images[imageIndex].(map[string]interface{})
 
-		for _, comment := range child.PrevComment {
-			fmt.Fprintf(&outputBuffer, "# %s\n", comment)
+					tag := image["tag"].(string)
+					if d.excludeTags {
+						tag = ""
+					}
+
+					replacementImageLine := parse.NewImage(
+						kind.Dockerfile, image["name"].(string), tag,
+						image["digest"].(string), nil, nil,
+					).ImageLine()
+
+					fields[imageLineIndex] = replacementImageLine
+					imageIndex++
+				}
+
+				// Ensure stage is added to the stage name set:
+				// FROM <image> AS <stage>
+
+				// Ensure another stage is added to the stage name set:
+				// FROM <stage> AS <another stage>
+				if len(fields) == maxNumFields {
+					stageNames[fields[stageIndex]] = true
+				}
+			}
+
+			outputLine = strings.Join(fields, " ")
 		}
 
 		outputBuffer.WriteString(fmt.Sprintf("%s\n", outputLine))
+
+		outputLine = ""
 	}
 
 	if imageIndex < len(images) {
@@ -195,17 +201,4 @@ func (d *dockerfileWriter) writeFile(
 	}
 
 	return writtenFile.Name(), err
-}
-
-func (d *dockerfileWriter) formatASTLine(
-	child *parser.Node, raw []string,
-) string {
-	line := []string{strings.ToUpper(child.Value)}
-	if child.Flags != nil {
-		line = append(line, child.Flags...)
-	}
-
-	line = append(line, raw...)
-
-	return strings.Join(line, " ")
 }
