@@ -72,6 +72,9 @@ func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 		"update-existing-digests", false,
 		"Query registries for new digests even if they are hardcoded in files",
 	)
+	verifyCmd.Flags().Bool(
+		"exclude-tags", false, "Exclude image tags from verification",
+	)
 
 	return verifyCmd, nil
 }
