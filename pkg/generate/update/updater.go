@@ -58,7 +58,8 @@ func (i *imageDigestUpdater) UpdateDigests(
 				defer waitGroup.Done()
 
 				if image.Err() != nil ||
-					(image.Digest() != "" && !i.updateExistingDigests) {
+					(image.Digest() != "" && !i.updateExistingDigests) ||
+					image.Tag() == "" {
 					select {
 					case <-done:
 					case updatedImages <- image:
@@ -69,12 +70,7 @@ func (i *imageDigestUpdater) UpdateDigests(
 
 				wrapper := i.wrapperManager.Wrapper(image.Name())
 
-				tag := image.Tag()
-				if tag == "" {
-					tag = "latest"
-				}
-
-				digest, err := wrapper.Digest(image.Name(), tag)
+				digest, err := wrapper.Digest(image.Name(), image.Tag())
 				if err != nil && !i.ignoreMissingDigests {
 					select {
 					case <-done:

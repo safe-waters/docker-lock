@@ -36,7 +36,7 @@ func (i *imageDigestUpdater) UpdateDigests(
 		defer waitGroup.Done()
 
 		imagesToQuery := make(chan parse.IImage)
-		imagesToQueryCache := map[string][]parse.IImage{}
+		imageLineCache := map[string][]parse.IImage{}
 
 		var imagesToQueryWaitGroup sync.WaitGroup
 
@@ -55,16 +55,22 @@ func (i *imageDigestUpdater) UpdateDigests(
 					return
 				}
 
-				key := image.Name() + image.Tag()
-				if _, ok := imagesToQueryCache[key]; !ok {
+				key := image.ImageLine()
+				if _, ok := imageLineCache[key]; !ok {
+					metadata := image.Metadata()
+					metadata["key"] = key
+
 					select {
 					case <-done:
 						return
-					case imagesToQuery <- image:
+					case imagesToQuery <- parse.NewImage(
+						image.Kind(), image.Name(), image.Tag(),
+						image.Digest(), metadata, image.Err(),
+					):
 					}
 				}
 
-				imagesToQueryCache[key] = append(imagesToQueryCache[key], image)
+				imageLineCache[key] = append(imageLineCache[key], image)
 			}
 		}()
 
@@ -91,9 +97,9 @@ func (i *imageDigestUpdater) UpdateDigests(
 		}
 
 		for _, updatedImage := range allUpdatedImages {
-			key := updatedImage.Name() + updatedImage.Tag()
+			key := updatedImage.Metadata()["key"].(string)
 
-			for _, image := range imagesToQueryCache[key] {
+			for _, image := range imageLineCache[key] {
 				image.SetDigest(updatedImage.Digest())
 
 				select {
