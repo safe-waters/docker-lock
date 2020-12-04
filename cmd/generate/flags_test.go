@@ -165,6 +165,7 @@ func TestFlagsWithSharedValues(t *testing.T) {
 				test.Expected.BaseDir, test.Expected.LockfileName,
 				test.Expected.ConfigPath, test.Expected.EnvPath,
 				test.Expected.IgnoreMissingDigests,
+				test.Expected.UpdateExistingDigests,
 			)
 			if test.ShouldFail {
 				if err == nil {
@@ -275,6 +276,7 @@ func TestFlags(t *testing.T) {
 				test.Expected.FlagsWithSharedValues.ConfigPath,
 				test.Expected.FlagsWithSharedValues.EnvPath,
 				test.Expected.FlagsWithSharedValues.IgnoreMissingDigests,
+				test.Expected.FlagsWithSharedValues.UpdateExistingDigests,
 				test.Expected.DockerfileFlags.ManualPaths,
 				test.Expected.ComposefileFlags.ManualPaths,
 				test.Expected.KubernetesfileFlags.ManualPaths,

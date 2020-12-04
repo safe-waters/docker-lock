@@ -202,6 +202,7 @@ func DefaultImageDigestUpdater(
 
 	imageDigestUpdater, err := update.NewImageDigestUpdater(
 		wrapperManager, flags.FlagsWithSharedValues.IgnoreMissingDigests,
+		flags.FlagsWithSharedValues.UpdateExistingDigests,
 	)
 	if err != nil {
 		return nil, err

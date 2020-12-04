@@ -44,6 +44,7 @@ func TestFlags(t *testing.T) {
 				test.Expected.ConfigPath,
 				test.Expected.EnvPath,
 				test.Expected.IgnoreMissingDigests,
+				test.Expected.UpdateExistingDigests,
 				test.Expected.ExcludeTags,
 			)
 			if test.ShouldFail {

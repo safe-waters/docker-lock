@@ -10,11 +10,12 @@ import (
 // FlagsWithSharedValues represents flags whose values
 // are the same for Dockerfiles, Composefiles and Kubernetesfiles.
 type FlagsWithSharedValues struct {
-	BaseDir              string
-	LockfileName         string
-	ConfigPath           string
-	EnvPath              string
-	IgnoreMissingDigests bool
+	BaseDir               string
+	LockfileName          string
+	ConfigPath            string
+	EnvPath               string
+	IgnoreMissingDigests  bool
+	UpdateExistingDigests bool
 }
 
 // FlagsWithSharedNames represents flags whose values
@@ -48,6 +49,7 @@ func NewFlagsWithSharedValues(
 	configPath string,
 	envPath string,
 	ignoreMissingDigests bool,
+	updateExistingDigests bool,
 ) (*FlagsWithSharedValues, error) {
 	if baseDir != "" {
 		if err := validateBaseDirectory(baseDir); err != nil {
@@ -62,11 +64,12 @@ func NewFlagsWithSharedValues(
 	}
 
 	return &FlagsWithSharedValues{
-		BaseDir:              baseDir,
-		LockfileName:         lockfileName,
-		ConfigPath:           configPath,
-		EnvPath:              envPath,
-		IgnoreMissingDigests: ignoreMissingDigests,
+		BaseDir:               baseDir,
+		LockfileName:          lockfileName,
+		ConfigPath:            configPath,
+		EnvPath:               envPath,
+		IgnoreMissingDigests:  ignoreMissingDigests,
+		UpdateExistingDigests: updateExistingDigests,
 	}, nil
 }
 
@@ -122,6 +125,7 @@ func NewFlags(
 	configPath string,
 	envPath string,
 	ignoreMissingDigests bool,
+	updateExistingDigests bool,
 	dockerfilePaths []string,
 	composefilePaths []string,
 	kubernetesfilePaths []string,
@@ -137,6 +141,7 @@ func NewFlags(
 ) (*Flags, error) {
 	sharedFlags, err := NewFlagsWithSharedValues(
 		baseDir, lockfileName, configPath, envPath, ignoreMissingDigests,
+		updateExistingDigests,
 	)
 	if err != nil {
 		return nil, err

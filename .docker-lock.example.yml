@@ -25,6 +25,7 @@ generate:
   exclude-all-dockerfiles: true
   exclude-all-kubernetesfiles: false
   ignore-missing-digests: false
+  update-missing-digests: true
   lockfile-name: docker-lock.json
 
 # To learn more about each flag, run `docker lock verify --help`
@@ -33,6 +34,7 @@ verify:
   env-file: .env
   lockfile-name: docker-lock.json
   ignore-missing-digests: false
+  update-missing-digests: true
   exclude-tags: false
 
 # To learn more about each flag, run `docker lock rewrite --help`

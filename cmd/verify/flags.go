@@ -9,11 +9,12 @@ import (
 // Flags holds all command line options for Dockerfiles, Composefiles,
 // and Kubernetesfiles.
 type Flags struct {
-	LockfileName         string
-	ConfigPath           string
-	EnvPath              string
-	IgnoreMissingDigests bool
-	ExcludeTags          bool
+	LockfileName          string
+	ConfigPath            string
+	EnvPath               string
+	IgnoreMissingDigests  bool
+	UpdateExistingDigests bool
+	ExcludeTags           bool
 }
 
 // NewFlags returns Flags for Dockerfiles, Composefiles, and Kubernetesfiles,
@@ -25,6 +26,7 @@ func NewFlags(
 	configPath string,
 	envPath string,
 	ignoreMissingDigests bool,
+	updateExistingDigests bool,
 	excludeTags bool,
 ) (*Flags, error) {
 	if err := validateLockfileName(lockfileName); err != nil {
@@ -32,11 +34,12 @@ func NewFlags(
 	}
 
 	return &Flags{
-		LockfileName:         lockfileName,
-		ConfigPath:           configPath,
-		EnvPath:              envPath,
-		IgnoreMissingDigests: ignoreMissingDigests,
-		ExcludeTags:          excludeTags,
+		LockfileName:          lockfileName,
+		ConfigPath:            configPath,
+		EnvPath:               envPath,
+		IgnoreMissingDigests:  ignoreMissingDigests,
+		UpdateExistingDigests: updateExistingDigests,
+		ExcludeTags:           excludeTags,
 	}, nil
 }
 

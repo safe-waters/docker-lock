@@ -166,7 +166,7 @@ func TestImageDigestUpdater(t *testing.T) {
 			}
 
 			innerUpdater, err := update.NewImageDigestUpdater(
-				wrapperManager, false,
+				wrapperManager, false, false,
 			)
 			if err != nil {
 				t.Fatal(err)

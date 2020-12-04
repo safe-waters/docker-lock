@@ -30,6 +30,7 @@ func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 				"config-file",
 				"env-file",
 				"ignore-missing-digests",
+				"update-existing-digests",
 				"exclude-tags",
 			})
 		},
@@ -68,7 +69,8 @@ func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 		"Do not fail if unable to find digests",
 	)
 	verifyCmd.Flags().Bool(
-		"exclude-tags", false, "Exclude image tags from verification",
+		"update-existing-digests", false,
+		"Query registries for new digests even if they are hardcoded in files",
 	)
 
 	return verifyCmd, nil
@@ -122,9 +124,10 @@ func SetupVerifier(
 
 	generatorFlags, err := cmd_generate.NewFlags(
 		".", "", flags.ConfigPath, flags.EnvPath, flags.IgnoreMissingDigests,
-		dockerfilePaths, composefilePaths, kubernetesfilePaths, nil, nil, nil,
-		false, false, false, len(dockerfilePaths) == 0,
-		len(composefilePaths) == 0, len(kubernetesfilePaths) == 0,
+		flags.UpdateExistingDigests, dockerfilePaths, composefilePaths,
+		kubernetesfilePaths, nil, nil, nil, false, false, false,
+		len(dockerfilePaths) == 0, len(composefilePaths) == 0,
+		len(kubernetesfilePaths) == 0,
 	)
 	if err != nil {
 		return nil, err
@@ -178,11 +181,15 @@ func parseFlags() (*Flags, error) {
 	ignoreMissingDigests := viper.GetBool(
 		fmt.Sprintf("%s.%s", namespace, "ignore-missing-digests"),
 	)
+	updateExistingDigests := viper.GetBool(
+		fmt.Sprintf("%s.%s", namespace, "update-existing-digests"),
+	)
 	excludeTags := viper.GetBool(
 		fmt.Sprintf("%s.%s", namespace, "exclude-tags"),
 	)
 
 	return NewFlags(
-		lockfileName, configPath, envPath, ignoreMissingDigests, excludeTags,
+		lockfileName, configPath, envPath, ignoreMissingDigests,
+		updateExistingDigests, excludeTags,
 	)
 }

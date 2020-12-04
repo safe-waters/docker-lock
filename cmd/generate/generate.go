@@ -37,6 +37,7 @@ func NewGenerateCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 				"exclude-all-composefiles",
 				"exclude-all-kubernetesfiles",
 				"ignore-missing-digests",
+				"update-existing-digests",
 			})
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -121,6 +122,10 @@ func NewGenerateCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 	generateCmd.Flags().Bool(
 		"ignore-missing-digests", false,
 		"Do not fail if unable to find digests",
+	)
+	generateCmd.Flags().Bool(
+		"update-existing-digests", false,
+		"Query registries for new digests even if they are hardcoded in files",
 	)
 
 	return generateCmd, nil
@@ -233,9 +238,13 @@ func parseFlags() (*Flags, error) {
 	ignoreMissingDigests := viper.GetBool(
 		fmt.Sprintf("%s.%s", namespace, "ignore-missing-digests"),
 	)
+	updateExistingDigests := viper.GetBool(
+		fmt.Sprintf("%s.%s", namespace, "update-existing-digests"),
+	)
 
 	return NewFlags(
-		baseDir, lockfileName, configPath, envPath, ignoreMissingDigests,
+		baseDir, lockfileName, configPath, envPath,
+		ignoreMissingDigests, updateExistingDigests,
 		dockerfilePaths, composefilePaths, kubernetesfilePaths,
 		dockerfileGlobs, composefileGlobs, kubernetesfileGlobs,
 		dockerfileRecursive, composefileRecursive, kubernetesfileRecursive,

@@ -17,6 +17,7 @@ func TestImageDigestUpdater(t *testing.T) {
 	tests := []struct {
 		Name                    string
 		Images                  []parse.IImage
+		UpdateExistingDigests   bool
 		ExpectedNumNetworkCalls uint64
 		ExpectedImages          []parse.IImage
 	}{
@@ -51,6 +52,23 @@ func TestImageDigestUpdater(t *testing.T) {
 				),
 			},
 		},
+		{
+			Name: "Update Existing Digests",
+			Images: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "busybox", "latest",
+					"digest-to-update", nil, nil,
+				),
+			},
+			UpdateExistingDigests:   true,
+			ExpectedNumNetworkCalls: 1,
+			ExpectedImages: []parse.IImage{
+				parse.NewImage(
+					kind.Dockerfile, "busybox", "latest",
+					testutils.BusyboxLatestSHA, nil, nil,
+				),
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -77,7 +95,9 @@ func TestImageDigestUpdater(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			updater, err := update.NewImageDigestUpdater(wrapperManager, false)
+			updater, err := update.NewImageDigestUpdater(
+				wrapperManager, false, test.UpdateExistingDigests,
+			)
 			if err != nil {
 				t.Fatal(err)
 			}
