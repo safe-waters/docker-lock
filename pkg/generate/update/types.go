@@ -11,3 +11,7 @@ type IImageDigestUpdater interface {
 		done <-chan struct{},
 	) <-chan parse.IImage
 }
+
+type IDigestRequester interface {
+	Digest(name string, tag string) (string, error)
+}

@@ -1,1 +1,0 @@
-FROM dockerlocktestaccount.azurecr.io/busybox:v1

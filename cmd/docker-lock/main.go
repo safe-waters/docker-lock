@@ -57,12 +57,12 @@ func execute() error {
 	lockCmd := lock.NewLockCmd()
 	versionCmd := version.NewVersionCmd()
 
-	generateCmd, err := generate.NewGenerateCmd(nil)
+	generateCmd, err := generate.NewGenerateCmd()
 	if err != nil {
 		return err
 	}
 
-	verifyCmd, err := verify.NewVerifyCmd(nil)
+	verifyCmd, err := verify.NewVerifyCmd()
 	if err != nil {
 		return err
 	}

@@ -27,14 +27,6 @@ than those last recorded in the Lockfile.
 * `docker lock rewrite` rewrites `Dockerfiles`, `docker-compose` files,
 and `Kubernetes` manifests to include digests.
 
-`docker-lock` ships with support for [Docker Hub](https://hub.docker.com/),
-[Azure Container Registry](https://azure.microsoft.com/en-us/services/container-registry/),
-[internal registries](https://docs.docker.com/registry/deploying/),
-and a variety of other registries. If your registry is not supported
-out of the box, do not worry. `docker-lock` was designed to be
-[easily extensible](./docs/tutorials/bring-your-own-registry.md) to any
-container registry.
-
 `docker-lock` is most commonly used as a
 [cli-plugin](https://github.com/docker/cli/issues/1534) for `docker` so `lock`
 can be used as subcommand of `docker` as in `docker lock`. However,
@@ -183,78 +175,8 @@ command will be run. The root of this repo has an example,
 [.docker-lock.yml.example](./.docker-lock.example.yml).
 
 ## Registries
-`docker-lock` can use credentials from `${HOME}/.docker/config.json` to
-retrieve digests from private repositories. It supports credential helpers
-such as `wincred`, `osxkeychain`, and `pass`, so it should work in most cases.
-
-As a fallback, you can specify auth credentials as environment variables.
-
-### Dockerhub
-Login:
-```bash
-$ docker login --username "${DOCKERHUB_USERNAME}" --password "${DOCKERHUB_PASSWORD}"
-```
-
-Run `docker-lock`:
-```bash
-$ docker lock generate
-```
-
-If this fails, specify credentials in a `.env` file in the directory from
-which the command will be run (this location can also be specified with the
-flag `--env-file`):
-```
-DOCKER_USERNAME=<your docker username>
-DOCKER_PASSWORD=<your docker password>
-```
-
-or export those same variables:
-```bash
-$ export DOCKER_USERNAME=<your docker username>
-$ export DOCKER_PASSWORD=<your docker password>
-```
-
-Run `docker-lock`:
-```bash
-$ docker lock generate
-```
-
-### Azure Container Registry
-Login:
-```
-$ docker login --username "${ACR_USERNAME}" --password "${ACR_PASSWORD}" "${ACR_REGISTRY_NAME}.azurecr.io"
-```
-> Note: `az acr login` is not yet supported
-
-Either specify the `ACR_REGISTRY_NAME` in a `.env` file or as an exported
-environment variable:
-```bash
-ACR_REGISTRY_NAME=<your registry name>
-```
-
-or
-```bash
-$ export ACR_REGISTRY_NAME=<your registry name>
-```
-
-Run `docker-lock`:
-```bash
-$ docker lock generate
-```
-
-If this fails, specify your credentials in a `.env` file or as exported
-environment variables, as in the [Dockerhub example](#Dockerhub).
-
-### Other registries
-Currently, `docker-lock` also supports Microsoft Container Registry and the
-Elastic Search registry. These will just work -- no extra
-configuration is required.
-
-If you would like to add support for your own registry, see
-[Bring Your Own Registry](./docs/tutorials/bring-your-own-registry.md).
-
-If you would like to use an internal registry, see
-[Using Internal Registries](./docs/tutorials/internal-registry.md).
+`docker-lock` supports public and private registries. If necessary, login to
+docker before using `docker-lock`.
 
 # Contributing
 ## Development Environment
@@ -278,13 +200,6 @@ from the root of the project, run:
 
 ```bash
 $ make install
-```
-
-If you would like to cross-compile for another operating system
-or architecture, from the root of the project, run:
-
-```bash
-$ CGO_ENABLED=0 GOOS=<your os> GOARCH=<your arch> go build ./cmd/docker-lock
 ```
 
 ## Code Quality and Correctness

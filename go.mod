@@ -4,9 +4,9 @@ go 1.14
 
 require (
 	github.com/docker/cli v20.10.0-beta1.0.20201029214301-1d20b15adc38+incompatible
-	github.com/docker/docker-credential-helpers v0.6.3
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-cmp v0.5.2 // indirect
+	github.com/google/go-containerregistry v0.1.2
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/magiconair/properties v1.8.4 // indirect

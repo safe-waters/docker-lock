@@ -9,7 +9,6 @@ import (
 	"os"
 
 	cmd_generate "github.com/safe-waters/docker-lock/cmd/generate"
-	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 	"github.com/safe-waters/docker-lock/pkg/kind"
 	"github.com/safe-waters/docker-lock/pkg/verify"
 	"github.com/safe-waters/docker-lock/pkg/verify/diff"
@@ -20,7 +19,7 @@ import (
 const namespace = "verify"
 
 // NewVerifyCmd creates the command 'verify' used in 'docker lock verify'.
-func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
+func NewVerifyCmd() (*cobra.Command, error) {
 	verifyCmd := &cobra.Command{
 		Use:   "verify",
 		Short: "Verify that a Lockfile is up-to-date",
@@ -40,7 +39,7 @@ func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 				return err
 			}
 
-			verifier, err := SetupVerifier(client, flags)
+			verifier, err := SetupVerifier(flags)
 			if err != nil {
 				return err
 			}
@@ -81,7 +80,6 @@ func NewVerifyCmd(client *registry.HTTPClient) (*cobra.Command, error) {
 
 // SetupVerifier creates a Verifier configured for docker-lock's cli.
 func SetupVerifier(
-	client *registry.HTTPClient,
 	flags *Flags,
 ) (verify.IVerifier, error) {
 	if flags == nil {
@@ -136,7 +134,7 @@ func SetupVerifier(
 		return nil, err
 	}
 
-	generator, err := cmd_generate.SetupGenerator(client, generatorFlags)
+	generator, err := cmd_generate.SetupGenerator(generatorFlags)
 	if err != nil {
 		return nil, err
 	}

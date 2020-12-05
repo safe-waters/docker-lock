@@ -3,11 +3,9 @@ package generate_test
 import (
 	"testing"
 
-	cmd_generate "github.com/safe-waters/docker-lock/cmd/generate"
 	"github.com/safe-waters/docker-lock/internal/testutils"
 	"github.com/safe-waters/docker-lock/pkg/generate"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
-	"github.com/safe-waters/docker-lock/pkg/generate/registry"
 	"github.com/safe-waters/docker-lock/pkg/generate/update"
 	"github.com/safe-waters/docker-lock/pkg/kind"
 )
@@ -149,24 +147,11 @@ func TestImageDigestUpdater(t *testing.T) {
 
 			var gotNumNetworkCalls uint64
 
-			server := testutils.MakeMockServer(t, &gotNumNetworkCalls)
-			defer server.Close()
-
-			client := &registry.HTTPClient{
-				Client:      server.Client(),
-				RegistryURL: server.URL,
-				TokenURL:    server.URL + "?scope=repository%s",
-			}
-
-			wrapperManager, err := cmd_generate.DefaultWrapperManager(
-				client, cmd_generate.DefaultConfigPath(),
+			digestRequester := testutils.NewMockDigestRequester(
+				t, &gotNumNetworkCalls,
 			)
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			innerUpdater, err := update.NewImageDigestUpdater(
-				wrapperManager, false, false,
+				digestRequester, false, false,
 			)
 			if err != nil {
 				t.Fatal(err)

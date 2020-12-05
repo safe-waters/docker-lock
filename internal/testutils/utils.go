@@ -18,6 +18,7 @@ import (
 
 	"github.com/safe-waters/docker-lock/pkg/generate/collect"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
+	"github.com/safe-waters/docker-lock/pkg/generate/update"
 )
 
 const (
@@ -25,6 +26,40 @@ const (
 	GolangLatestSHA  = "6cb55c08bbf44793f16e3572bd7d2ae18f7a858f6ae4faa474c0a6eae1174a5d" // nolint: lll
 	RedisLatestSHA   = "09c33840ec47815dc0351f1eca3befe741d7105b3e95bc8fdb9a7e4985b9e1e5" // nolint: lll
 )
+
+type mockDigestRequester struct {
+	numNetworkCalls *uint64
+}
+
+func NewMockDigestRequester(
+	t *testing.T,
+	numNetworkCalls *uint64,
+) update.IDigestRequester {
+	t.Helper()
+
+	return &mockDigestRequester{
+		numNetworkCalls: numNetworkCalls,
+	}
+}
+
+func (m *mockDigestRequester) Digest(name string, tag string) (string, error) {
+	if m.numNetworkCalls != nil {
+		atomic.AddUint64(m.numNetworkCalls, 1)
+	}
+
+	nameTag := fmt.Sprintf("%s:%s", name, tag)
+
+	switch nameTag {
+	case "busybox:latest":
+		return BusyboxLatestSHA, nil
+	case "redis:latest":
+		return RedisLatestSHA, nil
+	case "golang:latest":
+		return GolangLatestSHA, nil
+	default:
+		return "", fmt.Errorf("no digest found for %s", nameTag)
+	}
+}
 
 func AssertImagesEqual(
 	t *testing.T,

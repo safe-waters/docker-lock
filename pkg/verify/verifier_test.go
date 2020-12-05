@@ -3,14 +3,19 @@ package verify_test
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	cmd_generate "github.com/safe-waters/docker-lock/cmd/generate"
 	cmd_verify "github.com/safe-waters/docker-lock/cmd/verify"
 	"github.com/safe-waters/docker-lock/internal/testutils"
-	"github.com/safe-waters/docker-lock/pkg/generate/registry"
+	"github.com/safe-waters/docker-lock/pkg/generate"
+	"github.com/safe-waters/docker-lock/pkg/generate/update"
 	"github.com/safe-waters/docker-lock/pkg/kind"
+	"github.com/safe-waters/docker-lock/pkg/verify"
+	"github.com/safe-waters/docker-lock/pkg/verify/diff"
 )
 
 func TestVerifier(t *testing.T) {
@@ -286,24 +291,127 @@ services:
 
 			reader := bytes.NewReader(lockfileWithTempDirByt)
 
-			var numNetworkCalls uint64
-
-			server := testutils.MakeMockServer(t, &numNetworkCalls)
-			defer server.Close()
-
-			client := &registry.HTTPClient{
-				Client:      server.Client(),
-				RegistryURL: server.URL,
-				TokenURL:    server.URL + "?scope=repository%s",
-			}
-
 			flags := &cmd_verify.Flags{
 				LockfileName: tempPaths[len(tempPaths)-1],
 				EnvPath:      ".env",
 				ExcludeTags:  test.ExcludeTags,
 			}
 
-			verifier, err := cmd_verify.SetupVerifier(client, flags)
+			if err = cmd_generate.DefaultLoadEnv(flags.EnvPath); err != nil {
+				t.Fatal(err)
+			}
+
+			existingLByt, err := ioutil.ReadFile(flags.LockfileName)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var existingLockfile map[kind.Kind]map[string][]interface{}
+			if err = json.Unmarshal(
+				existingLByt, &existingLockfile,
+			); err != nil {
+				t.Fatal(err)
+			}
+
+			dockerfilePaths := make(
+				[]string, len(existingLockfile[kind.Dockerfile]),
+			)
+			composefilePaths := make(
+				[]string, len(existingLockfile[kind.Composefile]),
+			)
+			kubernetesfilePaths := make(
+				[]string, len(existingLockfile[kind.Kubernetesfile]),
+			)
+
+			var i, j, k int
+
+			for p := range existingLockfile[kind.Dockerfile] {
+				dockerfilePaths[i] = p
+				i++
+			}
+
+			for p := range existingLockfile[kind.Composefile] {
+				composefilePaths[j] = p
+				j++
+			}
+
+			for p := range existingLockfile[kind.Kubernetesfile] {
+				kubernetesfilePaths[k] = p
+				k++
+			}
+
+			generatorFlags, err := cmd_generate.NewFlags(
+				".", "", flags.ConfigPath, flags.EnvPath,
+				flags.IgnoreMissingDigests, flags.UpdateExistingDigests,
+				dockerfilePaths, composefilePaths,
+				kubernetesfilePaths, nil, nil, nil, false, false, false,
+				len(dockerfilePaths) == 0, len(composefilePaths) == 0,
+				len(kubernetesfilePaths) == 0,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if err = cmd_generate.DefaultLoadEnv(
+				generatorFlags.FlagsWithSharedValues.EnvPath,
+			); err != nil {
+				t.Fatal(err)
+			}
+
+			collector, err := cmd_generate.DefaultPathCollector(generatorFlags)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			parser, err := cmd_generate.DefaultImageParser(generatorFlags)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			digestRequester := testutils.NewMockDigestRequester(t, nil)
+
+			imageDigestUpdater, err := update.NewImageDigestUpdater(
+				digestRequester,
+				generatorFlags.FlagsWithSharedValues.IgnoreMissingDigests,
+				generatorFlags.FlagsWithSharedValues.UpdateExistingDigests,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			updater, err := generate.NewImageDigestUpdater(imageDigestUpdater)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			sorter, err := cmd_generate.DefaultImageFormatter(generatorFlags)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			generator, err := generate.NewGenerator(
+				collector, parser, updater, sorter,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			dockerfileDifferentiator := diff.NewDockerfileDifferentiator(
+				flags.ExcludeTags,
+			)
+
+			composefileDifferentiator := diff.NewComposefileDifferentiator(
+				flags.ExcludeTags,
+			)
+
+			kubernetesfileDifferentiator := diff.NewKubernetesfileDifferentiator( // nolint: lll
+				flags.ExcludeTags,
+			)
+
+			verifier, err := verify.NewVerifier(
+				generator, dockerfileDifferentiator, composefileDifferentiator,
+				kubernetesfileDifferentiator,
+			)
 			if err != nil {
 				t.Fatal(err)
 			}
