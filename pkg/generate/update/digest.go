@@ -9,6 +9,7 @@ import (
 
 type digestRequester struct{}
 
+// NewDigestRequester returns a digest requester based on the library "crane".
 func NewDigestRequester() IDigestRequester {
 	return &digestRequester{}
 }

@@ -172,9 +172,6 @@ func DefaultImageFormatter(flags *Flags) (generate.IImageFormatter, error) {
 //
 // If all "ExcludePaths" are true or any of the three's flags,
 // are nil, an error is returned.
-//
-// DefaultImageDigestUpdater relies on DefaultWrapperManager and is subject
-// to the same error conditions.
 func DefaultImageDigestUpdater(
 	flags *Flags,
 ) (generate.IImageDigestUpdater, error) {

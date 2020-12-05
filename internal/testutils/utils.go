@@ -6,13 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
-	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -167,46 +164,6 @@ func AssertNumNetworkCallsEqual(t *testing.T, expected uint64, got uint64) {
 	if expected != got {
 		t.Fatalf("expected %d network calls, got %d", expected, got)
 	}
-}
-
-func MakeMockServer(t *testing.T, numNetworkCalls *uint64) *httptest.Server {
-	t.Helper()
-
-	server := httptest.NewServer(
-		http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-			switch url := req.URL.String(); {
-			case strings.Contains(url, "scope"):
-				byt := []byte(`{"token": "NOT_USED"}`)
-				_, err := res.Write(byt)
-				if err != nil {
-					t.Fatal(err)
-				}
-			case strings.Contains(url, "manifests"):
-				atomic.AddUint64(numNetworkCalls, 1)
-
-				urlParts := strings.Split(url, "/")
-				repo, ref := urlParts[2], urlParts[len(urlParts)-1]
-
-				var digest string
-				switch fmt.Sprintf("%s:%s", repo, ref) {
-				case "busybox:latest":
-					digest = BusyboxLatestSHA
-				case "redis:latest":
-					digest = RedisLatestSHA
-				case "golang:latest":
-					digest = GolangLatestSHA
-				default:
-					digest = fmt.Sprintf(
-						"repo %s with ref %s not defined for testing",
-						repo, ref,
-					)
-				}
-
-				res.Header().Set("Docker-Content-Digest", digest)
-			}
-		}))
-
-	return server
 }
 
 func MakeDir(t *testing.T, dirPath string) {

@@ -14,7 +14,7 @@ type imageDigestUpdater struct {
 }
 
 // NewImageDigestUpdater returns an IImageDigestUpdater after validating its
-// fields. wrapperManager cannot be nil as it is responsible for querying
+// fields. digestRequester cannot be nil as it is responsible for querying
 // registries for digests.
 func NewImageDigestUpdater(
 	digestRequester IDigestRequester,
@@ -22,7 +22,7 @@ func NewImageDigestUpdater(
 	updateExistingDigests bool,
 ) (IImageDigestUpdater, error) {
 	if digestRequester == nil {
-		return nil, errors.New("wrapperManager cannot be nil")
+		return nil, errors.New("digestRequester cannot be nil")
 	}
 
 	return &imageDigestUpdater{

@@ -54,5 +54,5 @@ clean:
 .PHONY: inttest
 inttest: clean install
 	@echo "running inttest target..."
-	@./test/demo-app/tests/sh
+	@./test/demo-app/tests.sh
 	@echo "inttest target passed!"
