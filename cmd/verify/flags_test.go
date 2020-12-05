@@ -41,7 +41,6 @@ func TestFlags(t *testing.T) {
 
 			got, err := verify.NewFlags(
 				test.Expected.LockfileName,
-				test.Expected.ConfigPath,
 				test.Expected.EnvPath,
 				test.Expected.IgnoreMissingDigests,
 				test.Expected.UpdateExistingDigests,

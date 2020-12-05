@@ -12,7 +12,6 @@ import (
 type FlagsWithSharedValues struct {
 	BaseDir               string
 	LockfileName          string
-	ConfigPath            string
 	EnvPath               string
 	IgnoreMissingDigests  bool
 	UpdateExistingDigests bool
@@ -46,7 +45,6 @@ type Flags struct {
 func NewFlagsWithSharedValues(
 	baseDir string,
 	lockfileName string,
-	configPath string,
 	envPath string,
 	ignoreMissingDigests bool,
 	updateExistingDigests bool,
@@ -66,7 +64,6 @@ func NewFlagsWithSharedValues(
 	return &FlagsWithSharedValues{
 		BaseDir:               baseDir,
 		LockfileName:          lockfileName,
-		ConfigPath:            configPath,
 		EnvPath:               envPath,
 		IgnoreMissingDigests:  ignoreMissingDigests,
 		UpdateExistingDigests: updateExistingDigests,
@@ -122,7 +119,6 @@ func NewFlagsWithSharedNames(
 func NewFlags(
 	baseDir string,
 	lockfileName string,
-	configPath string,
 	envPath string,
 	ignoreMissingDigests bool,
 	updateExistingDigests bool,
@@ -140,7 +136,7 @@ func NewFlags(
 	kubernetesfileExcludeAll bool,
 ) (*Flags, error) {
 	sharedFlags, err := NewFlagsWithSharedValues(
-		baseDir, lockfileName, configPath, envPath, ignoreMissingDigests,
+		baseDir, lockfileName, envPath, ignoreMissingDigests,
 		updateExistingDigests,
 	)
 	if err != nil {

@@ -30,7 +30,6 @@ func NewGenerateCmd() (*cobra.Command, error) {
 				"dockerfile-recursive",
 				"composefile-recursive",
 				"kubernetesfile-recursive",
-				"config-file",
 				"env-file",
 				"exclude-all-dockerfiles",
 				"exclude-all-composefiles",
@@ -98,10 +97,6 @@ func NewGenerateCmd() (*cobra.Command, error) {
 	generateCmd.Flags().Bool(
 		"kubernetesfile-recursive", false,
 		"Recursively collect kubernetes files",
-	)
-	generateCmd.Flags().String(
-		"config-file", DefaultConfigPath(),
-		"Path to config file for auth credentials",
 	)
 	generateCmd.Flags().String(
 		"env-file", ".env", "Path to .env file",
@@ -191,9 +186,6 @@ func parseFlags() (*Flags, error) {
 	lockfileName := viper.GetString(
 		fmt.Sprintf("%s.%s", namespace, "lockfile-name"),
 	)
-	configPath := viper.GetString(
-		fmt.Sprintf("%s.%s", namespace, "config-file"),
-	)
 	envPath := viper.GetString(
 		fmt.Sprintf("%s.%s", namespace, "env-file"),
 	)
@@ -241,7 +233,7 @@ func parseFlags() (*Flags, error) {
 	)
 
 	return NewFlags(
-		baseDir, lockfileName, configPath, envPath,
+		baseDir, lockfileName, envPath,
 		ignoreMissingDigests, updateExistingDigests,
 		dockerfilePaths, composefilePaths, kubernetesfilePaths,
 		dockerfileGlobs, composefileGlobs, kubernetesfileGlobs,

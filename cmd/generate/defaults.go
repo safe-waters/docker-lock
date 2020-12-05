@@ -3,7 +3,6 @@ package generate
 import (
 	"errors"
 	"os"
-	"path/filepath"
 
 	"github.com/joho/godotenv"
 	"github.com/safe-waters/docker-lock/pkg/generate"
@@ -200,22 +199,6 @@ func DefaultImageDigestUpdater(
 	}
 
 	return generate.NewImageDigestUpdater(imageDigestUpdater)
-}
-
-// DefaultConfigPath returns the default location of docker's config.json
-// for all platforms. If the platform does not have a home directory, it
-// returns an empty string.
-func DefaultConfigPath() string {
-	if homeDir, err := os.UserHomeDir(); err == nil {
-		configPath := filepath.Join(homeDir, ".docker", "config.json")
-		if _, err := os.Stat(configPath); err != nil {
-			return ""
-		}
-
-		return configPath
-	}
-
-	return ""
 }
 
 // DefaultLoadEnv loads .env files based on the path. If a path does not

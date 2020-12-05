@@ -9,7 +9,6 @@ generate:
   composefile-recursive: true
   composefiles:
     - docker-compose.yml
-  config-file: /user/home/.docker/config.json
   dockerfile-globs:
     - '**/Dockerfile'
   dockerfile-recursive: false
@@ -30,7 +29,6 @@ generate:
 
 # To learn more about each flag, run `docker lock verify --help`
 verify:
-  config-file: /user/home/.docker/config.json
   env-file: .env
   lockfile-name: docker-lock.json
   ignore-missing-digests: false

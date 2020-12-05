@@ -26,7 +26,6 @@ func NewVerifyCmd() (*cobra.Command, error) {
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			return bindPFlags(cmd, []string{
 				"lockfile-name",
-				"config-file",
 				"env-file",
 				"ignore-missing-digests",
 				"update-existing-digests",
@@ -55,10 +54,6 @@ func NewVerifyCmd() (*cobra.Command, error) {
 	}
 	verifyCmd.Flags().String(
 		"lockfile-name", "docker-lock.json", "Lockfile to read from",
-	)
-	verifyCmd.Flags().String(
-		"config-file", cmd_generate.DefaultConfigPath(),
-		"Path to config file for auth credentials",
 	)
 	verifyCmd.Flags().String(
 		"env-file", ".env", "Path to .env file",
@@ -124,7 +119,7 @@ func SetupVerifier(
 	}
 
 	generatorFlags, err := cmd_generate.NewFlags(
-		".", "", flags.ConfigPath, flags.EnvPath, flags.IgnoreMissingDigests,
+		".", "", flags.EnvPath, flags.IgnoreMissingDigests,
 		flags.UpdateExistingDigests, dockerfilePaths, composefilePaths,
 		kubernetesfilePaths, nil, nil, nil, false, false, false,
 		len(dockerfilePaths) == 0, len(composefilePaths) == 0,
@@ -173,9 +168,6 @@ func parseFlags() (*Flags, error) {
 	lockfileName := viper.GetString(
 		fmt.Sprintf("%s.%s", namespace, "lockfile-name"),
 	)
-	configPath := viper.GetString(
-		fmt.Sprintf("%s.%s", namespace, "config-file"),
-	)
 	envPath := viper.GetString(
 		fmt.Sprintf("%s.%s", namespace, "env-file"),
 	)
@@ -190,7 +182,7 @@ func parseFlags() (*Flags, error) {
 	)
 
 	return NewFlags(
-		lockfileName, configPath, envPath, ignoreMissingDigests,
+		lockfileName, envPath, ignoreMissingDigests,
 		updateExistingDigests, excludeTags,
 	)
 }

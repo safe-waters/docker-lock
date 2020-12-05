@@ -341,7 +341,7 @@ services:
 			}
 
 			generatorFlags, err := cmd_generate.NewFlags(
-				".", "", flags.ConfigPath, flags.EnvPath,
+				".", "", flags.EnvPath,
 				flags.IgnoreMissingDigests, flags.UpdateExistingDigests,
 				dockerfilePaths, composefilePaths,
 				kubernetesfilePaths, nil, nil, nil, false, false, false,
