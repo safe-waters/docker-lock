@@ -293,12 +293,7 @@ services:
 
 			flags := &cmd_verify.Flags{
 				LockfileName: tempPaths[len(tempPaths)-1],
-				EnvPath:      ".env",
 				ExcludeTags:  test.ExcludeTags,
-			}
-
-			if err = cmd_generate.DefaultLoadEnv(flags.EnvPath); err != nil {
-				t.Fatal(err)
 			}
 
 			existingLByt, err := ioutil.ReadFile(flags.LockfileName)
@@ -341,7 +336,7 @@ services:
 			}
 
 			generatorFlags, err := cmd_generate.NewFlags(
-				".", "", flags.EnvPath,
+				".", "",
 				flags.IgnoreMissingDigests, flags.UpdateExistingDigests,
 				dockerfilePaths, composefilePaths,
 				kubernetesfilePaths, nil, nil, nil, false, false, false,
@@ -349,12 +344,6 @@ services:
 				len(kubernetesfilePaths) == 0,
 			)
 			if err != nil {
-				t.Fatal(err)
-			}
-
-			if err = cmd_generate.DefaultLoadEnv(
-				generatorFlags.FlagsWithSharedValues.EnvPath,
-			); err != nil {
 				t.Fatal(err)
 			}
 

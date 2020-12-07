@@ -20,7 +20,6 @@ func TestFlags(t *testing.T) {
 			Name: "Lockfile Name With Slashes",
 			Expected: &verify.Flags{
 				LockfileName: filepath.Join("lockfile", "path"),
-				EnvPath:      ".env",
 			},
 			ShouldFail: true,
 		},
@@ -28,7 +27,6 @@ func TestFlags(t *testing.T) {
 			Name: "Normal",
 			Expected: &verify.Flags{
 				LockfileName: "docker-lock.json",
-				EnvPath:      ".env",
 			},
 		},
 	}
@@ -41,7 +39,6 @@ func TestFlags(t *testing.T) {
 
 			got, err := verify.NewFlags(
 				test.Expected.LockfileName,
-				test.Expected.EnvPath,
 				test.Expected.IgnoreMissingDigests,
 				test.Expected.UpdateExistingDigests,
 				test.Expected.ExcludeTags,

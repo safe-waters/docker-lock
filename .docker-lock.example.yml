@@ -19,7 +19,6 @@ generate:
   kubernetesfile-recursive: false
   kubernetesfiles:
     - deployment.yml
-  env-file: .env
   exclude-all-composefiles: false
   exclude-all-dockerfiles: true
   exclude-all-kubernetesfiles: false
@@ -29,7 +28,6 @@ generate:
 
 # To learn more about each flag, run `docker lock verify --help`
 verify:
-  env-file: .env
   lockfile-name: docker-lock.json
   ignore-missing-digests: false
   update-missing-digests: true

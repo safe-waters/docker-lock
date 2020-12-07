@@ -26,7 +26,6 @@ func NewVerifyCmd() (*cobra.Command, error) {
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			return bindPFlags(cmd, []string{
 				"lockfile-name",
-				"env-file",
 				"ignore-missing-digests",
 				"update-existing-digests",
 				"exclude-tags",
@@ -55,9 +54,6 @@ func NewVerifyCmd() (*cobra.Command, error) {
 	verifyCmd.Flags().String(
 		"lockfile-name", "docker-lock.json", "Lockfile to read from",
 	)
-	verifyCmd.Flags().String(
-		"env-file", ".env", "Path to .env file",
-	)
 	verifyCmd.Flags().Bool(
 		"ignore-missing-digests", false,
 		"Do not fail if unable to find digests",
@@ -79,10 +75,6 @@ func SetupVerifier(
 ) (verify.IVerifier, error) {
 	if flags == nil {
 		return nil, errors.New("flags cannot be nil")
-	}
-
-	if err := cmd_generate.DefaultLoadEnv(flags.EnvPath); err != nil {
-		return nil, err
 	}
 
 	existingLByt, err := ioutil.ReadFile(flags.LockfileName)
@@ -119,9 +111,9 @@ func SetupVerifier(
 	}
 
 	generatorFlags, err := cmd_generate.NewFlags(
-		".", "", flags.EnvPath, flags.IgnoreMissingDigests,
-		flags.UpdateExistingDigests, dockerfilePaths, composefilePaths,
-		kubernetesfilePaths, nil, nil, nil, false, false, false,
+		".", "", flags.IgnoreMissingDigests, flags.UpdateExistingDigests,
+		dockerfilePaths, composefilePaths, kubernetesfilePaths,
+		nil, nil, nil, false, false, false,
 		len(dockerfilePaths) == 0, len(composefilePaths) == 0,
 		len(kubernetesfilePaths) == 0,
 	)
@@ -168,9 +160,6 @@ func parseFlags() (*Flags, error) {
 	lockfileName := viper.GetString(
 		fmt.Sprintf("%s.%s", namespace, "lockfile-name"),
 	)
-	envPath := viper.GetString(
-		fmt.Sprintf("%s.%s", namespace, "env-file"),
-	)
 	ignoreMissingDigests := viper.GetBool(
 		fmt.Sprintf("%s.%s", namespace, "ignore-missing-digests"),
 	)
@@ -182,7 +171,7 @@ func parseFlags() (*Flags, error) {
 	)
 
 	return NewFlags(
-		lockfileName, envPath, ignoreMissingDigests,
+		lockfileName, ignoreMissingDigests,
 		updateExistingDigests, excludeTags,
 	)
 }

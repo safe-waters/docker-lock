@@ -149,7 +149,6 @@ func TestFlagsWithSharedValues(t *testing.T) {
 			Expected: &generate.FlagsWithSharedValues{
 				BaseDir:      ".",
 				LockfileName: "docker-lock.json",
-				EnvPath:      ".env",
 			},
 		},
 	}
@@ -162,7 +161,6 @@ func TestFlagsWithSharedValues(t *testing.T) {
 
 			got, err := generate.NewFlagsWithSharedValues(
 				test.Expected.BaseDir, test.Expected.LockfileName,
-				test.Expected.EnvPath,
 				test.Expected.IgnoreMissingDigests,
 				test.Expected.UpdateExistingDigests,
 			)
@@ -247,7 +245,6 @@ func TestFlags(t *testing.T) {
 				FlagsWithSharedValues: &generate.FlagsWithSharedValues{
 					BaseDir:      ".",
 					LockfileName: "docker-lock.json",
-					EnvPath:      ".env",
 				},
 				DockerfileFlags: &generate.FlagsWithSharedNames{
 					ManualPaths: []string{"Dockerfile"},
@@ -271,7 +268,6 @@ func TestFlags(t *testing.T) {
 			got, err := generate.NewFlags(
 				test.Expected.FlagsWithSharedValues.BaseDir,
 				test.Expected.FlagsWithSharedValues.LockfileName,
-				test.Expected.FlagsWithSharedValues.EnvPath,
 				test.Expected.FlagsWithSharedValues.IgnoreMissingDigests,
 				test.Expected.FlagsWithSharedValues.UpdateExistingDigests,
 				test.Expected.DockerfileFlags.ManualPaths,

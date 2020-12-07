@@ -10,7 +10,6 @@ import (
 // and Kubernetesfiles.
 type Flags struct {
 	LockfileName          string
-	EnvPath               string
 	IgnoreMissingDigests  bool
 	UpdateExistingDigests bool
 	ExcludeTags           bool
@@ -22,7 +21,6 @@ type Flags struct {
 // lockfileName may not contain slashes.
 func NewFlags(
 	lockfileName string,
-	envPath string,
 	ignoreMissingDigests bool,
 	updateExistingDigests bool,
 	excludeTags bool,
@@ -33,7 +31,6 @@ func NewFlags(
 
 	return &Flags{
 		LockfileName:          lockfileName,
-		EnvPath:               envPath,
 		IgnoreMissingDigests:  ignoreMissingDigests,
 		UpdateExistingDigests: updateExistingDigests,
 		ExcludeTags:           excludeTags,
