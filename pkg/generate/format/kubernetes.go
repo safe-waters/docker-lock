@@ -39,6 +39,10 @@ func (k *kubernetesfileImageFormatter) Kind() kind.Kind {
 func (k *kubernetesfileImageFormatter) FormatImages(
 	images <-chan parse.IImage,
 ) (map[string][]interface{}, error) {
+	if images == nil {
+		return nil, errors.New("'images' cannot be nil")
+	}
+
 	formattedImages := map[string][]interface{}{}
 
 	for image := range images {
@@ -48,7 +52,7 @@ func (k *kubernetesfileImageFormatter) FormatImages(
 
 		path, ok := image.Metadata()["path"].(string)
 		if !ok {
-			return nil, errors.New("missing path in kubernetesfile image")
+			return nil, errors.New("missing 'path' in kubernetesfile image")
 		}
 
 		path = filepath.ToSlash(path)
@@ -56,21 +60,21 @@ func (k *kubernetesfileImageFormatter) FormatImages(
 		containerName, ok := image.Metadata()["containerName"].(string)
 		if !ok {
 			return nil, errors.New(
-				"missing containerName in kubernetesfile image",
+				"missing 'containerName' in kubernetesfile image",
 			)
 		}
 
 		imagePosition, ok := image.Metadata()["imagePosition"].(int)
 		if !ok {
 			return nil, errors.New(
-				"missing imagePosition in kubernetesfile image",
+				"missing 'imagePosition' in kubernetesfile image",
 			)
 		}
 
 		docPosition, ok := image.Metadata()["docPosition"].(int)
 		if !ok {
 			return nil, errors.New(
-				"missing docPosition in kubernetesfile image",
+				"missing 'docPosition' in kubernetesfile image",
 			)
 		}
 

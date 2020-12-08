@@ -26,7 +26,7 @@ func NewWriter(writers ...write.IWriter) (IWriter, error) {
 	}
 
 	if len(kindWriter) == 0 {
-		return nil, errors.New("non nil writers must be greater than 0")
+		return nil, errors.New("non nil 'writers' must be greater than 0")
 	}
 
 	return &writer{writers: kindWriter}, nil
@@ -37,9 +37,14 @@ func (w *writer) WriteFiles(
 	lockfile map[kind.Kind]map[string][]interface{},
 	done <-chan struct{},
 ) <-chan write.IWrittenPath {
-	writtenPaths := make(chan write.IWrittenPath)
+	if lockfile == nil {
+		return nil
+	}
 
-	var waitGroup sync.WaitGroup
+	var (
+		waitGroup    sync.WaitGroup
+		writtenPaths = make(chan write.IWrittenPath)
+	)
 
 	waitGroup.Add(1)
 

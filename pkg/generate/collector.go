@@ -27,7 +27,7 @@ func NewPathCollector(
 	}
 
 	if len(nonNilCollectors) == 0 {
-		return nil, errors.New("non nil collectors must be greater than 0")
+		return nil, errors.New("non nil 'collectors' must be greater than 0")
 	}
 
 	return &pathCollector{collectors: nonNilCollectors}, nil
@@ -37,9 +37,10 @@ func NewPathCollector(
 func (p *pathCollector) CollectPaths(
 	done <-chan struct{},
 ) <-chan collect.IPath {
-	paths := make(chan collect.IPath)
-
-	var waitGroup sync.WaitGroup
+	var (
+		waitGroup sync.WaitGroup
+		paths     = make(chan collect.IPath)
+	)
 
 	waitGroup.Add(1)
 

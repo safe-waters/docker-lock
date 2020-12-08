@@ -1,6 +1,7 @@
 package preprocess
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"sync"
@@ -34,17 +35,22 @@ func (c *composefilePreprocessor) Kind() kind.Kind {
 func (c *composefilePreprocessor) PreprocessLockfile(
 	lockfile map[kind.Kind]map[string][]interface{},
 ) (map[kind.Kind]map[string][]interface{}, error) {
+	if lockfile == nil {
+		return nil, errors.New("'lockfile' cannot be nil")
+	}
+
 	if len(lockfile[kind.Composefile]) == 0 ||
 		len(lockfile[kind.Dockerfile]) == 0 {
 		return lockfile, nil
 	}
 
-	var waitGroup sync.WaitGroup
+	var (
+		waitGroup                   sync.WaitGroup
+		deduplicatedDockerfilePaths = make(chan *deduplicatedPath)
+		done                        = make(chan struct{})
+	)
 
-	done := make(chan struct{})
 	defer close(done)
-
-	deduplicatedDockerfilePaths := make(chan *deduplicatedPath)
 
 	for _, images := range lockfile[kind.Composefile] {
 		images := images

@@ -36,6 +36,10 @@ func (d *dockerfileImageFormatter) Kind() kind.Kind {
 func (d *dockerfileImageFormatter) FormatImages(
 	images <-chan parse.IImage,
 ) (map[string][]interface{}, error) {
+	if images == nil {
+		return nil, errors.New("'images' cannot be nil")
+	}
+
 	formattedImages := map[string][]interface{}{}
 
 	for image := range images {
@@ -45,14 +49,14 @@ func (d *dockerfileImageFormatter) FormatImages(
 
 		path, ok := image.Metadata()["path"].(string)
 		if !ok {
-			return nil, errors.New("missing path in dockerfile image")
+			return nil, errors.New("missing 'path' in dockerfile image")
 		}
 
 		path = filepath.ToSlash(path)
 
 		position, ok := image.Metadata()["position"].(int)
 		if !ok {
-			return nil, errors.New("missing position in dockerfile image")
+			return nil, errors.New("missing 'position' in dockerfile image")
 		}
 
 		formattedImage := &formattedDockerfileImage{

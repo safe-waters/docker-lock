@@ -1,6 +1,8 @@
 package diff
 
 import (
+	"errors"
+
 	"github.com/safe-waters/docker-lock/pkg/kind"
 )
 
@@ -26,6 +28,14 @@ func (d *dockerfileImageDifferentiator) DifferentiateImage(
 	existingImage map[string]interface{},
 	newImage map[string]interface{},
 ) error {
+	if existingImage == nil {
+		return errors.New("'existingImage' cannot be nil")
+	}
+
+	if newImage == nil {
+		return errors.New("'newImage' cannot be nil")
+	}
+
 	var diffFields = []string{"name", "tag", "digest"}
 
 	if d.excludeTags {

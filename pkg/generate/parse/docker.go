@@ -3,6 +3,7 @@ package parse
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -32,9 +33,14 @@ func (d *dockerfileImageParser) ParseFiles(
 	paths <-chan collect.IPath,
 	done <-chan struct{},
 ) <-chan IImage {
-	dockerfileImages := make(chan IImage)
+	if paths == nil {
+		return nil
+	}
 
-	var waitGroup sync.WaitGroup
+	var (
+		waitGroup        sync.WaitGroup
+		dockerfileImages = make(chan IImage)
+	)
 
 	waitGroup.Add(1)
 
@@ -68,6 +74,10 @@ func (d *dockerfileImageParser) ParseFile(
 ) {
 	defer waitGroup.Done()
 
+	if path == nil || reflect.ValueOf(path).IsNil() || dockerfileImages == nil {
+		return
+	}
+
 	if path.Err() != nil {
 		select {
 		case <-done:
@@ -77,7 +87,7 @@ func (d *dockerfileImageParser) ParseFile(
 		return
 	}
 
-	f, err := os.Open(path.Val())
+	dockerfile, err := os.Open(path.Val())
 	if err != nil {
 		select {
 		case <-done:
@@ -86,9 +96,9 @@ func (d *dockerfileImageParser) ParseFile(
 
 		return
 	}
-	defer f.Close()
+	defer dockerfile.Close()
 
-	loadedDockerfile, err := parser.Parse(f)
+	loadedDockerfile, err := parser.Parse(dockerfile)
 	if err != nil {
 		select {
 		case <-done:
@@ -157,7 +167,7 @@ func (d *dockerfileImageParser) ParseFile(
 
 			if len(raw) == 0 {
 				err := fmt.Errorf(
-					"invalid from instruction in Dockerfile '%s'", path,
+					"invalid FROM instruction in Dockerfile '%s'", path,
 				)
 
 				select {

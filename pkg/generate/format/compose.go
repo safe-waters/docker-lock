@@ -38,6 +38,10 @@ func (c *composefileImageFormatter) Kind() kind.Kind {
 func (c *composefileImageFormatter) FormatImages(
 	images <-chan parse.IImage,
 ) (map[string][]interface{}, error) {
+	if images == nil {
+		return nil, errors.New("'images' cannot be nil")
+	}
+
 	formattedImages := map[string][]interface{}{}
 
 	for image := range images {
@@ -47,7 +51,9 @@ func (c *composefileImageFormatter) FormatImages(
 
 		path, ok := image.Metadata()["path"].(string)
 		if !ok {
-			return nil, errors.New("missing path in composefile image")
+			return nil, errors.New(
+				"missing 'path' in composefile image metadata",
+			)
 		}
 
 		path = filepath.ToSlash(path)
@@ -57,13 +63,15 @@ func (c *composefileImageFormatter) FormatImages(
 
 		serviceName, ok := image.Metadata()["serviceName"].(string)
 		if !ok {
-			return nil, errors.New("missing serviceName in composefile image")
+			return nil, errors.New(
+				"missing 'serviceName' in composefile image metadata",
+			)
 		}
 
 		servicePosition, ok := image.Metadata()["servicePosition"].(int)
 		if !ok {
 			return nil, errors.New(
-				"missing servicePosition in composefile image",
+				"missing 'servicePosition' in composefile image metadata",
 			)
 		}
 

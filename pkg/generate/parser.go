@@ -28,7 +28,7 @@ func NewImageParser(parsers ...parse.IImageParser) (IImageParser, error) {
 	}
 
 	if len(kindParser) == 0 {
-		return nil, errors.New("non nil parsers must be greater than 0")
+		return nil, errors.New("non nil 'parsers' must be greater than 0")
 	}
 
 	return &imageParser{parsers: kindParser}, nil
@@ -39,9 +39,14 @@ func (i *imageParser) ParseFiles(
 	paths <-chan collect.IPath,
 	done <-chan struct{},
 ) <-chan parse.IImage {
-	images := make(chan parse.IImage)
+	if paths == nil {
+		return nil
+	}
 
-	var waitGroup sync.WaitGroup
+	var (
+		waitGroup sync.WaitGroup
+		images    = make(chan parse.IImage)
+	)
 
 	waitGroup.Add(1)
 
@@ -81,7 +86,7 @@ func (i *imageParser) ParseFiles(
 					case images <- parse.NewImage(
 						path.Kind(), "", "", "", nil,
 						fmt.Errorf(
-							"kind %s does not have a parser defined",
+							"kind '%s' does not have a parser defined",
 							path.Kind(),
 						),
 					):

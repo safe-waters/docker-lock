@@ -1,6 +1,7 @@
 package rewrite
 
 import (
+	"errors"
 	"os"
 	"sync"
 
@@ -19,7 +20,7 @@ func (r *renamer) RenameFiles(
 	writtenPaths <-chan write.IWrittenPath,
 ) error {
 	if writtenPaths == nil {
-		return nil
+		return errors.New("'writtenPaths' cannot be nil")
 	}
 
 	var allWrittenPaths []write.IWrittenPath // nolint: prealloc
@@ -37,12 +38,13 @@ func (r *renamer) RenameFiles(
 		return nil
 	}
 
-	errCh := make(chan error)
+	var (
+		waitGroup sync.WaitGroup
+		errCh     = make(chan error)
+		done      = make(chan struct{})
+	)
 
-	done := make(chan struct{})
 	defer close(done)
-
-	var waitGroup sync.WaitGroup
 
 	for _, writtenPath := range allWrittenPaths {
 		waitGroup.Add(1)

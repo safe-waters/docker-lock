@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"reflect"
 	"sync"
 
 	"github.com/safe-waters/docker-lock/pkg/generate/collect"
@@ -33,9 +34,14 @@ func (k *kubernetesfileImageParser) ParseFiles(
 	paths <-chan collect.IPath,
 	done <-chan struct{},
 ) <-chan IImage {
-	kubernetesfileImages := make(chan IImage)
+	if paths == nil {
+		return nil
+	}
 
-	var waitGroup sync.WaitGroup
+	var (
+		waitGroup            sync.WaitGroup
+		kubernetesfileImages = make(chan IImage)
+	)
 
 	waitGroup.Add(1)
 
@@ -67,6 +73,11 @@ func (k *kubernetesfileImageParser) ParseFile(
 	waitGroup *sync.WaitGroup,
 ) {
 	defer waitGroup.Done()
+
+	if path == nil || reflect.ValueOf(path).IsNil() ||
+		kubernetesfileImages == nil {
+		return
+	}
 
 	if path.Err() != nil {
 		select {
@@ -154,9 +165,7 @@ func (k *kubernetesfileImageParser) parseDocRecursive(
 ) {
 	switch doc := doc.(type) {
 	case yaml.MapSlice:
-		var name string
-
-		var imageLine string
+		var name, imageLine string
 
 		for _, item := range doc {
 			key, _ := item.Key.(string)

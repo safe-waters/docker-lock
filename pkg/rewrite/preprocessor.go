@@ -27,7 +27,7 @@ func NewPreprocessor(
 	}
 
 	if len(nonNilPreprocessors) == 0 {
-		return nil, errors.New("non nil preprocessors must be greater than 0")
+		return nil, errors.New("non nil 'preprocessors' must be greater than 0")
 	}
 
 	return &preprocessor{preprocessors: nonNilPreprocessors}, nil
@@ -37,6 +37,10 @@ func NewPreprocessor(
 func (p *preprocessor) PreprocessLockfile(
 	lockfile map[kind.Kind]map[string][]interface{},
 ) (map[kind.Kind]map[string][]interface{}, error) {
+	if lockfile == nil {
+		return nil, errors.New("'lockfile' cannot be nil")
+	}
+
 	for _, preprocessor := range p.preprocessors {
 		var err error
 

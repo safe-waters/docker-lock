@@ -27,7 +27,7 @@ func NewVerifier(
 	differentiators ...diff.IImageDifferentiator,
 ) (IVerifier, error) {
 	if generator == nil || reflect.ValueOf(generator).IsNil() {
-		return nil, errors.New("generator cannot be nil")
+		return nil, errors.New("'generator' cannot be nil")
 	}
 
 	kindDifferentiator := map[kind.Kind]diff.IImageDifferentiator{}
@@ -39,7 +39,9 @@ func NewVerifier(
 	}
 
 	if len(kindDifferentiator) == 0 {
-		return nil, errors.New("non nil differentiators must be greater than 0")
+		return nil, errors.New(
+			"non nil 'differentiators' must be greater than 0",
+		)
 	}
 
 	return &verifier{
@@ -53,7 +55,7 @@ func NewVerifier(
 // returned as an error.
 func (v *verifier) VerifyLockfile(lockfileReader io.Reader) error {
 	if lockfileReader == nil || reflect.ValueOf(lockfileReader).IsNil() {
-		return errors.New("reader cannot be nil")
+		return errors.New("'lockfileReader' cannot be nil")
 	}
 
 	existingLockfileByt, err := ioutil.ReadAll(lockfileReader)

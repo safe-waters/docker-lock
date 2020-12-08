@@ -29,7 +29,7 @@ func NewComposefileImageParser(
 ) (IComposefileImageParser, error) {
 	if dockerfileImageParser == nil ||
 		reflect.ValueOf(dockerfileImageParser).IsNil() {
-		return nil, errors.New("dockerfileImageParser cannot be nil")
+		return nil, errors.New("'dockerfileImageParser' cannot be nil")
 	}
 
 	return &composefileImageParser{
@@ -48,9 +48,14 @@ func (c *composefileImageParser) ParseFiles(
 	paths <-chan collect.IPath,
 	done <-chan struct{},
 ) <-chan IImage {
-	composefileImages := make(chan IImage)
+	if paths == nil {
+		return nil
+	}
 
-	var waitGroup sync.WaitGroup
+	var (
+		waitGroup         sync.WaitGroup
+		composefileImages = make(chan IImage)
+	)
 
 	waitGroup.Add(1)
 
@@ -82,6 +87,11 @@ func (c *composefileImageParser) ParseFile(
 	waitGroup *sync.WaitGroup,
 ) {
 	defer waitGroup.Done()
+
+	if path == nil || reflect.ValueOf(path).IsNil() ||
+		composefileImages == nil {
+		return
+	}
 
 	if path.Err() != nil {
 		select {
@@ -189,9 +199,10 @@ func (c *composefileImageParser) parseService(
 		return
 	}
 
-	dockerfileImages := make(chan IImage)
-
-	var dockerfileImageWaitGroup sync.WaitGroup
+	var (
+		dockerfileImageWaitGroup sync.WaitGroup
+		dockerfileImages         = make(chan IImage)
+	)
 
 	dockerfileImageWaitGroup.Add(1)
 

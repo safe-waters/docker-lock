@@ -36,7 +36,7 @@ func NewImageFormatter(
 	}
 
 	if len(kindFormatter) == 0 {
-		return nil, errors.New("non nil formatter must be greater than 0")
+		return nil, errors.New("non nil 'formatters' must be greater than 0")
 	}
 
 	return &imageFormatter{formatters: kindFormatter}, nil
@@ -47,13 +47,18 @@ func (i *imageFormatter) FormatImages(
 	images <-chan parse.IImage,
 	done <-chan struct{},
 ) (map[kind.Kind]map[string][]interface{}, error) {
-	kindImages := map[kind.Kind]chan parse.IImage{}
+	if images == nil {
+		return nil, errors.New("'images' cannot be nil")
+	}
+
+	var (
+		kindImagesWaitGroup sync.WaitGroup
+		kindImages          = map[kind.Kind]chan parse.IImage{}
+	)
 
 	for kind := range i.formatters {
 		kindImages[kind] = make(chan parse.IImage)
 	}
-
-	var kindImagesWaitGroup sync.WaitGroup
 
 	for image := range images {
 		if image.Err() != nil {
@@ -62,7 +67,7 @@ func (i *imageFormatter) FormatImages(
 
 		if _, ok := i.formatters[image.Kind()]; !ok {
 			return nil, fmt.Errorf(
-				"kind %s does not have a formatter defined", image.Kind(),
+				"kind '%s' does not have a formatter defined", image.Kind(),
 			)
 		}
 
@@ -89,9 +94,10 @@ func (i *imageFormatter) FormatImages(
 		}
 	}()
 
-	var waitGroup sync.WaitGroup
-
-	formattedResults := make(chan *formattedResult)
+	var (
+		waitGroup        sync.WaitGroup
+		formattedResults = make(chan *formattedResult)
+	)
 
 	for kind, images := range kindImages {
 		kind := kind

@@ -22,21 +22,21 @@ func NewGenerator(
 	imageFormatter IImageFormatter,
 ) (IGenerator, error) {
 	if pathCollector == nil || reflect.ValueOf(pathCollector).IsNil() {
-		return nil, errors.New("pathCollector may not be nil")
+		return nil, errors.New("'pathCollector' may not be nil")
 	}
 
 	if imageParser == nil || reflect.ValueOf(imageParser).IsNil() {
-		return nil, errors.New("imageParser may not be nil")
+		return nil, errors.New("'imageParser' may not be nil")
 	}
 
 	if imageDigestUpdater == nil ||
 		reflect.ValueOf(imageDigestUpdater).IsNil() {
-		return nil, errors.New("imageDigestUpdater may not be nil")
+		return nil, errors.New("'imageDigestUpdater' may not be nil")
 	}
 
 	if imageFormatter == nil ||
 		reflect.ValueOf(imageFormatter).IsNil() {
-		return nil, errors.New("imageFormatter may not be nil")
+		return nil, errors.New("'imageFormatter' may not be nil")
 	}
 
 	return &generator{
@@ -50,7 +50,7 @@ func NewGenerator(
 // GenerateLockfile creates a Lockfile and writes it to an io.Writer.
 func (g *generator) GenerateLockfile(lockfileWriter io.Writer) error {
 	if lockfileWriter == nil || reflect.ValueOf(lockfileWriter).IsNil() {
-		return errors.New("writer cannot be nil")
+		return errors.New("'lockfileWriter' cannot be nil")
 	}
 
 	done := make(chan struct{})

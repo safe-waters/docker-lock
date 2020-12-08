@@ -26,19 +26,25 @@ func (i *imageDigestUpdater) UpdateDigests(
 	images <-chan parse.IImage,
 	done <-chan struct{},
 ) <-chan parse.IImage {
-	updatedImages := make(chan parse.IImage)
+	if images == nil {
+		return nil
+	}
 
-	var waitGroup sync.WaitGroup
+	var (
+		waitGroup     sync.WaitGroup
+		updatedImages = make(chan parse.IImage)
+	)
 
 	waitGroup.Add(1)
 
 	go func() {
 		defer waitGroup.Done()
 
-		imagesToQuery := make(chan parse.IImage)
-		imageLineCache := map[string][]parse.IImage{}
-
-		var imagesToQueryWaitGroup sync.WaitGroup
+		var (
+			imagesToQueryWaitGroup sync.WaitGroup
+			imagesToQuery          = make(chan parse.IImage)
+			imageLineCache         = map[string][]parse.IImage{}
+		)
 
 		imagesToQueryWaitGroup.Add(1)
 

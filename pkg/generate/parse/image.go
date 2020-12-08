@@ -120,8 +120,10 @@ func (i *image) ImageLine() string {
 // an image line. It accepts inputs of the format "name", "name:tag",
 // "name@sha256:digest", and "name:tag@sha256:digest".
 func (i *image) SetNameTagDigestFromImageLine(imageLine string) {
-	tagSeparator := -1
-	digestSeparator := -1
+	var (
+		tagSeparator    = -1
+		digestSeparator = -1
+	)
 
 loop:
 	for i, c := range imageLine {
@@ -178,18 +180,18 @@ func (i *image) Err() error {
 }
 
 func (i *image) deepCopyMetadata(
-	m map[string]interface{},
+	metadata map[string]interface{},
 ) map[string]interface{} {
-	cp := make(map[string]interface{})
+	copy := make(map[string]interface{})
 
-	for k, v := range m {
+	for k, v := range metadata {
 		vm, ok := v.(map[string]interface{})
 		if ok {
-			cp[k] = i.deepCopyMetadata(vm)
+			copy[k] = i.deepCopyMetadata(vm)
 		} else {
-			cp[k] = v
+			copy[k] = v
 		}
 	}
 
-	return cp
+	return copy
 }

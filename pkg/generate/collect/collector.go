@@ -33,7 +33,9 @@ func NewPathCollector(
 ) (IPathCollector, error) {
 	if recursive && len(defaultPathVals) == 0 {
 		return nil,
-			errors.New("if recursive is true, defaultPathVals must also be set")
+			errors.New(
+				"if 'recursive' is true, 'defaultPathVals' must also be set",
+			)
 	}
 
 	return &pathCollector{
@@ -46,6 +48,7 @@ func NewPathCollector(
 	}, nil
 }
 
+// Kind is a getter for the kind.
 func (p *pathCollector) Kind() kind.Kind {
 	return p.kind
 }
@@ -53,26 +56,26 @@ func (p *pathCollector) Kind() kind.Kind {
 // CollectPaths gathers specified file paths if they are within the base
 // directory or a subdirectory of the base directory. Paths are deduplicated.
 func (p *pathCollector) CollectPaths(done <-chan struct{}) <-chan IPath {
-	paths := make(chan IPath)
-
-	var waitGroup sync.WaitGroup
+	var (
+		waitGroup sync.WaitGroup
+		paths     = make(chan IPath)
+	)
 
 	waitGroup.Add(1)
 
 	go func() {
 		defer waitGroup.Done()
 
-		intermediatePaths := make(chan IPath)
-		intermediateDone := make(chan struct{})
-
-		var intermediateWaitGroup sync.WaitGroup
+		var (
+			intermediateWaitGroup sync.WaitGroup
+			intermediatePaths     = make(chan IPath)
+		)
 
 		if len(p.manualPathVals) != 0 {
 			intermediateWaitGroup.Add(1)
 
 			go p.collectManualPaths(
-				intermediatePaths, intermediateDone,
-				&intermediateWaitGroup,
+				intermediatePaths, done, &intermediateWaitGroup,
 			)
 		}
 
@@ -80,8 +83,7 @@ func (p *pathCollector) CollectPaths(done <-chan struct{}) <-chan IPath {
 			intermediateWaitGroup.Add(1)
 
 			go p.collectGlobs(
-				intermediatePaths, intermediateDone,
-				&intermediateWaitGroup,
+				intermediatePaths, done, &intermediateWaitGroup,
 			)
 		}
 
@@ -89,8 +91,7 @@ func (p *pathCollector) CollectPaths(done <-chan struct{}) <-chan IPath {
 			intermediateWaitGroup.Add(1)
 
 			go p.collectRecursive(
-				intermediatePaths, intermediateDone,
-				&intermediateWaitGroup,
+				intermediatePaths, done, &intermediateWaitGroup,
 			)
 		}
 
@@ -101,8 +102,7 @@ func (p *pathCollector) CollectPaths(done <-chan struct{}) <-chan IPath {
 			intermediateWaitGroup.Add(1)
 
 			go p.collectDefaultPaths(
-				intermediatePaths, intermediateDone,
-				&intermediateWaitGroup,
+				intermediatePaths, done, &intermediateWaitGroup,
 			)
 		}
 
@@ -115,8 +115,6 @@ func (p *pathCollector) CollectPaths(done <-chan struct{}) <-chan IPath {
 
 		for result := range intermediatePaths {
 			if result.Err() != nil {
-				close(intermediateDone)
-
 				select {
 				case <-done:
 				case paths <- result:

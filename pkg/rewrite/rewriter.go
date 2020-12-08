@@ -23,11 +23,11 @@ func NewRewriter(
 	renamer IRenamer,
 ) (IRewriter, error) {
 	if writer == nil || reflect.ValueOf(writer).IsNil() {
-		return nil, errors.New("writer cannot be nil")
+		return nil, errors.New("'writer' cannot be nil")
 	}
 
 	if renamer == nil || reflect.ValueOf(renamer).IsNil() {
-		return nil, errors.New("renamer cannot be nil")
+		return nil, errors.New("'renamer' cannot be nil")
 	}
 
 	return &rewriter{
@@ -41,7 +41,7 @@ func NewRewriter(
 // the Lockfile.
 func (r *rewriter) RewriteLockfile(lockfileReader io.Reader) error {
 	if lockfileReader == nil || reflect.ValueOf(lockfileReader).IsNil() {
-		return errors.New("lockfileReader cannot be nil")
+		return errors.New("'lockfileReader' cannot be nil")
 	}
 
 	var lockfile map[kind.Kind]map[string][]interface{}

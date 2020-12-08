@@ -2,6 +2,7 @@ package update
 
 import (
 	"errors"
+	"reflect"
 	"sync"
 
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
@@ -21,8 +22,8 @@ func NewImageDigestUpdater(
 	ignoreMissingDigests bool,
 	updateExistingDigests bool,
 ) (IImageDigestUpdater, error) {
-	if digestRequester == nil {
-		return nil, errors.New("digestRequester cannot be nil")
+	if digestRequester == nil || reflect.ValueOf(digestRequester).IsNil() {
+		return nil, errors.New("'digestRequester' cannot be nil")
 	}
 
 	return &imageDigestUpdater{
@@ -39,9 +40,14 @@ func (i *imageDigestUpdater) UpdateDigests(
 	images <-chan parse.IImage,
 	done <-chan struct{},
 ) <-chan parse.IImage {
-	updatedImages := make(chan parse.IImage)
+	if images == nil {
+		return nil
+	}
 
-	var waitGroup sync.WaitGroup
+	var (
+		waitGroup     sync.WaitGroup
+		updatedImages = make(chan parse.IImage)
+	)
 
 	waitGroup.Add(1)
 
