@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/kyokomi/emoji"
 	"github.com/safe-waters/docker-lock/pkg/rewrite"
 	"github.com/safe-waters/docker-lock/pkg/rewrite/preprocess"
 	"github.com/safe-waters/docker-lock/pkg/rewrite/write"
@@ -44,7 +45,15 @@ func NewRewriteCmd() (*cobra.Command, error) {
 			}
 			defer reader.Close()
 
-			return rewriter.RewriteLockfile(reader)
+			err = rewriter.RewriteLockfile(reader)
+			if err == nil {
+				emoji.Println(
+					"successfully rewrote files referenced by lockfile " +
+						":whale::lock:!",
+				)
+			}
+
+			return err
 		},
 	}
 	rewriteCmd.Flags().String(

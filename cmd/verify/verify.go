@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/kyokomi/emoji"
 	cmd_generate "github.com/safe-waters/docker-lock/cmd/generate"
 	"github.com/safe-waters/docker-lock/pkg/kind"
 	"github.com/safe-waters/docker-lock/pkg/verify"
@@ -48,7 +49,12 @@ func NewVerifyCmd() (*cobra.Command, error) {
 			}
 			defer reader.Close()
 
-			return verifier.VerifyLockfile(reader)
+			err = verifier.VerifyLockfile(reader)
+			if err == nil {
+				emoji.Println("successfully verified lockfile :whale::lock:!")
+			}
+
+			return err
 		},
 	}
 	verifyCmd.Flags().String(

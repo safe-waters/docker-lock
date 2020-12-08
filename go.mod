@@ -8,6 +8,7 @@ require (
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/google/go-containerregistry v0.1.2
 	github.com/imdario/mergo v0.3.11 // indirect
+	github.com/kyokomi/emoji v2.2.4+incompatible
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mitchellh/mapstructure v1.3.3 // indirect
 	// using buildkit from master rather than a tagged release because
