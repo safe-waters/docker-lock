@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kyokomi/emoji"
 	"github.com/safe-waters/docker-lock/pkg/generate"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -74,7 +73,7 @@ func NewGenerateCmd() (*cobra.Command, error) {
 
 			_, err = writer.Write(lockfileContents)
 			if err == nil {
-				emoji.Println("successfully generated lockfile :whale::lock:!")
+				fmt.Println("successfully generated lockfile!")
 			}
 
 			return err
