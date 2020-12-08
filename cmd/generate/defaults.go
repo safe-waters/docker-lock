@@ -155,9 +155,11 @@ func DefaultImageFormatter(flags *Flags) (generate.IImageFormatter, error) {
 		return nil, errors.New("nothing to do - all paths excluded")
 	}
 
-	dockerfileImageFormatter := format.NewDockerfileImageFormatter()
-	composefileImageFormatter := format.NewComposefileImageFormatter()
-	kubernetesfileImageFormatter := format.NewKubernetesfileImageFormatter()
+	var (
+		dockerfileImageFormatter     = format.NewDockerfileImageFormatter()
+		composefileImageFormatter    = format.NewComposefileImageFormatter()
+		kubernetesfileImageFormatter = format.NewKubernetesfileImageFormatter()
+	)
 
 	return generate.NewImageFormatter(
 		dockerfileImageFormatter, composefileImageFormatter,
@@ -198,7 +200,7 @@ func DefaultImageDigestUpdater(
 
 func ensureFlagsNotNil(flags *Flags) error {
 	if flags == nil {
-		return errors.New("flags cannot be nil")
+		return errors.New("'flags' cannot be nil")
 	}
 
 	if flags.DockerfileFlags == nil {

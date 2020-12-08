@@ -453,7 +453,9 @@ services:
 				t, tempDir, pathsToWrite, test.Contents[:len(test.Contents)-1],
 			)
 
-			flags, err := cmd_rewrite.NewFlags("", tempDir, false)
+			noopFile := filepath.Base("rewriter_test.go")
+
+			flags, err := cmd_rewrite.NewFlags(noopFile, tempDir, false)
 			if err != nil {
 				t.Fatal(err)
 			}

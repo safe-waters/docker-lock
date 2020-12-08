@@ -65,6 +65,10 @@ func (g *generator) GenerateLockfile(lockfileWriter io.Writer) error {
 		return err
 	}
 
+	if len(formattedImages) == 0 {
+		return nil
+	}
+
 	byt, err := json.MarshalIndent(formattedImages, "", "\t")
 	if err != nil {
 		return err

@@ -89,7 +89,7 @@ func initViper() error {
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return fmt.Errorf("malformed %s file: %v", cfgFilePrefix, err)
+			return fmt.Errorf("malformed '%s' file: %v", cfgFilePrefix, err)
 		}
 	}
 
