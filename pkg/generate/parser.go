@@ -53,13 +53,14 @@ func (i *imageParser) ParseFiles(
 	go func() {
 		defer waitGroup.Done()
 
-		kindPaths := map[kind.Kind]chan collect.IPath{}
+		var (
+			kindPathsWaitGroup sync.WaitGroup
+			kindPaths          = map[kind.Kind]chan collect.IPath{}
+		)
 
 		for kind := range i.parsers {
 			kindPaths[kind] = make(chan collect.IPath)
 		}
-
-		var kindPathsWaitGroup sync.WaitGroup
 
 		for path := range paths {
 			path := path

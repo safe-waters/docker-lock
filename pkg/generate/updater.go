@@ -1,6 +1,8 @@
 package generate
 
 import (
+	"errors"
+	"reflect"
 	"sync"
 
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
@@ -16,9 +18,11 @@ type imageDigestUpdater struct {
 func NewImageDigestUpdater(
 	updater update.IImageDigestUpdater,
 ) (IImageDigestUpdater, error) {
-	return &imageDigestUpdater{
-		updater: updater,
-	}, nil
+	if updater == nil || reflect.ValueOf(updater).IsNil() {
+		return nil, errors.New("'updater' cannot be nil")
+	}
+
+	return &imageDigestUpdater{updater: updater}, nil
 }
 
 // UpdateDigests updates images with the most recent digests from registries.
@@ -64,6 +68,22 @@ func (i *imageDigestUpdater) UpdateDigests(
 				key := image.ImageLine()
 				if _, ok := imageLineCache[key]; !ok {
 					metadata := image.Metadata()
+					if metadata == nil {
+						metadata = map[string]interface{}{}
+					}
+
+					if _, ok := metadata["key"]; ok {
+						select {
+						case <-done:
+						case updatedImages <- parse.NewImage(
+							image.Kind(), "", "", "", nil,
+							errors.New("image metadata key 'key' is reserved"),
+						):
+						}
+
+						return
+					}
+
 					metadata["key"] = key
 
 					select {
@@ -103,6 +123,19 @@ func (i *imageDigestUpdater) UpdateDigests(
 		}
 
 		for _, updatedImage := range allUpdatedImages {
+			metadata := updatedImage.Metadata()
+			if metadata == nil {
+				select {
+				case <-done:
+				case updatedImages <- parse.NewImage(
+					updatedImage.Kind(), "", "", "", nil,
+					errors.New("image 'metadata' cannot be nil"),
+				):
+				}
+
+				return
+			}
+
 			key := updatedImage.Metadata()["key"].(string)
 
 			for _, image := range imageLineCache[key] {
