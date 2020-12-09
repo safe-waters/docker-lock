@@ -60,9 +60,10 @@ func (c *composefileWriter) WriteFiles(
 	pathImages map[string][]interface{},
 	done <-chan struct{},
 ) <-chan IWrittenPath {
-	writtenPaths := make(chan IWrittenPath)
-
-	var waitGroup sync.WaitGroup
+	var (
+		waitGroup    sync.WaitGroup
+		writtenPaths = make(chan IWrittenPath)
+	)
 
 	waitGroup.Add(1)
 
@@ -146,9 +147,10 @@ func (c *composefileWriter) writeComposefiles(
 	pathImages map[string][]interface{},
 	done <-chan struct{},
 ) <-chan IWrittenPath {
-	writtenPaths := make(chan IWrittenPath)
-
-	var waitGroup sync.WaitGroup
+	var (
+		waitGroup    sync.WaitGroup
+		writtenPaths = make(chan IWrittenPath)
+	)
 
 	waitGroup.Add(1)
 
@@ -220,9 +222,11 @@ func (c *composefileWriter) writeFile(
 	)
 
 	for scanner.Scan() {
-		inputLine := scanner.Text()
-		outputLine := inputLine
-		possibleServiceName := strings.Trim(inputLine, " :")
+		var (
+			inputLine           = scanner.Text()
+			outputLine          = inputLine
+			possibleServiceName = strings.Trim(inputLine, " :")
+		)
 
 		switch {
 		case serviceImageLines[possibleServiceName] != "":
@@ -282,8 +286,16 @@ func (c *composefileWriter) filterComposefileServices(
 	)
 
 	for _, image := range images {
-		image := image.(map[string]interface{})
-		serviceName := image["service"].(string)
+		// TODO: Validate the image here
+		image, ok := image.(map[string]interface{})
+		if !ok {
+			return nil, errors.New("malformed image")
+		}
+
+		serviceName, ok := image["service"].(string)
+		if !ok {
+			return nil, errors.New("missing 'service' from image")
+		}
 
 		if _, ok := comp.Services[serviceName]; !ok {
 			return nil, fmt.Errorf(
@@ -299,7 +311,11 @@ func (c *composefileWriter) filterComposefileServices(
 				)
 			}
 
-			tag := image["tag"].(string)
+			tag, ok := image["tag"].(string)
+			if !ok {
+				return nil, errors.New("missing 'tag' from image")
+			}
+
 			if c.excludeTags {
 				tag = ""
 			}
