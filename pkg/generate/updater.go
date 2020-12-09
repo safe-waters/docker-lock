@@ -136,7 +136,7 @@ func (i *imageDigestUpdater) UpdateDigests(
 				return
 			}
 
-			key := updatedImage.Metadata()["key"].(string)
+			key := metadata["key"].(string)
 
 			for _, image := range imageLineCache[key] {
 				image.SetDigest(updatedImage.Digest())

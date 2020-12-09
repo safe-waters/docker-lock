@@ -262,9 +262,22 @@ func (c *composefileImageParser) parseService(
 			return
 		}
 
+		dockerfileImageMetadata := dockerfileImage.Metadata()
+		if dockerfileImageMetadata == nil {
+			select {
+			case <-done:
+			case composefileImages <- NewImage(
+				dockerfileImage.Kind(), "", "", "", nil,
+				errors.New("'metadata' cannot be nil"),
+			):
+			}
+
+			return
+		}
+
 		dockerfileImage.SetMetadata(map[string]interface{}{
-			"dockerfilePath":  dockerfileImage.Metadata()["path"],
-			"servicePosition": dockerfileImage.Metadata()["position"],
+			"dockerfilePath":  dockerfileImageMetadata["path"],
+			"servicePosition": dockerfileImageMetadata["position"],
 			"serviceName":     serviceConfig.Name,
 			"path":            path.Val(),
 		})

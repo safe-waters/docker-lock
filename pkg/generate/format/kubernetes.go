@@ -50,28 +50,33 @@ func (k *kubernetesfileImageFormatter) FormatImages(
 			return nil, image.Err()
 		}
 
-		path, ok := image.Metadata()["path"].(string)
+		metadata := image.Metadata()
+		if metadata == nil {
+			return nil, errors.New("'metadata' cannot be nil")
+		}
+
+		path, ok := metadata["path"].(string)
 		if !ok {
 			return nil, errors.New("missing 'path' in kubernetesfile image")
 		}
 
 		path = filepath.ToSlash(path)
 
-		containerName, ok := image.Metadata()["containerName"].(string)
+		containerName, ok := metadata["containerName"].(string)
 		if !ok {
 			return nil, errors.New(
 				"missing 'containerName' in kubernetesfile image",
 			)
 		}
 
-		imagePosition, ok := image.Metadata()["imagePosition"].(int)
+		imagePosition, ok := metadata["imagePosition"].(int)
 		if !ok {
 			return nil, errors.New(
 				"missing 'imagePosition' in kubernetesfile image",
 			)
 		}
 
-		docPosition, ok := image.Metadata()["docPosition"].(int)
+		docPosition, ok := metadata["docPosition"].(int)
 		if !ok {
 			return nil, errors.New(
 				"missing 'docPosition' in kubernetesfile image",

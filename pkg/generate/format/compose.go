@@ -49,7 +49,12 @@ func (c *composefileImageFormatter) FormatImages(
 			return nil, image.Err()
 		}
 
-		path, ok := image.Metadata()["path"].(string)
+		metadata := image.Metadata()
+		if metadata == nil {
+			return nil, errors.New("'metadata' cannot be nil")
+		}
+
+		path, ok := metadata["path"].(string)
 		if !ok {
 			return nil, errors.New(
 				"missing 'path' in composefile image metadata",
@@ -58,17 +63,17 @@ func (c *composefileImageFormatter) FormatImages(
 
 		path = filepath.ToSlash(path)
 
-		dockerfilePath, _ := image.Metadata()["dockerfilePath"].(string)
+		dockerfilePath, _ := metadata["dockerfilePath"].(string)
 		dockerfilePath = filepath.ToSlash(dockerfilePath)
 
-		serviceName, ok := image.Metadata()["serviceName"].(string)
+		serviceName, ok := metadata["serviceName"].(string)
 		if !ok {
 			return nil, errors.New(
 				"missing 'serviceName' in composefile image metadata",
 			)
 		}
 
-		servicePosition, ok := image.Metadata()["servicePosition"].(int)
+		servicePosition, ok := metadata["servicePosition"].(int)
 		if !ok {
 			return nil, errors.New(
 				"missing 'servicePosition' in composefile image metadata",

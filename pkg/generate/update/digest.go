@@ -1,6 +1,7 @@
 package update
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -16,9 +17,17 @@ func NewDigestRequester() IDigestRequester {
 
 // Digest queries a registry for a sha256 digest given a name and tag.
 func (d *digestRequester) Digest(name string, tag string) (string, error) {
-	nameTag := fmt.Sprintf("%s:%s", name, tag)
-	digest, err := crane.Digest(nameTag)
+	if name == "" {
+		return "", errors.New("'name' cannot be nil")
+	}
 
+	if tag == "" {
+		return "", errors.New("'tag' cannot be nil")
+	}
+
+	nameTag := fmt.Sprintf("%s:%s", name, tag)
+
+	digest, err := crane.Digest(nameTag)
 	if err != nil {
 		return "", fmt.Errorf(
 			"failed to find digest for '%s' with err: %v", nameTag, err,
