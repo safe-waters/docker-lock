@@ -2,6 +2,7 @@ package update
 
 import (
 	"errors"
+	"log"
 	"reflect"
 	"sync"
 
@@ -46,6 +47,7 @@ func (i *imageDigestUpdater) UpdateDigests(
 
 	var (
 		waitGroup     sync.WaitGroup
+		doOnce        sync.Once
 		updatedImages = make(chan parse.IImage)
 	)
 
@@ -63,8 +65,25 @@ func (i *imageDigestUpdater) UpdateDigests(
 				defer waitGroup.Done()
 
 				if image.Err() != nil ||
-					(image.Digest() != "" && !i.updateExistingDigests) ||
+					(image.Digest() != "" && !i.updateExistingDigests) {
+					select {
+					case <-done:
+					case updatedImages <- image:
+					}
+
+					return
+				}
+
+				if image.Digest() != "" &&
+					i.updateExistingDigests &&
 					image.Tag() == "" {
+					doOnce.Do(func() {
+						log.Println(
+							"warning: image(s) with a digest but no tag " +
+								"found, will use existing digest",
+						)
+					})
+
 					select {
 					case <-done:
 					case updatedImages <- image:
