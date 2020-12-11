@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/docker/cli/cli/compose/loader"
+	"github.com/docker/cli/cli/compose/types"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 	"github.com/safe-waters/docker-lock/pkg/kind"
 	"gopkg.in/yaml.v2"
@@ -205,8 +206,22 @@ func (c *composefileWriter) writeFile(
 		return "", err
 	}
 
-	if _, err = loader.ParseYAML(pathByt); err != nil {
-		return "", err
+	data, err := loader.ParseYAML(pathByt)
+	if err != nil {
+		return "", fmt.Errorf("in '%s', %s", path, err)
+	}
+
+	if _, err = loader.Load(
+		types.ConfigDetails{
+			ConfigFiles: []types.ConfigFile{
+				{
+					Config:   data,
+					Filename: path,
+				},
+			},
+		},
+	); err != nil {
+		return "", fmt.Errorf("in '%s', %s", path, err)
 	}
 
 	serviceImageLines, err := c.filterComposefileServices(pathByt, images)
