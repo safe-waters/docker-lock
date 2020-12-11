@@ -64,8 +64,7 @@ func (i *imageDigestUpdater) UpdateDigests(
 			go func() {
 				defer waitGroup.Done()
 
-				if image.Err() != nil ||
-					(image.Digest() != "" && !i.updateExistingDigests) {
+				if image.Err() != nil {
 					select {
 					case <-done:
 					case updatedImages <- image:
@@ -84,6 +83,16 @@ func (i *imageDigestUpdater) UpdateDigests(
 						)
 					})
 
+					select {
+					case <-done:
+					case updatedImages <- image:
+					}
+
+					return
+				}
+
+				if (image.Digest() != "" && !i.updateExistingDigests) ||
+					image.Tag() == "" {
 					select {
 					case <-done:
 					case updatedImages <- image:
