@@ -61,10 +61,30 @@ func (c *composefilePreprocessor) PreprocessLockfile(
 			defer waitGroup.Done()
 
 			for _, image := range images {
-				image := image.(map[string]interface{})
+				image, ok := image.(map[string]interface{})
+				if !ok {
+					select {
+					case <-done:
+					case deduplicatedDockerfilePaths <- &deduplicatedPath{
+						err: errors.New("malformed image"),
+					}:
+					}
+
+					return
+				}
 
 				if image["dockerfile"] != nil {
-					dockerfilePath := image["dockerfile"].(string)
+					dockerfilePath, ok := image["dockerfile"].(string)
+					if !ok {
+						select {
+						case <-done:
+						case deduplicatedDockerfilePaths <- &deduplicatedPath{
+							err: errors.New("malformed 'dockerfile' in image"),
+						}:
+						}
+
+						return
+					}
 
 					if filepath.IsAbs(dockerfilePath) {
 						var err error

@@ -57,7 +57,7 @@ func (k *kubernetesfileImageFormatter) FormatImages(
 
 		path, ok := metadata["path"].(string)
 		if !ok {
-			return nil, errors.New("missing 'path' in kubernetesfile image")
+			return nil, errors.New("malformed 'path' in kubernetesfile image")
 		}
 
 		path = filepath.ToSlash(path)
@@ -65,21 +65,21 @@ func (k *kubernetesfileImageFormatter) FormatImages(
 		containerName, ok := metadata["containerName"].(string)
 		if !ok {
 			return nil, errors.New(
-				"missing 'containerName' in kubernetesfile image",
+				"malformed 'containerName' in kubernetesfile image",
 			)
 		}
 
 		imagePosition, ok := metadata["imagePosition"].(int)
 		if !ok {
 			return nil, errors.New(
-				"missing 'imagePosition' in kubernetesfile image",
+				"malformed 'imagePosition' in kubernetesfile image",
 			)
 		}
 
 		docPosition, ok := metadata["docPosition"].(int)
 		if !ok {
 			return nil, errors.New(
-				"missing 'docPosition' in kubernetesfile image",
+				"malformed 'docPosition' in kubernetesfile image",
 			)
 		}
 

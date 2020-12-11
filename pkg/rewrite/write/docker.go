@@ -3,12 +3,13 @@ package write
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 	"sync"
 
+	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 	"github.com/safe-waters/docker-lock/pkg/kind"
 )
@@ -39,9 +40,10 @@ func (d *dockerfileWriter) WriteFiles( // nolint: dupl
 	pathImages map[string][]interface{},
 	done <-chan struct{},
 ) <-chan IWrittenPath {
-	writtenPaths := make(chan IWrittenPath)
-
-	var waitGroup sync.WaitGroup
+	var (
+		writtenPaths = make(chan IWrittenPath)
+		waitGroup    sync.WaitGroup
+	)
 
 	waitGroup.Add(1)
 
@@ -88,14 +90,17 @@ func (d *dockerfileWriter) writeFile(
 	path string,
 	images []interface{},
 ) (string, error) {
-	dockerfile, err := os.Open(path)
+	pathByt, err := ioutil.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
-	defer dockerfile.Close()
+
+	if _, err = parser.Parse(bytes.NewBuffer(pathByt)); err != nil {
+		return "", err
+	}
 
 	var (
-		scanner      = bufio.NewScanner(dockerfile)
+		scanner      = bufio.NewScanner(bytes.NewBuffer(pathByt))
 		stageNames   = map[string]bool{}
 		imageIndex   int
 		outputBuffer bytes.Buffer
@@ -147,16 +152,32 @@ func (d *dockerfileWriter) writeFile(
 						)
 					}
 
-					image := images[imageIndex].(map[string]interface{})
+					image, ok := images[imageIndex].(map[string]interface{})
+					if !ok {
+						return "", errors.New("malformed image")
+					}
 
-					tag := image["tag"].(string)
+					tag, ok := image["tag"].(string)
+					if !ok {
+						return "", errors.New("malformed 'tag' in image")
+					}
+
 					if d.excludeTags {
 						tag = ""
 					}
 
+					name, ok := image["name"].(string)
+					if !ok {
+						return "", errors.New("malformed 'name' in image")
+					}
+
+					digest, ok := image["digest"].(string)
+					if !ok {
+						return "", errors.New("malformed 'digest' in image")
+					}
+
 					replacementImageLine := parse.NewImage(
-						kind.Dockerfile, image["name"].(string), tag,
-						image["digest"].(string), nil, nil,
+						kind.Dockerfile, name, tag, digest, nil, nil,
 					).ImageLine()
 
 					fields[imageLineIndex] = replacementImageLine

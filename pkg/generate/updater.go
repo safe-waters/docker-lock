@@ -136,7 +136,18 @@ func (i *imageDigestUpdater) UpdateDigests(
 				return
 			}
 
-			key := metadata["key"].(string)
+			key, _ := metadata["key"].(string)
+			if key == "" {
+				select {
+				case <-done:
+				case updatedImages <- parse.NewImage(
+					updatedImage.Kind(), "", "", "", nil,
+					errors.New("missing 'key' in image"),
+				):
+				}
+
+				return
+			}
 
 			for _, image := range imageLineCache[key] {
 				image.SetDigest(updatedImage.Digest())

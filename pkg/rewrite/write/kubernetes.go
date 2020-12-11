@@ -2,6 +2,7 @@ package write
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -41,9 +42,10 @@ func (k *kubernetesfileWriter) WriteFiles( // nolint: dupl
 	pathImages map[string][]interface{},
 	done <-chan struct{},
 ) <-chan IWrittenPath {
-	writtenPaths := make(chan IWrittenPath)
-
-	var waitGroup sync.WaitGroup
+	var (
+		writtenPaths = make(chan IWrittenPath)
+		waitGroup    sync.WaitGroup
+	)
 
 	waitGroup.Add(1)
 
@@ -179,16 +181,32 @@ func (k *kubernetesfileWriter) encodeDoc(
 				)
 			}
 
-			image := images[*imagePosition].(map[string]interface{})
+			image, ok := images[*imagePosition].(map[string]interface{})
+			if !ok {
+				return errors.New("malformed image")
+			}
 
-			tag := image["tag"].(string)
+			tag, ok := image["tag"].(string)
+			if !ok {
+				return errors.New("malformed 'tag' in image")
+			}
+
 			if k.excludeTags {
 				tag = ""
 			}
 
+			name, ok := image["name"].(string)
+			if !ok {
+				return errors.New("malformed 'name' in image")
+			}
+
+			digest, ok := image["digest"].(string)
+			if !ok {
+				return errors.New("malformed 'digest' in image")
+			}
+
 			imageLine := parse.NewImage(
-				k.kind, image["name"].(string), tag, image["digest"].(string),
-				nil, nil,
+				k.kind, name, tag, digest, nil, nil,
 			).ImageLine()
 			doc[imageLineIndex].Value = imageLine
 

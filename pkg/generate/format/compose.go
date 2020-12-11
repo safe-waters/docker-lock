@@ -57,7 +57,7 @@ func (c *composefileImageFormatter) FormatImages(
 		path, ok := metadata["path"].(string)
 		if !ok {
 			return nil, errors.New(
-				"missing 'path' in composefile image metadata",
+				"malformed 'path' in composefile image metadata",
 			)
 		}
 
@@ -69,14 +69,14 @@ func (c *composefileImageFormatter) FormatImages(
 		serviceName, ok := metadata["serviceName"].(string)
 		if !ok {
 			return nil, errors.New(
-				"missing 'serviceName' in composefile image metadata",
+				"malformed 'serviceName' in composefile image metadata",
 			)
 		}
 
 		servicePosition, ok := metadata["servicePosition"].(int)
 		if !ok {
 			return nil, errors.New(
-				"missing 'servicePosition' in composefile image metadata",
+				"malformed 'servicePosition' in composefile image metadata",
 			)
 		}
 
