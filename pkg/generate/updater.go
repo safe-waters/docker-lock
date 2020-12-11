@@ -72,19 +72,21 @@ func (i *imageDigestUpdater) UpdateDigests(
 						metadata = map[string]interface{}{}
 					}
 
-					if _, ok := metadata["key"]; ok {
+					if _, ok := metadata["__updateKey"]; ok {
 						select {
 						case <-done:
 						case updatedImages <- parse.NewImage(
 							image.Kind(), "", "", "", nil,
-							errors.New("image metadata key 'key' is reserved"),
+							errors.New(
+								"image metadata key '__updateKey' is reserved",
+							),
 						):
 						}
 
 						return
 					}
 
-					metadata["key"] = key
+					metadata["__updateKey"] = key
 
 					select {
 					case <-done:
@@ -136,13 +138,13 @@ func (i *imageDigestUpdater) UpdateDigests(
 				return
 			}
 
-			key, _ := metadata["key"].(string)
+			key, _ := metadata["__updateKey"].(string)
 			if key == "" {
 				select {
 				case <-done:
 				case updatedImages <- parse.NewImage(
 					updatedImage.Kind(), "", "", "", nil,
-					errors.New("missing 'key' in image"),
+					errors.New("missing '__updateKey' in image"),
 				):
 				}
 
