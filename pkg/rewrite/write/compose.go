@@ -14,6 +14,7 @@ import (
 
 	"github.com/docker/cli/cli/compose/loader"
 	"github.com/docker/cli/cli/compose/types"
+	"github.com/docker/cli/opts"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 	"github.com/safe-waters/docker-lock/pkg/kind"
 	"gopkg.in/yaml.v2"
@@ -211,6 +212,26 @@ func (c *composefileWriter) writeFile(
 		return "", fmt.Errorf("in '%s', %s", path, err)
 	}
 
+	envVars := map[string]string{}
+
+	for _, envVarStr := range os.Environ() {
+		envVarVal := strings.SplitN(envVarStr, "=", 2)
+		envVars[envVarVal[0]] = envVarVal[1]
+	}
+
+	var envFileVars []string
+
+	if envFileVars, err = opts.ParseEnvFile(
+		filepath.Join(filepath.Dir(path), ".env"),
+	); err == nil {
+		for _, envVarStr := range envFileVars {
+			envVarVal := strings.SplitN(envVarStr, "=", 2)
+			if _, ok := envVars[envVarVal[0]]; !ok {
+				envVars[envVarVal[0]] = envVarVal[1]
+			}
+		}
+	}
+
 	if _, err = loader.Load(
 		types.ConfigDetails{
 			ConfigFiles: []types.ConfigFile{
@@ -219,6 +240,7 @@ func (c *composefileWriter) writeFile(
 					Filename: path,
 				},
 			},
+			Environment: envVars,
 		},
 	); err != nil {
 		return "", fmt.Errorf("in '%s', %s", path, err)

@@ -18,6 +18,7 @@ func TestComposefileWriter(t *testing.T) {
 		Contents    [][]byte
 		Expected    [][]byte
 		PathImages  map[string][]interface{}
+		EnvVars     map[string]string
 		ExcludeTags bool
 		ShouldFail  bool
 	}{
@@ -80,6 +81,42 @@ version: '3'
 services:
   svc:
     image: busybox:latest@sha256:busybox
+`,
+				),
+			},
+		},
+		{
+			Name: "Composefile With Required Env Vars",
+			Contents: [][]byte{
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    image: busybox
+    container_name: "${SOME_VAR?error message}"
+`,
+				),
+			},
+			PathImages: map[string][]interface{}{
+				"docker-compose.yml": {
+					map[string]interface{}{
+						"name":    "busybox",
+						"tag":     "latest",
+						"digest":  "busybox",
+						"service": "svc",
+					},
+				},
+			},
+			EnvVars: map[string]string{"SOME_VAR": "value"},
+			Expected: [][]byte{
+				[]byte(`
+version: '3'
+
+services:
+  svc:
+    image: busybox:latest@sha256:busybox
+    container_name: "${SOME_VAR?error message}"
 `,
 				),
 			},
@@ -612,6 +649,10 @@ services:
 
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
+
+			for k, v := range test.EnvVars {
+				os.Setenv(k, v)
+			}
 
 			tempDir := testutils.MakeTempDirInCurrentDir(t)
 			defer os.RemoveAll(tempDir)
