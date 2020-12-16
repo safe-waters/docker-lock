@@ -477,7 +477,7 @@ services:
 			}
 			reader := bytes.NewReader(lockfileByt)
 
-			err = rewriter.RewriteLockfile(reader)
+			err = rewriter.RewriteLockfile(reader, tempDir)
 
 			if test.ShouldFail {
 				if err == nil {

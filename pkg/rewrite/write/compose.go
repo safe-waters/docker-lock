@@ -24,7 +24,6 @@ type composefileWriter struct {
 	kind             kind.Kind
 	dockerfileWriter IWriter
 	excludeTags      bool
-	directory        string
 }
 
 type filteredDockerfilePathImages struct {
@@ -37,7 +36,6 @@ type filteredDockerfilePathImages struct {
 func NewComposefileWriter(
 	dockerfileWriter IWriter,
 	excludeTags bool,
-	directory string,
 ) (IWriter, error) {
 	if dockerfileWriter == nil || reflect.ValueOf(dockerfileWriter).IsNil() {
 		return nil, errors.New("dockerfileWriter cannot be nil")
@@ -47,7 +45,6 @@ func NewComposefileWriter(
 		kind:             kind.Composefile,
 		dockerfileWriter: dockerfileWriter,
 		excludeTags:      excludeTags,
-		directory:        directory,
 	}, nil
 }
 
@@ -61,6 +58,7 @@ func (c *composefileWriter) Kind() kind.Kind {
 // and new images that should replace the exsting ones.
 func (c *composefileWriter) WriteFiles(
 	pathImages map[string][]interface{},
+	outputDir string,
 	done <-chan struct{},
 ) <-chan IWrittenPath {
 	var (
@@ -92,7 +90,7 @@ func (c *composefileWriter) WriteFiles(
 
 			if len(dockerfilePathImages) != 0 {
 				for writtenPath := range c.dockerfileWriter.WriteFiles(
-					dockerfilePathImages, done,
+					dockerfilePathImages, outputDir, done,
 				) {
 					if writtenPath.Err() != nil {
 						select {
@@ -118,7 +116,7 @@ func (c *composefileWriter) WriteFiles(
 			defer waitGroup.Done()
 
 			for writtenPath := range c.writeComposefiles(
-				pathImages, done,
+				pathImages, outputDir, done,
 			) {
 				if writtenPath.Err() != nil {
 					select {
@@ -148,6 +146,7 @@ func (c *composefileWriter) WriteFiles(
 
 func (c *composefileWriter) writeComposefiles(
 	pathImages map[string][]interface{},
+	outputDir string,
 	done <-chan struct{},
 ) <-chan IWrittenPath {
 	var (
@@ -169,7 +168,7 @@ func (c *composefileWriter) writeComposefiles(
 			go func() {
 				defer waitGroup.Done()
 
-				writtenPath, err := c.writeFile(path, images)
+				writtenPath, err := c.writeFile(path, images, outputDir)
 				if err != nil {
 					select {
 					case <-done:
@@ -201,6 +200,7 @@ func (c *composefileWriter) writeComposefiles(
 func (c *composefileWriter) writeFile(
 	path string,
 	images []interface{},
+	outputDir string,
 ) (string, error) {
 	pathByt, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -297,9 +297,9 @@ func (c *composefileWriter) writeFile(
 	}
 
 	replacer := strings.NewReplacer("/", "-", "\\", "-")
-	tempPath := replacer.Replace(fmt.Sprintf("%s-*", path))
+	outputPath := replacer.Replace(fmt.Sprintf("%s-*", path))
 
-	writtenFile, err := ioutil.TempFile(c.directory, tempPath)
+	writtenFile, err := ioutil.TempFile(outputDir, outputPath)
 	if err != nil {
 		return "", err
 	}

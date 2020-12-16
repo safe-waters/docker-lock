@@ -44,7 +44,7 @@ func NewRewriteCmd() (*cobra.Command, error) {
 			}
 			defer reader.Close()
 
-			err = rewriter.RewriteLockfile(reader)
+			err = rewriter.RewriteLockfile(reader, flags.TempDir)
 			if err == nil {
 				fmt.Println(
 					"successfully rewrote files referenced by lockfile!",
@@ -58,7 +58,7 @@ func NewRewriteCmd() (*cobra.Command, error) {
 		"lockfile-name", "docker-lock.json", "Lockfile to read from",
 	)
 	rewriteCmd.Flags().String(
-		"tempdir", "",
+		"tempdir", ".",
 		"Directory where a temporary directory will be created/deleted "+
 			"during a rewrite transaction",
 	)
@@ -85,20 +85,16 @@ func SetupRewriter(flags *Flags) (rewrite.IRewriter, error) {
 		return nil, err
 	}
 
-	dockerfileWriter := write.NewDockerfileWriter(
-		flags.ExcludeTags, flags.TempDir,
-	)
+	dockerfileWriter := write.NewDockerfileWriter(flags.ExcludeTags)
 
 	composefileWriter, err := write.NewComposefileWriter(
-		dockerfileWriter, flags.ExcludeTags, flags.TempDir,
+		dockerfileWriter, flags.ExcludeTags,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	kubernetesfileWriter := write.NewKubernetesfileWriter(
-		flags.ExcludeTags, flags.TempDir,
-	)
+	kubernetesfileWriter := write.NewKubernetesfileWriter(flags.ExcludeTags)
 
 	writer, err := rewrite.NewWriter(
 		dockerfileWriter, composefileWriter, kubernetesfileWriter,

@@ -17,15 +17,13 @@ import (
 type dockerfileWriter struct {
 	kind        kind.Kind
 	excludeTags bool
-	directory   string
 }
 
 // NewDockerfileWriter returns an IWriter for Dockerfiles.
-func NewDockerfileWriter(excludeTags bool, directory string) IWriter {
+func NewDockerfileWriter(excludeTags bool) IWriter {
 	return &dockerfileWriter{
 		kind:        kind.Dockerfile,
 		excludeTags: excludeTags,
-		directory:   directory,
 	}
 }
 
@@ -38,6 +36,7 @@ func (d *dockerfileWriter) Kind() kind.Kind {
 // and new images that should replace the exsting ones.
 func (d *dockerfileWriter) WriteFiles( // nolint: dupl
 	pathImages map[string][]interface{},
+	outputDir string,
 	done <-chan struct{},
 ) <-chan IWrittenPath {
 	var (
@@ -59,7 +58,7 @@ func (d *dockerfileWriter) WriteFiles( // nolint: dupl
 			go func() {
 				defer waitGroup.Done()
 
-				writtenPath, err := d.writeFile(path, images)
+				writtenPath, err := d.writeFile(path, images, outputDir)
 				if err != nil {
 					select {
 					case <-done:
@@ -89,6 +88,7 @@ func (d *dockerfileWriter) WriteFiles( // nolint: dupl
 func (d *dockerfileWriter) writeFile(
 	path string,
 	images []interface{},
+	outputDir string,
 ) (string, error) {
 	pathByt, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -209,9 +209,9 @@ func (d *dockerfileWriter) writeFile(
 	}
 
 	replacer := strings.NewReplacer("/", "-", "\\", "-")
-	tempPath := replacer.Replace(fmt.Sprintf("%s-*", path))
+	outputPath := replacer.Replace(fmt.Sprintf("%s-*", path))
 
-	writtenFile, err := ioutil.TempFile(d.directory, tempPath)
+	writtenFile, err := ioutil.TempFile(outputDir, outputPath)
 	if err != nil {
 		return "", err
 	}

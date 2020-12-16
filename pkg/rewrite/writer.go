@@ -35,6 +35,7 @@ func NewWriter(writers ...write.IWriter) (IWriter, error) {
 // WriteFiles writes files with images from a Lockfile.
 func (w *writer) WriteFiles(
 	lockfile map[kind.Kind]map[string][]interface{},
+	tempDir string,
 	done <-chan struct{},
 ) <-chan write.IWrittenPath {
 	if lockfile == nil {
@@ -61,7 +62,7 @@ func (w *writer) WriteFiles(
 				defer waitGroup.Done()
 
 				for writtenPath := range writer.WriteFiles(
-					lockfile[kind], done,
+					lockfile[kind], tempDir, done,
 				) {
 					select {
 					case <-done:

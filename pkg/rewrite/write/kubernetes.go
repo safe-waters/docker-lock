@@ -18,15 +18,13 @@ import (
 type kubernetesfileWriter struct {
 	kind        kind.Kind
 	excludeTags bool
-	directory   string
 }
 
 // NewKubernetesfileWriter returns an IWriter for Kubernetesfiles.
-func NewKubernetesfileWriter(excludeTags bool, directory string) IWriter {
+func NewKubernetesfileWriter(excludeTags bool) IWriter {
 	return &kubernetesfileWriter{
 		kind:        kind.Kubernetesfile,
 		excludeTags: excludeTags,
-		directory:   directory,
 	}
 }
 
@@ -40,6 +38,7 @@ func (k *kubernetesfileWriter) Kind() kind.Kind {
 // the exsting ones.
 func (k *kubernetesfileWriter) WriteFiles( // nolint: dupl
 	pathImages map[string][]interface{},
+	outputDir string,
 	done <-chan struct{},
 ) <-chan IWrittenPath {
 	var (
@@ -61,7 +60,7 @@ func (k *kubernetesfileWriter) WriteFiles( // nolint: dupl
 			go func() {
 				defer waitGroup.Done()
 
-				writtenPath, err := k.writeFile(path, images)
+				writtenPath, err := k.writeFile(path, images, outputDir)
 				if err != nil {
 					select {
 					case <-done:
@@ -91,6 +90,7 @@ func (k *kubernetesfileWriter) WriteFiles( // nolint: dupl
 func (k *kubernetesfileWriter) writeFile(
 	path string,
 	images []interface{},
+	outputDir string,
 ) (string, error) {
 	byt, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -133,9 +133,9 @@ func (k *kubernetesfileWriter) writeFile(
 	}
 
 	replacer := strings.NewReplacer("/", "-", "\\", "-")
-	tempPath := replacer.Replace(fmt.Sprintf("%s-*", path))
+	outputPath := replacer.Replace(fmt.Sprintf("%s-*", path))
 
-	writtenFile, err := ioutil.TempFile(k.directory, tempPath)
+	writtenFile, err := ioutil.TempFile(outputDir, outputPath)
 	if err != nil {
 		return "", err
 	}

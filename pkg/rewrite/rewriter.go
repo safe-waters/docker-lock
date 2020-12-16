@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"reflect"
 
 	"github.com/safe-waters/docker-lock/pkg/kind"
@@ -38,11 +40,24 @@ func NewRewriter(
 }
 
 // RewriteLockfile rewrites files referenced by a Lockfile with images from
-// the Lockfile.
-func (r *rewriter) RewriteLockfile(lockfileReader io.Reader) error {
+// the Lockfile. Rewriting is a two step process. First, all of the files
+// are written to temporary paths in a subdirectory of tempDir (which will be
+// created if it does not exist). Next, all temporary files are renamed to
+// their original names.
+func (r *rewriter) RewriteLockfile(
+	lockfileReader io.Reader,
+	tempDir string,
+) error {
 	if lockfileReader == nil || reflect.ValueOf(lockfileReader).IsNil() {
 		return errors.New("'lockfileReader' cannot be nil")
 	}
+
+	tempDir = filepath.Join(tempDir, "temp-rewrite")
+	if err := os.MkdirAll(tempDir, 0700); err != nil {
+		return err
+	}
+
+	defer os.RemoveAll(tempDir)
 
 	var lockfile map[kind.Kind]map[string][]interface{}
 	if err := json.NewDecoder(lockfileReader).Decode(&lockfile); err != nil {
@@ -61,7 +76,7 @@ func (r *rewriter) RewriteLockfile(lockfileReader io.Reader) error {
 	done := make(chan struct{})
 	defer close(done)
 
-	writtenPaths := r.writer.WriteFiles(lockfile, done)
+	writtenPaths := r.writer.WriteFiles(lockfile, tempDir, done)
 
 	return r.renamer.RenameFiles(writtenPaths)
 }

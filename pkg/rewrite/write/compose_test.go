@@ -690,12 +690,10 @@ services:
 				t, tempDir, pathsToWrite, test.Contents,
 			)
 
-			dockerfileWriter := write.NewDockerfileWriter(
-				test.ExcludeTags, tempDir,
-			)
+			dockerfileWriter := write.NewDockerfileWriter(test.ExcludeTags)
 
 			composefileWriter, err := write.NewComposefileWriter(
-				dockerfileWriter, test.ExcludeTags, tempDir,
+				dockerfileWriter, test.ExcludeTags,
 			)
 			if err != nil {
 				t.Fatal(err)
@@ -705,7 +703,7 @@ services:
 			defer close(done)
 
 			writtenPathResults := composefileWriter.WriteFiles(
-				tempPathImages, done,
+				tempPathImages, tempDir, done,
 			)
 
 			var got []string

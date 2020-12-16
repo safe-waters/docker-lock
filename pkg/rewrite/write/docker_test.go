@@ -412,13 +412,13 @@ FROM redis
 				t, tempDir, pathsToWrite, test.Contents,
 			)
 
-			writer := write.NewDockerfileWriter(test.ExcludeTags, tempDir)
+			writer := write.NewDockerfileWriter(test.ExcludeTags)
 
 			done := make(chan struct{})
 			defer close(done)
 
 			writtenPathResults := writer.WriteFiles(
-				tempPathImages, done,
+				tempPathImages, tempDir, done,
 			)
 
 			var got []string

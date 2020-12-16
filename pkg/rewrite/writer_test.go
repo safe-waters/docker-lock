@@ -170,16 +170,14 @@ spec:
 				t, tempDir, pathsToWrite, test.Contents,
 			)
 
-			dockerfileWriter := write.NewDockerfileWriter(false, tempDir)
+			dockerfileWriter := write.NewDockerfileWriter(false)
 			composefileWriter, err := write.NewComposefileWriter(
-				dockerfileWriter, false, tempDir,
+				dockerfileWriter, false,
 			)
 			if err != nil {
 				t.Fatal(err)
 			}
-			kubernetesfileWriter := write.NewKubernetesfileWriter(
-				false, tempDir,
-			)
+			kubernetesfileWriter := write.NewKubernetesfileWriter(false)
 
 			writer, err := rewrite.NewWriter(
 				dockerfileWriter, composefileWriter, kubernetesfileWriter,
@@ -191,7 +189,9 @@ spec:
 			done := make(chan struct{})
 			defer close(done)
 
-			writtenPathResults := writer.WriteFiles(lockfileWithTempDir, done)
+			writtenPathResults := writer.WriteFiles(
+				lockfileWithTempDir, tempDir, done,
+			)
 
 			var got []string
 

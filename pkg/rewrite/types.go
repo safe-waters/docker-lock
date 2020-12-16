@@ -22,6 +22,7 @@ type IPreprocessor interface {
 type IWriter interface {
 	WriteFiles(
 		lockfile map[kind.Kind]map[string][]interface{},
+		tempDir string,
 		done <-chan struct{},
 	) <-chan write.IWrittenPath
 }
@@ -29,7 +30,7 @@ type IWriter interface {
 // IRewriter provides an interface for Rewriters, which are responsible for
 // rewriting files referenced in a Lockfile with images from the Lockfile.
 type IRewriter interface {
-	RewriteLockfile(lockfileReader io.Reader) error
+	RewriteLockfile(lockfileReader io.Reader, tempDir string) error
 }
 
 // IRenamer provides an interface for Renamers, which rename temporary files

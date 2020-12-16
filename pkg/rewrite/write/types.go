@@ -4,11 +4,12 @@ package write
 import "github.com/safe-waters/docker-lock/pkg/kind"
 
 // IWriter provides an interface for Writers, which are responsible for
-// writing files with information from a Lockfile to temporary paths.
+// writing files with information from a Lockfile to paths in outputDir.
 type IWriter interface {
 	Kind() kind.Kind
 	WriteFiles(
 		pathImages map[string][]interface{},
+		outputDir string,
 		done <-chan struct{},
 	) <-chan IWrittenPath
 }
