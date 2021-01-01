@@ -21,7 +21,7 @@ lint:
 	@[[ $$(gofmt -s -l . | wc -c) -eq 0 ]];
 	@echo "gofmt passed!"
 	@echo "running golangci-lint..."
-	@golangci-lint run
+	@golangci-lint run --timeout 5m0s
 	@echo "golangci-lint passed!"
 	@echo "lint target passed!"
 
