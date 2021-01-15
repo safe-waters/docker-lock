@@ -11,7 +11,7 @@
 			{
 				"name": "alpine",
 				"tag": "latest",
-				"digest": "3c7497bf0c7af93428242d6176e8f7905f2201d8fc5861f45be7a346b5f23436"
+				"digest": "64a89278afeafaa517fd6d206b1689a2121c1db9cb5ec0825d1a485a9f778fde"
 			},
 			{
 				"name": "scratch",
