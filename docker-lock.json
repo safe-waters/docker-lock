@@ -4,7 +4,7 @@
 			{
 				"name": "ubuntu",
 				"tag": "bionic",
-				"digest": "fd25e706f3dea2a5ff705dbc3353cf37f08307798f3e360a13e9385840f73fb3"
+				"digest": "e94703a91b5045b1faf3d018d3f16fbf3180f9de426dffc66e11ed58a8cc9ccb"
 			}
 		],
 		"Dockerfile": [
