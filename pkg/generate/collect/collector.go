@@ -38,6 +38,11 @@ func NewPathCollector(
 			)
 	}
 
+	baseDir = filepath.Join(".", baseDir)
+	if err := isSubPath(baseDir); err != nil {
+		return nil, err
+	}
+
 	return &pathCollector{
 		kind:            kind,
 		baseDir:         baseDir,
@@ -152,7 +157,7 @@ func (p *pathCollector) collectManualPaths(
 	for _, val := range p.manualPathVals {
 		val = filepath.Join(p.baseDir, val)
 
-		if err := p.validatePath(val); err != nil {
+		if err := validatePath(val); err != nil {
 			select {
 			case <-done:
 			case paths <- NewPath(p.kind, "", err):
@@ -179,7 +184,7 @@ func (p *pathCollector) collectDefaultPaths(
 	for _, val := range p.defaultPathVals {
 		val = filepath.Join(p.baseDir, val)
 
-		if err := p.validatePath(val); err != nil {
+		if err := isSubPath(val); err != nil {
 			select {
 			case <-done:
 			case paths <- NewPath(p.kind, "", err):
@@ -188,7 +193,7 @@ func (p *pathCollector) collectDefaultPaths(
 			return
 		}
 
-		if err := p.fileExists(val); err == nil {
+		if err := validatePath(val); err == nil {
 			select {
 			case <-done:
 				return
@@ -219,7 +224,7 @@ func (p *pathCollector) collectGlobs(
 		}
 
 		for _, val := range vals {
-			if err := p.validatePath(val); err != nil {
+			if err := validatePath(val); err != nil {
 				select {
 				case <-done:
 				case pathResults <- NewPath(p.kind, "", err):
@@ -258,7 +263,7 @@ func (p *pathCollector) collectRecursive(
 			}
 
 			if _, ok := defaultSet[filepath.Base(val)]; ok {
-				if err := p.validatePath(val); err != nil {
+				if err := validatePath(val); err != nil {
 					return err
 				}
 
@@ -278,12 +283,26 @@ func (p *pathCollector) collectRecursive(
 	}
 }
 
-func (p *pathCollector) fileExists(val string) error {
-	_, err := os.Stat(val)
-	return err
+func validatePath(val string) error {
+	if err := isSubPath(val); err != nil {
+		return err
+	}
+
+	fileInfo, err := os.Stat(val)
+	if err != nil {
+		return fmt.Errorf("'%s' encountered an error '%v'", err, val)
+	}
+
+	if mode := fileInfo.Mode(); mode.IsDir() {
+		return fmt.Errorf(
+			"'%s' was collected but is a directory rather than a file", val,
+		)
+	}
+
+	return nil
 }
 
-func (p *pathCollector) validatePath(val string) error {
+func isSubPath(val string) error {
 	if strings.HasPrefix(val, "..") {
 		return fmt.Errorf("'%s' is outside the current working directory", val)
 	}
