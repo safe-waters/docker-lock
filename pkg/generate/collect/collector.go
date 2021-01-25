@@ -39,8 +39,21 @@ func NewPathCollector(
 	}
 
 	baseDir = filepath.Join(".", baseDir)
-	if err := isSubPath(baseDir); err != nil {
+	if !couldBeSubPath(baseDir) {
+		return nil, fmt.Errorf(
+			"'%s' baseDir is outside the current working directory", baseDir,
+		)
+	}
+
+	isDir, err := isDirectory(baseDir)
+	if err != nil {
 		return nil, err
+	}
+
+	if !isDir {
+		return nil, fmt.Errorf(
+			"'%s' baseDir is not a directory", baseDir,
+		)
 	}
 
 	return &pathCollector{
@@ -118,22 +131,22 @@ func (p *pathCollector) CollectPaths(done <-chan struct{}) <-chan IPath {
 
 		seenPathVals := map[string]struct{}{}
 
-		for result := range intermediatePaths {
-			if result.Err() != nil {
+		for path := range intermediatePaths {
+			if path.Err() != nil {
 				select {
 				case <-done:
-				case paths <- result:
+				case paths <- path:
 				}
 
 				return
 			}
 
-			if _, ok := seenPathVals[result.Val()]; !ok {
-				seenPathVals[result.Val()] = struct{}{}
+			if _, ok := seenPathVals[path.Val()]; !ok {
+				seenPathVals[path.Val()] = struct{}{}
 
 				select {
 				case <-done:
-				case paths <- result:
+				case paths <- path:
 				}
 			}
 		}
@@ -157,10 +170,35 @@ func (p *pathCollector) collectManualPaths(
 	for _, val := range p.manualPathVals {
 		val = filepath.Join(p.baseDir, val)
 
-		if err := validatePath(val); err != nil {
+		if !couldBeSubPath(val) {
+			select {
+			case <-done:
+			case paths <- NewPath(p.kind, "", fmt.Errorf(
+				"'%s' is outside the current working directory", val,
+			)):
+			}
+
+			return
+		}
+
+		isDir, err := isDirectory(val)
+		if err != nil {
 			select {
 			case <-done:
 			case paths <- NewPath(p.kind, "", err):
+			}
+
+			return
+		}
+
+		if isDir {
+			select {
+			case <-done:
+			case paths <- NewPath(
+				p.kind, "", fmt.Errorf(
+					"'%s' is a directory rather than a file", val,
+				),
+			):
 			}
 
 			return
@@ -184,16 +222,20 @@ func (p *pathCollector) collectDefaultPaths(
 	for _, val := range p.defaultPathVals {
 		val = filepath.Join(p.baseDir, val)
 
-		if err := isSubPath(val); err != nil {
+		if !couldBeSubPath(val) {
 			select {
 			case <-done:
-			case paths <- NewPath(p.kind, "", err):
+			case paths <- NewPath(
+				p.kind, "", fmt.Errorf(
+					"'%s' is outside the current working directory", val,
+				),
+			):
 			}
 
 			return
 		}
 
-		if err := validatePath(val); err == nil {
+		if isDir, err := isDirectory(val); !isDir && err == nil {
 			select {
 			case <-done:
 				return
@@ -204,7 +246,7 @@ func (p *pathCollector) collectDefaultPaths(
 }
 
 func (p *pathCollector) collectGlobs(
-	pathResults chan<- IPath,
+	paths chan<- IPath,
 	done <-chan struct{},
 	waitGroup *sync.WaitGroup,
 ) {
@@ -217,17 +259,42 @@ func (p *pathCollector) collectGlobs(
 		if err != nil {
 			select {
 			case <-done:
-			case pathResults <- NewPath(p.kind, "", err):
+			case paths <- NewPath(p.kind, "", err):
 			}
 
 			return
 		}
 
 		for _, val := range vals {
-			if err := validatePath(val); err != nil {
+			if !couldBeSubPath(val) {
 				select {
 				case <-done:
-				case pathResults <- NewPath(p.kind, "", err):
+				case paths <- NewPath(p.kind, "", fmt.Errorf(
+					"'%s' is outside the current working directory", val,
+				)):
+				}
+
+				return
+			}
+
+			isDir, err := isDirectory(val)
+			if err != nil {
+				select {
+				case <-done:
+				case paths <- NewPath(p.kind, "", err):
+				}
+
+				return
+			}
+
+			if isDir {
+				select {
+				case <-done:
+				case paths <- NewPath(
+					p.kind, "", fmt.Errorf(
+						"'%s' is a directory rather than a file", val,
+					),
+				):
 				}
 
 				return
@@ -236,7 +303,7 @@ func (p *pathCollector) collectGlobs(
 			select {
 			case <-done:
 				return
-			case pathResults <- NewPath(p.kind, val, nil):
+			case paths <- NewPath(p.kind, val, nil):
 			}
 		}
 	}
@@ -263,13 +330,16 @@ func (p *pathCollector) collectRecursive(
 			}
 
 			if _, ok := defaultSet[filepath.Base(val)]; ok {
-				if err := validatePath(val); err != nil {
+				isDir, err := isDirectory(val)
+				if err != nil {
 					return err
 				}
 
-				select {
-				case <-done:
-				case paths <- NewPath(p.kind, val, nil):
+				if !isDir {
+					select {
+					case <-done:
+					case paths <- NewPath(p.kind, val, nil):
+					}
 				}
 			}
 
@@ -283,29 +353,15 @@ func (p *pathCollector) collectRecursive(
 	}
 }
 
-func validatePath(val string) error {
-	if err := isSubPath(val); err != nil {
-		return err
-	}
-
+func isDirectory(val string) (bool, error) {
 	fileInfo, err := os.Stat(val)
 	if err != nil {
-		return fmt.Errorf("'%s' encountered an error '%v'", err, val)
+		return false, err
 	}
 
-	if mode := fileInfo.Mode(); mode.IsDir() {
-		return fmt.Errorf(
-			"'%s' was collected but is a directory rather than a file", val,
-		)
-	}
-
-	return nil
+	return fileInfo.Mode().IsDir(), nil
 }
 
-func isSubPath(val string) error {
-	if strings.HasPrefix(val, "..") {
-		return fmt.Errorf("'%s' is outside the current working directory", val)
-	}
-
-	return nil
+func couldBeSubPath(val string) bool {
+	return !strings.HasPrefix(val, "..")
 }
