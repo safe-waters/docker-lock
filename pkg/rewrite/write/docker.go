@@ -96,7 +96,9 @@ func (d *dockerfileWriter) writeFile(
 	}
 
 	if _, err = parser.Parse(bytes.NewBuffer(pathByt)); err != nil {
-		return "", err
+		return "", fmt.Errorf(
+			"'%s' failed to parse with err: %v", path, err,
+		)
 	}
 
 	var (

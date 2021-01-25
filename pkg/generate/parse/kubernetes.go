@@ -2,6 +2,7 @@ package parse
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"reflect"
@@ -104,7 +105,11 @@ func (k *kubernetesfileImageParser) ParseFile(
 	if err != nil {
 		select {
 		case <-done:
-		case kubernetesfileImages <- NewImage(k.kind, "", "", "", nil, err):
+		case kubernetesfileImages <- NewImage(
+			k.kind, "", "", "", nil, fmt.Errorf(
+				"'%s' failed to parse with err: %v", path.Val(), err,
+			),
+		):
 		}
 
 		return
@@ -120,7 +125,10 @@ func (k *kubernetesfileImageParser) ParseFile(
 				select {
 				case <-done:
 				case kubernetesfileImages <- NewImage(
-					k.kind, "", "", "", nil, err,
+					k.kind, "", "", "", nil, fmt.Errorf(
+						"'%s' yaml decoder failed with err: %v", path.Val(),
+						err,
+					),
 				):
 				}
 

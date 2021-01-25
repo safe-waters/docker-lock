@@ -99,7 +99,9 @@ func (k *kubernetesfileWriter) writeFile(
 
 	_, _, err = scheme.Codecs.UniversalDeserializer().Decode(byt, nil, nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf(
+			"'%s' failed to parse with err: %v", path, err,
+		)
 	}
 
 	var (
@@ -113,7 +115,9 @@ func (k *kubernetesfileWriter) writeFile(
 
 		if err = dec.Decode(&doc); err != nil {
 			if err != io.EOF {
-				return "", err
+				return "", fmt.Errorf(
+					"'%s' yaml decoder failed with err: %v", path, err,
+				)
 			}
 
 			break

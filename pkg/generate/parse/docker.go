@@ -102,7 +102,11 @@ func (d *dockerfileImageParser) ParseFile(
 	if err != nil {
 		select {
 		case <-done:
-		case dockerfileImages <- NewImage(d.kind, "", "", "", nil, err):
+		case dockerfileImages <- NewImage(
+			d.kind, "", "", "", nil, fmt.Errorf(
+				"'%s' failed to parse with err: %v", path.Val(), err,
+			),
+		):
 		}
 
 		return

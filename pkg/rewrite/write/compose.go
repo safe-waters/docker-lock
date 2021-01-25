@@ -209,7 +209,9 @@ func (c *composefileWriter) writeFile(
 
 	data, err := loader.ParseYAML(pathByt)
 	if err != nil {
-		return "", fmt.Errorf("in '%s', %s", path, err)
+		return "", fmt.Errorf(
+			"'%s' failed to parse with err: %v", path, err,
+		)
 	}
 
 	envVars := map[string]string{}
@@ -243,7 +245,9 @@ func (c *composefileWriter) writeFile(
 			Environment: envVars,
 		},
 	); err != nil {
-		return "", fmt.Errorf("in '%s', %s", path, err)
+		return "", fmt.Errorf(
+			"'%s' failed to load with err: %v", path, err,
+		)
 	}
 
 	serviceImageLines, err := c.filterComposefileServices(pathByt, images)
