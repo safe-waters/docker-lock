@@ -18,11 +18,11 @@ func NewDigestRequester() IDigestRequester {
 // Digest queries a registry for a sha256 digest given a name and tag.
 func (d *digestRequester) Digest(name string, tag string) (string, error) {
 	if name == "" {
-		return "", errors.New("'name' cannot be empty")
+		return "", errors.New("image 'name' cannot be empty")
 	}
 
 	if tag == "" {
-		return "", errors.New("'tag' cannot be empty")
+		return "", errors.New("image 'tag' cannot be empty")
 	}
 
 	nameTag := fmt.Sprintf("%s:%s", name, tag)

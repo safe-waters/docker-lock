@@ -2,6 +2,7 @@ package update
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"reflect"
 	"sync"
@@ -105,10 +106,19 @@ func (i *imageDigestUpdater) UpdateDigests(
 					image.Name(), image.Tag(),
 				)
 				if err != nil && !i.ignoreMissingDigests {
+					errMsg := fmt.Errorf(
+						"failed to update image with err: %v", err,
+					)
+
+					metadata := image.Metadata()
+					if path, ok := metadata["path"]; ok {
+						errMsg = fmt.Errorf("on '%s': %v", path, errMsg)
+					}
+
 					select {
 					case <-done:
 					case updatedImages <- parse.NewImage(
-						image.Kind(), "", "", "", nil, err,
+						image.Kind(), "", "", "", nil, errMsg,
 					):
 					}
 
