@@ -237,7 +237,76 @@ services:
 			},
 		},
 		{
-			Name: "More Services In Composefile",
+			Name: "More Services Without Images In Composefile",
+			Contents: [][]byte{
+				[]byte(`FROM golang
+`),
+				[]byte(`
+version: '3'
+
+services:
+  svc-compose:
+    image: busybox
+  svc-docker:
+    build: .
+  svc-docker-context:
+    build:
+      context: .
+  svc-extra:
+    build:
+      args:
+        a: b
+`,
+				),
+			},
+			PathImages: map[string][]interface{}{
+				"docker-compose.yml": {
+					map[string]interface{}{
+						"name":    "busybox",
+						"tag":     "latest",
+						"digest":  "busybox",
+						"service": "svc-compose",
+					},
+					map[string]interface{}{
+						"name":       "golang",
+						"tag":        "latest",
+						"digest":     "golang",
+						"dockerfile": "Dockerfile",
+						"service":    "svc-docker",
+					},
+					map[string]interface{}{
+						"name":       "golang",
+						"tag":        "latest",
+						"digest":     "golang",
+						"dockerfile": "Dockerfile",
+						"service":    "svc-docker-context",
+					},
+				},
+			},
+			Expected: [][]byte{
+				[]byte(`FROM golang:latest@sha256:golang
+`),
+				[]byte(`
+version: '3'
+
+services:
+  svc-compose:
+    image: busybox:latest@sha256:busybox
+  svc-docker:
+    build: .
+  svc-docker-context:
+    build:
+      context: .
+  svc-extra:
+    build:
+      args:
+        a: b
+`,
+				),
+			},
+		},
+		{
+			Name: "More Services With Images In Composefile",
 			Contents: [][]byte{
 				[]byte(`FROM golang
 `),

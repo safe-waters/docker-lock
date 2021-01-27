@@ -326,8 +326,8 @@ func (c *composefileWriter) filterComposefileServices(
 	}
 
 	var (
-		uniqueServices    = map[string]struct{}{}
-		serviceImageLines = map[string]string{}
+		uniqueServicesInLockfile = map[string]struct{}{}
+		serviceImageLines        = map[string]string{}
 	)
 
 	for _, image := range images {
@@ -380,13 +380,38 @@ func (c *composefileWriter) filterComposefileServices(
 			serviceImageLines[serviceName] = imageLine
 		}
 
-		uniqueServices[serviceName] = struct{}{}
+		uniqueServicesInLockfile[serviceName] = struct{}{}
 	}
 
-	if len(comp.Services) != len(uniqueServices) {
+	var numServicesInComposefile int
+
+	for _, v := range comp.Services {
+		if v.Build != nil {
+			switch build := v.Build.(type) {
+			case string:
+				if build != "" {
+					numServicesInComposefile++
+					continue
+				}
+			case map[interface{}]interface{}:
+				if _, ok := build["context"]; ok {
+					numServicesInComposefile++
+					continue
+				}
+			}
+		}
+
+		if v.Image != "" {
+			numServicesInComposefile++
+			continue
+		}
+	}
+
+	if numServicesInComposefile != len(uniqueServicesInLockfile) {
 		return nil, fmt.Errorf(
-			"'%d' service(s) exist, yet asked to rewrite '%d'",
-			len(comp.Services), len(uniqueServices),
+			"'%d' service(s) with an 'image' or 'build' definition exist, "+
+				"yet asked to rewrite '%d'",
+			numServicesInComposefile, len(uniqueServicesInLockfile),
 		)
 	}
 
