@@ -192,6 +192,10 @@ func (c *composefileImageParser) parseService(
 	defer waitGroup.Done()
 
 	if serviceConfig.Build.Context == "" {
+		if serviceConfig.Image == "" {
+			return
+		}
+
 		image := NewImage(c.kind, "", "", "", map[string]interface{}{
 			"serviceName":     serviceConfig.Name,
 			"servicePosition": 0,
