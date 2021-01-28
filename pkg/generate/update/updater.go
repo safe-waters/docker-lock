@@ -3,7 +3,6 @@ package update
 import (
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 	"sync"
 
@@ -78,7 +77,7 @@ func (i *imageDigestUpdater) UpdateDigests(
 					i.updateExistingDigests &&
 					image.Tag() == "" {
 					doOnce.Do(func() {
-						log.Println(
+						fmt.Println(
 							"warning: image(s) with a digest but no tag " +
 								"found, will use existing digest",
 						)
