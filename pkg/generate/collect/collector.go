@@ -267,6 +267,8 @@ func (p *pathCollector) collectGlobs(
 		}
 
 		for _, val := range vals {
+			val = filepath.FromSlash(val)
+
 			if !couldBeSubPath(val) {
 				select {
 				case <-done:
