@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/mattn/go-zglob"
 	"github.com/safe-waters/docker-lock/pkg/kind"
 )
 
@@ -255,7 +256,7 @@ func (p *pathCollector) collectGlobs(
 	for _, val := range p.globVals {
 		val = filepath.Join(p.baseDir, val)
 
-		vals, err := filepath.Glob(val)
+		vals, err := zglob.Glob(val)
 		if err != nil {
 			select {
 			case <-done:
@@ -287,23 +288,12 @@ func (p *pathCollector) collectGlobs(
 				return
 			}
 
-			if isDir {
+			if !isDir {
 				select {
 				case <-done:
-				case paths <- NewPath(
-					p.kind, "", fmt.Errorf(
-						"'%s' is a directory rather than a file", val,
-					),
-				):
+					return
+				case paths <- NewPath(p.kind, val, nil):
 				}
-
-				return
-			}
-
-			select {
-			case <-done:
-				return
-			case paths <- NewPath(p.kind, val, nil):
 			}
 		}
 	}

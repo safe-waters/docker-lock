@@ -9,6 +9,7 @@ require (
 	github.com/google/go-containerregistry v0.1.2
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/magiconair/properties v1.8.4 // indirect
+	github.com/mattn/go-zglob v0.0.3
 	github.com/mitchellh/mapstructure v1.3.3 // indirect
 	// using buildkit from master rather than a tagged release because
 	// https://github.com/moby/buildkit/pull/1425
