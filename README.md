@@ -224,7 +224,7 @@ docker-compose files that match the glob pattern relative to the base directory 
 as default Dockerfiles and Kubernetes manifests in the base directory
 and generate a Lockfile. Use '**' to recursively search directories.
 Remember to quote using single quotes so that the glob is not expanded
-before docker-lock uses it.
+before `docker-lock` uses it.
 
 ### Commands for Kubernetes manifests
 * `docker lock generate --kubernetesfiles=[file1,file2,file3]` will collect all
@@ -244,7 +244,7 @@ Kubernetes manifests that match the glob pattern relative to the base directory 
 as default Dockerfiles and docker-compose files in the base directory
 and generate a Lockfile. Use '**' to recursively search directories.
 Remember to quote using single quotes so that the glob is not expanded
-before docker-lock uses it.
+before `docker-lock` uses it.
 
 ## Verify
 * `docker lock verify` will take an existing Lockfile, with the default name,
@@ -285,7 +285,24 @@ location and the temporary directory is deleted. Normally, this occurs in the
 current directory. In general, this 2 step process happens to ensure that
 either all rewrites succeed, or none of them do. There are also other rollback
 measures in `docker-lock` to ensure this transaction happens and you are not
-left with some files rewritten if a failure occurs. 
+left with some files rewritten if a failure occurs.
+
+# Suggested workflow
+* Locally run `docker lock generate` to create a Lockfile, `docker-lock.json`,
+and commit it.
+* Continue developing normally, as if the Lockfile does not exist.
+* When merging a code change/releasing, run `docker-lock` in a CI/CD
+pipeline. Specifically:
+    * In the pipeline, run `docker lock verify` to make sure that the
+    Lockfile is up-to-date. If `docker lock verify` fails, the developer can
+    locally rerun `docker lock generate` to update the Lockfile. This has
+    the benefit that digest changes will be explicitly tracked in git.
+    * Once the `docker lock verify` step in the pipeline passes, the pipeline
+    should run `docker lock rewrite` so all files have correct digests
+    hardcoded in them.
+    * The CI should run tests that use the rewritten images.
+    * If the tests pass, merge the code change/push the images to
+    the registry, etc.
 
 # Contributing
 ## Development Environment
