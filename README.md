@@ -300,7 +300,7 @@ pipeline. Specifically:
     * Once the `docker lock verify` step in the pipeline passes, the pipeline
     should run `docker lock rewrite` so all files have correct digests
     hardcoded in them.
-    * The CI should run tests that use the rewritten images.
+    * The pipeline should run tests that use the rewritten images.
     * If the tests pass, merge the code change/push the images to
     the registry, etc.
 
