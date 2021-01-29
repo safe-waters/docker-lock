@@ -116,8 +116,9 @@ $ docker-lock lock --help
 ```
 
 ## Docker image
-* `docker-lock` can be run in a `docker` container, as below. If you leave off
+`docker-lock` can be run in a `docker` container, as below. If you leave off
 the `${VERSION}` tag, you will use the latest, nightly build from the master branch.
+
 > Note: If your host machine uses a credential helper such as `osxkeychain`,
 > `wincred`, or `pass`, the credentials will not be available to the container even
 > if you pass in your `docker` config.
@@ -142,23 +143,17 @@ $ docker run -v "%USERPROFILE%\.docker\config.json":/.docker/config.json:ro -v "
 ```
 
 # Use
-## Command line flags
-`docker-lock` supports a variety of command line flags to customize behavior.
+## Registries
+`docker-lock` supports public and private registries. If necessary, login to
+docker before using `docker-lock`.
 
-For instance, by default, `docker-lock` looks for files named `Dockerfile`,
-`docker-compose.yaml`, `docker-compose.yml`, `pod.yml`, `pod.yaml`,
-`deployment.yml`, `deployment.yaml`, `job.yml`, and `job.yaml` in the directory
-from which the command is run. However, you may want `docker-lock` to find all
-`Dockerfiles` in your project.
+## How to specify configuration options
+`docker-lock` supports options via cli flags or a configuration file,
+`.docker-lock.yml`.
+The root of this repo has an example,
+[.docker-lock.yml.example](./.docker-lock.example.yml).
 
-To do so, you could specify the command line flag, `--dockerfile-recursive`,
-to the `generate` command as in:
-
-```bash
-$ docker lock generate --dockerfile-recursive
-```
-
-To see available command line flags, run commands with `--help`. For instance:
+To see available options, run commands with `--help`. For instance:
 
 ```bash
 $ docker lock --help
@@ -168,15 +163,129 @@ $ docker lock rewrite --help
 $ docker lock version --help
 ```
 
-## Configuration File
-Instead of specifying command line flags, you can specify flags in a
-configuration file, `.docker-lock.yml`, in the directory from which the
-command will be run. The root of this repo has an example,
-[.docker-lock.yml.example](./.docker-lock.example.yml).
+> Note: You can mix and match cli flags to get the output that you want.
 
-## Registries
-`docker-lock` supports public and private registries. If necessary, login to
-docker before using `docker-lock`.
+## Generate
+### Commands for Dockerfiles, docker-compose files, and Kubernetes manifests
+* `docker lock generate` will collect all default files (`Dockerfile`,
+`docker-compose.yaml`, `docker-compose.yml`, `pod.yml`, `pod.yaml`,
+`deployment.yml`, `deployment.yaml`, `job.yml`, and `job.yaml` in the default
+base directory, the directory from which the command is run) and generate a Lockfile.
+
+* `docker lock generate --lockfile-name=[file name]` will generate a Lockfile with the
+file name as the output, instead of the default `docker-lock.json`.
+
+* `docker lock generate --update-existing-digests` will generate a Lockfile,
+querying for all digests, even those that are hardcoded in the files. Normally,
+if a digest is hardcoded, it would be used in the Lockfile.
+
+* `docker lock generate --ignore-missing-digests` will generate a Lockfile,
+recording images for which a digest could not be found as not having a digest.
+Normally, if a digest cannot be found, `docker-lock` would print an error.
+
+* `docker lock generate --base-dir=[sub directory]` will collect all default
+files in a sub directory and generate a Lockfile.
+
+### Commands for Dockerfiles
+* `docker lock generate --dockerfiles=[file1,file2,file3]` will collect all
+files from a comma separated list ("file1,file2,file3") as well as default
+docker-compose files and Kubernetes manifests and generate a Lockfile.
+
+* `docker lock generate --exclude-all-dockerfiles` will generate a Lockfile,
+excluding all Dockerfiles.
+
+* `docker lock generate --dockerfile-recursive` will collect all default
+Dockerfiles (`Dockerfile`) in subdirectories from the base directory as well
+as default docker-compose files and Kubernetes manifests in the base directory
+and generate a Lockfile.
+
+* `docker lock generate --dockerfile-globs='[glob pattern]'` will collect all
+Dockerfiles that match the glob pattern relative to the base directory as well
+as default docker-compose files and Kubernetes manifests in the base directory
+and generate a Lockfile. Use '**' to recursively search directories.
+Remember to quote using single quotes so that the glob is not expanded
+before `docker-lock` uses it.
+
+### Commands for docker-compose files
+* `docker lock generate --composefiles=[file1,file2,file3]` will collect all
+files from a comma separated list ("file1,file2,file3") as well as default
+Dockerfiles files and Kubernetes manifests and generate a Lockfile.
+
+* `docker lock generate --exclude-all-composefiles` will generate a Lockfile,
+excluding all docker-compose files.
+
+* `docker lock generate --composefile-recursive` will collect all default
+docker-compose files (`docker-compose.yaml`, `docker-compose.yml`) in
+subdirectories from the base directory as well as default Dockerfiles
+and Kubernetes manifests in the base directory and generate a Lockfile.
+
+* `docker lock generate --composefile-globs='[glob pattern]'` will collect all
+docker-compose files that match the glob pattern relative to the base directory as well
+as default Dockerfiles and Kubernetes manifests in the base directory
+and generate a Lockfile. Use '**' to recursively search directories.
+Remember to quote using single quotes so that the glob is not expanded
+before docker-lock uses it.
+
+### Commands for Kubernetes manifests
+* `docker lock generate --kubernetesfiles=[file1,file2,file3]` will collect all
+files from a comma separated list ("file1,file2,file3") as well as default
+Dockerfiles files and docker-compose files and generate a Lockfile.
+
+* `docker lock generate --exclude-all-kubernetesfiles` will generate a Lockfile,
+excluding all Kubernetes manifests.
+
+* `docker lock generate --kubernetesfile-recursive` will collect all default
+Kubernetes manifests (`pod.yaml`, `pod.yml`) in
+subdirectories from the base directory as well as default Dockerfiles
+and docker-compose files in the base directory and generate a Lockfile.
+
+* `docker lock generate --kubernetesfile-globs='[glob pattern]'` will collect all
+Kubernetes manifests that match the glob pattern relative to the base directory as well
+as default Dockerfiles and docker-compose files in the base directory
+and generate a Lockfile. Use '**' to recursively search directories.
+Remember to quote using single quotes so that the glob is not expanded
+before docker-lock uses it.
+
+## Verify
+* `docker lock verify` will take an existing Lockfile, with the default name,
+`docker-lock.json`, generate a new Lockfile and report differences between
+the new and existing Lockfiles.
+
+* `docker lock verify --lockfile-name=[file name]` will use another file, instead
+of the default `docker-lock.json`, as the Lockfile.
+
+* `docker lock verify --exclude-tags` will check for differences between a newly
+generated Lockfile and the existing Lockfile, ignoring if tags are different.
+
+* `docker lock verify --ignore-missing-digests` will verify, but when generating
+the new Lockfile to compare against, will assume that digests that cannot be
+found are empty. Normally, if a digest could not be found, an error would be
+reported.
+
+* `docker lock verify --update-existing-digests` will verify, but when generating
+the new Lockfile to compare against, will query for digests even if they are hardcoded.
+Normally, the new Lockfile would use the hardcoded digests, instead of querying
+for the most recent one.
+
+## Rewrite
+* `docker lock rewrite` will write the image names, tags, and digests
+from the Lockfile into the referenced Dockerfiles, docker-compose files,
+and Kubernetes manifests.
+
+* `docker lock rewrite --lockfile-name=[file name]` will use another file, instead
+of the default `docker-lock.json`, as the Lockfile.
+
+* `docker lock rewrite --exclude-tags` will write image names and digests,
+but not the tags, from the Lockfile into the referenced Dockerfiles,
+docker-compose files, and Kubernetes manifests.
+
+* `docker lock rewrite --tempdir=[directory]` will create a temporary directory in the `[directory]` and
+write all files into it. Afterwards, the files are renamed to the appropriate
+location and the temporary directory is deleted. Normally, this occurs in the
+current directory. In general, this 2 step process happens to ensure that
+either all rewrites succeed, or none of them do. There are also other rollback
+measures in `docker-lock` to ensure this transaction happens and you are not
+left with some files rewritten if a failure occurs. 
 
 # Contributing
 ## Development Environment
