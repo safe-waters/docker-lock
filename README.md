@@ -305,7 +305,7 @@ pipeline. Specifically:
     the registry, etc.
 
 # Contributing
-## Development Environment
+## Development environment
 A development container based on `ubuntu:bionic` has been provided,
 so ensure `docker` is installed and the `docker` daemon is running.
 
@@ -320,7 +320,7 @@ command+shift+p on Mac), type "Reopen in Container".
 so you can use `docker` and `docker-compose` commands from within the container
 as if they were run on the host.
 
-## Build From Source
+## Build from source
 To build and install `docker-lock` in `docker`'s cli-plugins directory,
 from the root of the project, run:
 
@@ -328,7 +328,7 @@ from the root of the project, run:
 $ make install
 ```
 
-## Code Quality and Correctness
+## Code quality and correctness
 To clean, format, lint, and run unit tests:
 ```bash
 make
