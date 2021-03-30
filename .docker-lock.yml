@@ -1,6 +1,4 @@
 generate:
-  dockerfiles:
-  - ./.devcontainer/Dockerfile
-  - Dockerfile
-rewrite:
-  tempdir: .
+  dockerfile-globs:
+  - '.devcontainer/Dockerfile*'
+  - 'Dockerfile*'

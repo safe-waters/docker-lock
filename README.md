@@ -142,6 +142,17 @@ $ docker run -v "%cd%":/run safewaters/docker-lock:${VERSION} [commands]
 $ docker run -v "%USERPROFILE%\.docker\config.json":/.docker/config.json:ro -v "%cd%":/run safewaters/docker-lock:${VERSION} [commands]
 ```
 
+### Available tags
+* By default, images are built from `scratch`. These images only contain
+the `docker-lock` executable and are tagged as follows:
+    * `safewaters/docker-lock:${VERSION}`
+    * `safewaters/docker-lock`
+* If you need a shell alongside the executable (as is required by some CI/CD
+providers such as Gitlab), images built from `alpine` are provided. They
+are tagged as follows:
+    * `safewaters/docker-lock:${VERSION}-alpine`
+    * `safewaters/docker-lock:alpine`
+
 # Use
 ## Registries
 `docker-lock` supports public and private registries. If necessary, login to
@@ -329,7 +340,7 @@ $ make install
 ```
 
 ## Code quality and correctness
-To clean, format, lint, and run unit tests:
+To clean, format, lint, install, generate a new Lockfile, and run unit tests:
 ```bash
 make
 ```
@@ -340,6 +351,7 @@ You can run any step individually.
 
 * To uninstall: `make clean`
 * To install into `docker`'s cli-plugins directory: `make install`
+* To generate a new Lockfile: `make lock`
 * To format Go code: `make format`
 * To lint all code: `make lint`
 * To run unit tests: `make unittest`

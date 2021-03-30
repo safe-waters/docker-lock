@@ -1,7 +1,7 @@
 SHELL=/bin/bash -euo pipefail
 
 .PHONY: all
-all: clean format lint install unittest
+all: clean format lint install lock unittest
 
 .PHONY: format
 format:
@@ -33,6 +33,13 @@ install:
 	@CGO_ENABLED=0 go build -o "$${HOME}/.docker/cli-plugins" ./cmd/docker-lock
 	@echo "installation passed!"
 	@echo "install target passed!"
+
+.PHONY: lock
+lock:
+	@echo "running docker lock generate..."
+	@test -e "$${HOME}/.docker/cli-plugins/docker-lock" || (echo "failed - please run 'make install' first"; exit 1)
+	@docker lock generate
+	@echo "docker lock generate passed!"
 
 .PHONY: unittest
 unittest:
