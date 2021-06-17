@@ -12,7 +12,7 @@ import (
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 	"github.com/safe-waters/docker-lock/pkg/kind"
 	"gopkg.in/yaml.v2"
-	"k8s.io/client-go/deprecated/scheme"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 type kubernetesfileWriter struct {
