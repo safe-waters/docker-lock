@@ -147,6 +147,10 @@ func (c *composefileImageParser) ParseFile(
 		}
 	}
 
+	skipValidation := func(opts *loader.Options) {
+		opts.SkipValidation = true
+	}
+
 	loadedComposefile, err := loader.Load(
 		types.ConfigDetails{
 			ConfigFiles: []types.ConfigFile{
@@ -158,6 +162,7 @@ func (c *composefileImageParser) ParseFile(
 			// replaces env vars with $ in file
 			Environment: envVars,
 		},
+		skipValidation,
 	)
 	if err != nil {
 		select {

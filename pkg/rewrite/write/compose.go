@@ -234,6 +234,10 @@ func (c *composefileWriter) writeFile(
 		}
 	}
 
+	skipValidation := func(opts *loader.Options) {
+		opts.SkipValidation = true
+	}
+
 	if _, err = loader.Load(
 		types.ConfigDetails{
 			ConfigFiles: []types.ConfigFile{
@@ -244,6 +248,7 @@ func (c *composefileWriter) writeFile(
 			},
 			Environment: envVars,
 		},
+		skipValidation,
 	); err != nil {
 		return "", fmt.Errorf(
 			"'%s' failed to load with err: %v", path, err,
