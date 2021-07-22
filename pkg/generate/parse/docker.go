@@ -144,12 +144,13 @@ func (d *dockerfileImageParser) ParseFile(
 			if globalContext {
 				if strings.Contains(raw[0], "=") {
 					// ARG VAR=VAL
-					varVal := strings.SplitN(raw[0], "=", 2)
-
 					const (
-						varIndex = 0
-						valIndex = 1
+						argValLen = 2
+						varIndex  = 0
+						valIndex  = 1
 					)
+
+					varVal := strings.SplitN(raw[0], "=", argValLen)
 
 					strippedVar := d.stripQuotes(varVal[varIndex])
 					strippedVal := d.stripQuotes(varVal[valIndex])

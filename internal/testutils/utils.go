@@ -169,7 +169,7 @@ func AssertNumNetworkCallsEqual(t *testing.T, expected uint64, got uint64) {
 func MakeDir(t *testing.T, dirPath string) {
 	t.Helper()
 
-	err := os.MkdirAll(dirPath, 0777)
+	err := os.MkdirAll(dirPath, 0777) // nolint: gomnd
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +189,9 @@ func MakeTempDir(t *testing.T, dirName string) string {
 func MakeTempDirInCurrentDir(t *testing.T) string {
 	t.Helper()
 
-	b := make([]byte, 16)
+	const tempLen = 16
+
+	b := make([]byte, tempLen)
 
 	_, err := rand.Read(b)
 	if err != nil {
@@ -239,7 +241,7 @@ func WriteFilesToTempDir(
 		fullPath := filepath.Join(tempDir, name)
 
 		if err := ioutil.WriteFile(
-			fullPath, fileContents[i], 0777,
+			fullPath, fileContents[i], 0777, // nolint: gomnd
 		); err != nil {
 			t.Fatal(err)
 		}

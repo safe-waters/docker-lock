@@ -53,7 +53,7 @@ func (r *rewriter) RewriteLockfile(
 	}
 
 	tempDir = filepath.Join(tempDir, "temp-rewrite")
-	if err := os.MkdirAll(tempDir, 0700); err != nil {
+	if err := os.MkdirAll(tempDir, 0700); err != nil { // nolint: gomnd
 		return err
 	}
 

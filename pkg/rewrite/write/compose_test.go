@@ -241,6 +241,9 @@ services:
 			Contents: [][]byte{
 				[]byte(`FROM golang
 `),
+				[]byte(`FROM golang
+`),
+
 				[]byte(`
 version: '3'
 
@@ -248,10 +251,13 @@ services:
   svc-compose:
     image: busybox
   svc-docker:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile-1
   svc-docker-context:
     build:
       context: .
+      dockerfile: Dockerfile-2
   svc-extra:
     build:
       args:
@@ -271,14 +277,14 @@ services:
 						"name":       "golang",
 						"tag":        "latest",
 						"digest":     "golang",
-						"dockerfile": "Dockerfile",
+						"dockerfile": "Dockerfile-1",
 						"service":    "svc-docker",
 					},
 					map[string]interface{}{
 						"name":       "golang",
 						"tag":        "latest",
 						"digest":     "golang",
-						"dockerfile": "Dockerfile",
+						"dockerfile": "Dockerfile-2",
 						"service":    "svc-docker-context",
 					},
 				},
@@ -286,6 +292,9 @@ services:
 			Expected: [][]byte{
 				[]byte(`FROM golang:latest@sha256:golang
 `),
+				[]byte(`FROM golang:latest@sha256:golang
+`),
+
 				[]byte(`
 version: '3'
 
@@ -293,10 +302,13 @@ services:
   svc-compose:
     image: busybox:latest@sha256:busybox
   svc-docker:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile-1
   svc-docker-context:
     build:
       context: .
+      dockerfile: Dockerfile-2
   svc-extra:
     build:
       args:
@@ -635,7 +647,9 @@ services:
   svc-compose:
     image: busybox
   svc-docker:
-    build: .
+    build:
+        context: .
+        dockerfile: Dockerfile-1
 `,
 				),
 				[]byte(`
@@ -647,7 +661,7 @@ services:
   svc-another-docker:
     build:
       context: .
-      dockerfile: AnotherDockerfile
+      dockerfile: Dockerfile-2
 `,
 				),
 			},
@@ -695,7 +709,9 @@ services:
   svc-compose:
     image: busybox:latest@sha256:busybox
   svc-docker:
-    build: .
+    build:
+        context: .
+        dockerfile: Dockerfile-1
 `,
 				),
 				[]byte(`
@@ -707,7 +723,7 @@ services:
   svc-another-docker:
     build:
       context: .
-      dockerfile: AnotherDockerfile
+      dockerfile: Dockerfile-2
 `,
 				),
 			},

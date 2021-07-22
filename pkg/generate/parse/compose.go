@@ -188,6 +188,7 @@ func (c *composefileImageParser) parseService(
 	)
 
 	_, err = os.Stat(relPath)
+
 	switch {
 	case os.IsNotExist(err) && serviceConfig.Image != "":
 		image := NewImage(c.kind, "", "", "", map[string]interface{}{
@@ -210,6 +211,7 @@ func (c *composefileImageParser) parseService(
 			"skipping because the path does not exist\n",
 			path.Val(), serviceConfig.Name, relPath,
 		)
+
 		return
 	}
 
