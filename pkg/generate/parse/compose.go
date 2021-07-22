@@ -189,13 +189,7 @@ func (c *composefileImageParser) parseService(
 
 	_, err = os.Stat(relPath)
 	switch {
-	case os.IsNotExist(err) && serviceConfig.Image == "":
-		fmt.Printf("warning: '%s' has a 'build' block, but a Dockerfile "+
-			"or 'image' block could not be identified - skipping\n",
-			relPath,
-		)
-		return
-	case os.IsNotExist(err):
+	case os.IsNotExist(err) && serviceConfig.Image != "":
 		image := NewImage(c.kind, "", "", "", map[string]interface{}{
 			"serviceName":     serviceConfig.Name,
 			"servicePosition": 0,
@@ -209,6 +203,13 @@ func (c *composefileImageParser) parseService(
 		case composefileImages <- image:
 		}
 
+		return
+	case os.IsNotExist(err):
+		fmt.Printf("warning: '%s' with a service named '%s' has a 'build' "+
+			"block that references '%s' - "+
+			"skipping because the path does not exist\n",
+			path.Val(), serviceConfig.Name, relPath,
+		)
 		return
 	}
 
