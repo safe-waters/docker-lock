@@ -3,9 +3,7 @@ module github.com/safe-waters/docker-lock
 go 1.16
 
 require (
-	github.com/compose-spec/compose-go v0.0.0-20210716132856-efad24e892ce
-	github.com/docker/cli v20.10.7+incompatible
-	github.com/docker/docker v20.10.7+incompatible // indirect
+	github.com/compose-spec/compose-go v0.0.0-20210722130045-6e1e1c2b26de
 	github.com/google/go-containerregistry v0.5.1
 	github.com/mattn/go-zglob v0.0.3
 	github.com/moby/buildkit v0.8.3
