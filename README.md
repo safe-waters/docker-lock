@@ -179,9 +179,10 @@ $ docker lock version --help
 ## Generate
 ### Commands for Dockerfiles, docker-compose files, and Kubernetes manifests
 * `docker lock generate` will collect all default files (`Dockerfile`,
-`docker-compose.yaml`, `docker-compose.yml`, `pod.yml`, `pod.yaml`,
-`deployment.yml`, `deployment.yaml`, `job.yml`, and `job.yaml` in the default
-base directory, the directory from which the command is run) and generate a Lockfile.
+`compose.yml`, `compose.yaml`, `docker-compose.yaml`, `docker-compose.yml`,
+`pod.yml`, `pod.yaml`, `deployment.yml`, `deployment.yaml`, `job.yml`,
+and `job.yaml` in the default base directory, the directory from which
+the command is run) and generate a Lockfile.
 
 * `docker lock generate --lockfile-name=[file name]` will generate a Lockfile with the
 file name as the output, instead of the default `docker-lock.json`.
@@ -226,9 +227,10 @@ Dockerfiles files and Kubernetes manifests and generate a Lockfile.
 excluding all docker-compose files.
 
 * `docker lock generate --composefile-recursive` will collect all default
-docker-compose files (`docker-compose.yaml`, `docker-compose.yml`) in
-subdirectories from the base directory as well as default Dockerfiles
-and Kubernetes manifests in the base directory and generate a Lockfile.
+docker-compose files (`compose.yml`, `compose.yaml`,
+`docker-compose.yaml`, `docker-compose.yml`) in subdirectories from the
+base directory as well as default Dockerfiles and Kubernetes manifests in
+the base directory and generate a Lockfile.
 
 * `docker lock generate --composefile-globs='[glob pattern]'` will collect all
 docker-compose files that match the glob pattern relative to the base directory as well

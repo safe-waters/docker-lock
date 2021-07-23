@@ -3,6 +3,7 @@ package generate
 import (
 	"errors"
 
+	"github.com/compose-spec/compose-go/cli"
 	"github.com/safe-waters/docker-lock/pkg/generate"
 	"github.com/safe-waters/docker-lock/pkg/generate/collect"
 	"github.com/safe-waters/docker-lock/pkg/generate/format"
@@ -15,7 +16,8 @@ import (
 // Composefiles, and Kubernetesfiles.
 //
 // For all three, respectively, the defaults are
-// ["Dockerfile"], ["docker-compose.yml", "docker-compose.yaml"], and
+// ["Dockerfile"], ["compose.yml", "compose.yaml",
+// "docker-compose.yml", "docker-compose.yaml"], and
 // ["deployment.yml", "deployment.yaml", "pod.yml", "pod.yaml",
 // "job.yml", "job.yaml"].
 //
@@ -56,7 +58,7 @@ func DefaultPathCollector(flags *Flags) (generate.IPathCollector, error) {
 		composefileCollector, err = collect.NewPathCollector(
 			kind.Composefile,
 			flags.FlagsWithSharedValues.BaseDir,
-			[]string{"docker-compose.yml", "docker-compose.yaml"},
+			cli.DefaultFileNames,
 			flags.ComposefileFlags.ManualPaths, flags.ComposefileFlags.Globs,
 			flags.ComposefileFlags.Recursive,
 		)
