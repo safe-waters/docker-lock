@@ -175,7 +175,6 @@ func (c *composefileImageParser) parseService(
 		return
 	}
 
-	// TODO: check on windows
 	relPath := strings.TrimPrefix(
 		serviceConfig.Build.Dockerfile,
 		fmt.Sprintf("%s%s", wd, string(filepath.Separator)),
