@@ -120,7 +120,10 @@ func (c *composefileImageParser) ParseFile(
 	if err != nil {
 		select {
 		case <-done:
-		case composefileImages <- NewImage(c.kind, "", "", "", nil, err):
+		case composefileImages <- NewImage(
+			c.kind, "", "", "", nil,
+			fmt.Errorf("'%s' failed to parse with err: %v", path.Val(), err),
+		):
 		}
 
 		return

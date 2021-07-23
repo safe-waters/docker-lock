@@ -212,7 +212,7 @@ func (c *composefileWriter) writeFile(
 
 	project, err := cli.ProjectFromOptions(opts)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("'%s' failed to parse with err: %v", path, err)
 	}
 
 	serviceImageLines, err := c.filterComposefileServices(project, images)
