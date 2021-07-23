@@ -200,15 +200,9 @@ func (c *composefileWriter) writeFile(
 	images []interface{},
 	outputDir string,
 ) (string, error) {
-	pathByt, err := ioutil.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-
-	//
 	opts, err := cli.NewProjectOptions(
 		[]string{path},
-		cli.WithWorkingDirectory(filepath.Dir(path)), // for build ctx
+		cli.WithWorkingDirectory(filepath.Dir(path)),
 		cli.WithDotEnv,
 		cli.WithOsEnv,
 	)
@@ -220,7 +214,6 @@ func (c *composefileWriter) writeFile(
 	if err != nil {
 		return "", err
 	}
-	//
 
 	serviceImageLines, err := c.filterComposefileServices(project, images)
 	if err != nil {
@@ -229,6 +222,11 @@ func (c *composefileWriter) writeFile(
 
 	if len(serviceImageLines) == 0 {
 		return "", nil
+	}
+
+	pathByt, err := ioutil.ReadFile(path)
+	if err != nil {
+		return "", err
 	}
 
 	var (
@@ -314,7 +312,6 @@ func (c *composefileWriter) filterComposefileServices(
 			)
 		}
 
-		// if the dockerfile is nil, then check if there is an image
 		if image["dockerfile"] == nil {
 			if _, ok := serviceImageLines[serviceName]; ok {
 				return nil, fmt.Errorf(
@@ -370,13 +367,12 @@ func (c *composefileWriter) filterComposefileServices(
 				fmt.Sprintf("%s%s", wd, string(filepath.Separator)),
 			)
 
-			_, err = os.Stat(relPath)
+			mode, err := os.Stat(relPath)
 
 			switch {
 			case err == nil:
 				numServicesInComposefile++
-				// TODO: check if it is a file not a directory
-			case os.IsNotExist(err):
+			case err != nil || mode.IsDir():
 				fmt.Printf("warning: '%s' with a service named '%s' "+
 					"has a 'build' block that references '%s' - "+
 					"skipping because the path does not exist\n",

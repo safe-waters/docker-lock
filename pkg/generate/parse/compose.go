@@ -103,7 +103,7 @@ func (c *composefileImageParser) ParseFile(
 
 	opts, err := cli.NewProjectOptions(
 		[]string{path.Val()},
-		cli.WithWorkingDirectory(filepath.Dir(path.Val())), // for build ctx
+		cli.WithWorkingDirectory(filepath.Dir(path.Val())),
 		cli.WithDotEnv,
 		cli.WithOsEnv,
 	)
@@ -165,13 +165,6 @@ func (c *composefileImageParser) parseService(
 		return
 	}
 
-	var (
-		dockerfileImageWaitGroup sync.WaitGroup
-		dockerfileImages         = make(chan IImage)
-	)
-
-	dockerfileImageWaitGroup.Add(1)
-
 	wd, err := os.Getwd()
 	if err != nil {
 		select {
@@ -182,15 +175,16 @@ func (c *composefileImageParser) parseService(
 		return
 	}
 
+	// TODO: check on windows
 	relPath := strings.TrimPrefix(
 		serviceConfig.Build.Dockerfile,
 		fmt.Sprintf("%s%s", wd, string(filepath.Separator)),
 	)
 
-	_, err = os.Stat(relPath)
+	mode, err := os.Stat(relPath)
 
 	switch {
-	case os.IsNotExist(err) && serviceConfig.Image != "":
+	case err != nil && serviceConfig.Image != "":
 		image := NewImage(c.kind, "", "", "", map[string]interface{}{
 			"serviceName":     serviceConfig.Name,
 			"servicePosition": 0,
@@ -205,15 +199,22 @@ func (c *composefileImageParser) parseService(
 		}
 
 		return
-	case os.IsNotExist(err):
+	case err != nil || mode.IsDir():
 		fmt.Printf("warning: '%s' with a service named '%s' has a 'build' "+
 			"block that references '%s' - "+
-			"skipping because the path does not exist\n",
+			"skipping because the file does not exist\n",
 			path.Val(), serviceConfig.Name, relPath,
 		)
 
 		return
 	}
+
+	var (
+		dockerfileImageWaitGroup sync.WaitGroup
+		dockerfileImages         = make(chan IImage)
+	)
+
+	dockerfileImageWaitGroup.Add(1)
 
 	go func() {
 		defer dockerfileImageWaitGroup.Done()
