@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/compose-spec/compose-go/cli"
+	"github.com/compose-spec/compose-go/loader"
 	"github.com/compose-spec/compose-go/types"
 	"github.com/safe-waters/docker-lock/pkg/generate/collect"
 	"github.com/safe-waters/docker-lock/pkg/kind"
@@ -106,6 +107,7 @@ func (c *composefileImageParser) ParseFile(
 		cli.WithWorkingDirectory(filepath.Dir(path.Val())),
 		cli.WithDotEnv,
 		cli.WithOsEnv,
+		cli.WithLoadOptions(loader.WithSkipValidation),
 	)
 	if err != nil {
 		select {

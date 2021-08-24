@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/compose-spec/compose-go/cli"
+	"github.com/compose-spec/compose-go/loader"
 	"github.com/compose-spec/compose-go/types"
 	"github.com/safe-waters/docker-lock/pkg/generate/parse"
 	"github.com/safe-waters/docker-lock/pkg/kind"
@@ -205,6 +206,7 @@ func (c *composefileWriter) writeFile(
 		cli.WithWorkingDirectory(filepath.Dir(path)),
 		cli.WithDotEnv,
 		cli.WithOsEnv,
+		cli.WithLoadOptions(loader.WithSkipValidation),
 	)
 	if err != nil {
 		return "", err

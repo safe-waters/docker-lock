@@ -12,3 +12,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/client-go v0.21.1
 )
+
+replace github.com/compose-spec/compose-go => github.com/michaelperel/compose-go v0.0.0-20210824182527-54163a104a9a
