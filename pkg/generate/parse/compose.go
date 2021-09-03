@@ -102,32 +102,9 @@ func (c *composefileImageParser) ParseFile(
 		return
 	}
 
-	opts, err := cli.NewProjectOptions(
-		[]string{path.Val()},
-		cli.WithWorkingDirectory(filepath.Dir(path.Val())),
-		cli.WithDotEnv,
-		cli.WithOsEnv,
-		cli.WithLoadOptions(loader.WithSkipValidation),
-	)
+	project, err := c.loadNewProject(path.Val())
 	if err != nil {
-		select {
-		case <-done:
-		case composefileImages <- NewImage(c.kind, "", "", "", nil, err):
-		}
-
-		return
-	}
-
-	project, err := cli.ProjectFromOptions(opts)
-	if err != nil {
-		select {
-		case <-done:
-		case composefileImages <- NewImage(
-			c.kind, "", "", "", nil,
-			fmt.Errorf("'%s' failed to parse with err: %v", path.Val(), err),
-		):
-		}
-
+		fmt.Println(err)
 		return
 	}
 
@@ -138,6 +115,45 @@ func (c *composefileImageParser) ParseFile(
 			serviceConfig, path, composefileImages, waitGroup, done,
 		)
 	}
+}
+
+func (c *composefileImageParser) loadNewProject(
+	path string,
+) (project *types.Project, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("warning: skipping '%s' - "+
+				"if the compose file is valid "+
+				"but is part of a configuration of multiple files, then "+
+				"this file likely does not have a 'build' or 'image' stanza, "+
+				"meaning it does not contain a base image, "+
+				"so can be safely ignored: "+
+				"error from official compose-cli parser: '%v'",
+				path,
+				r,
+			)
+		}
+	}()
+
+	var opts *cli.ProjectOptions
+
+	opts, err = cli.NewProjectOptions(
+		[]string{path},
+		cli.WithWorkingDirectory(filepath.Dir(path)),
+		cli.WithDotEnv,
+		cli.WithOsEnv,
+		cli.WithLoadOptions(loader.WithSkipValidation),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	project, err = cli.ProjectFromOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return project, nil
 }
 
 func (c *composefileImageParser) parseService(
