@@ -206,7 +206,12 @@ func (c *composefileWriter) writeFile(
 		cli.WithWorkingDirectory(filepath.Dir(path)),
 		cli.WithDotEnv,
 		cli.WithOsEnv,
-		cli.WithLoadOptions(loader.WithSkipValidation),
+		cli.WithLoadOptions(
+			loader.WithSkipValidation,
+			func(o *loader.Options) {
+				o.SkipConsistencyCheck = true
+			},
+		),
 	)
 	if err != nil {
 		return "", err

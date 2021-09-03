@@ -104,7 +104,13 @@ func (c *composefileImageParser) ParseFile(
 
 	project, err := c.loadNewProject(path.Val())
 	if err != nil {
-		fmt.Println(err)
+		select {
+		case <-done:
+		case composefileImages <- NewImage(
+			c.kind, "", "", "", nil,
+			fmt.Errorf("'%s' failed to parse with err: %v", path.Val(), err)):
+		}
+
 		return
 	}
 
@@ -122,16 +128,7 @@ func (c *composefileImageParser) loadNewProject(
 ) (project *types.Project, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("warning: skipping '%s' - "+
-				"if the compose file is valid "+
-				"but is part of a configuration of multiple files, then "+
-				"this file likely does not have a 'build' or 'image' stanza, "+
-				"meaning it does not contain a base image, "+
-				"so can be safely ignored: "+
-				"error from official compose-cli parser: '%v'",
-				path,
-				r,
-			)
+			err = fmt.Errorf("%v", r)
 		}
 	}()
 
@@ -142,7 +139,12 @@ func (c *composefileImageParser) loadNewProject(
 		cli.WithWorkingDirectory(filepath.Dir(path)),
 		cli.WithDotEnv,
 		cli.WithOsEnv,
-		cli.WithLoadOptions(loader.WithSkipValidation),
+		cli.WithLoadOptions(
+			loader.WithSkipValidation,
+			func(o *loader.Options) {
+				o.SkipConsistencyCheck = true
+			},
+		),
 	)
 	if err != nil {
 		return nil, err
