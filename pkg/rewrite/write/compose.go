@@ -201,23 +201,7 @@ func (c *composefileWriter) writeFile(
 	images []interface{},
 	outputDir string,
 ) (string, error) {
-	opts, err := cli.NewProjectOptions(
-		[]string{path},
-		cli.WithWorkingDirectory(filepath.Dir(path)),
-		cli.WithDotEnv,
-		cli.WithOsEnv,
-		cli.WithLoadOptions(
-			loader.WithSkipValidation,
-			func(o *loader.Options) {
-				o.SkipConsistencyCheck = true
-			},
-		),
-	)
-	if err != nil {
-		return "", err
-	}
-
-	project, err := cli.ProjectFromOptions(opts)
+	project, err := c.loadNewProject(path)
 	if err != nil {
 		return "", fmt.Errorf("'%s' failed to parse with err: %v", path, err)
 	}
@@ -291,6 +275,41 @@ func (c *composefileWriter) writeFile(
 	}
 
 	return writtenFile.Name(), err
+}
+
+func (c *composefileWriter) loadNewProject(
+	path string,
+) (project *types.Project, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	var opts *cli.ProjectOptions
+
+	opts, err = cli.NewProjectOptions(
+		[]string{path},
+		cli.WithWorkingDirectory(filepath.Dir(path)),
+		cli.WithDotEnv,
+		cli.WithOsEnv,
+		cli.WithLoadOptions(
+			loader.WithSkipValidation,
+			func(o *loader.Options) {
+				o.SkipConsistencyCheck = true
+			},
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	project, err = cli.ProjectFromOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return project, nil
 }
 
 func (c *composefileWriter) filterComposefileServices(
